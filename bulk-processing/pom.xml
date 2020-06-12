@@ -11,7 +11,8 @@
     <version>1.0-SNAPSHOT</version>
 
     <modules>
-        <module>io-utils</module>
+<!--        <module>io-utils</module>-->
+        <module>spring-batch-etl</module>
     </modules>
 
 </project>
