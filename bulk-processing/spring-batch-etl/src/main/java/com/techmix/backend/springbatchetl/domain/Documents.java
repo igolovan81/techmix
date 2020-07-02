@@ -38,4 +38,11 @@ public class Documents {
         this.originals = originals;
     }
 
+    @Override
+    public String toString() {
+        return "Documents{" +
+                "corrected=" + corrected +
+                ", originals=" + originals +
+                '}';
+    }
 }

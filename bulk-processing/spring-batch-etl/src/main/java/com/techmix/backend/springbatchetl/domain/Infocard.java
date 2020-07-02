@@ -179,4 +179,22 @@ public class Infocard {
         this.declarationYear = declarationYear;
     }
 
+    @Override
+    public String toString() {
+        return "Infocard{" +
+                "firstName='" + firstName + '\'' +
+                ", patronymic='" + patronymic + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", office='" + office + '\'' +
+                ", position='" + position + '\'' +
+                ", source='" + source + '\'' +
+                ", id='" + id + '\'' +
+                ", userDeclarantId=" + userDeclarantId +
+                ", url='" + url + '\'' +
+                ", documentType='" + documentType + '\'' +
+                ", isCorrected=" + isCorrected +
+                ", createdDate='" + createdDate + '\'' +
+                ", declarationYear=" + declarationYear +
+                '}';
+    }
 }

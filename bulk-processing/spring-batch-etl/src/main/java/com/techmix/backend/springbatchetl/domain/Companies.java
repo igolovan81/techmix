@@ -51,4 +51,12 @@ public class Companies {
         this.all = all;
     }
 
+    @Override
+    public String toString() {
+        return "Companies{" +
+                "owned=" + owned +
+                ", related=" + related +
+                ", all=" + all +
+                '}';
+    }
 }

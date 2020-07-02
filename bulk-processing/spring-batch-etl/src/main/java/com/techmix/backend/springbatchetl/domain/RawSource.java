@@ -23,4 +23,10 @@ public class RawSource {
         this.url = url;
     }
 
+    @Override
+    public String toString() {
+        return "RawSource{" +
+                "url='" + url + '\'' +
+                '}';
+    }
 }

@@ -89,4 +89,15 @@ public class UnifiedSource {
     public void setStep6(Step6 step6) {
         this.step6 = step6;
     }
+
+    @Override
+    public String toString() {
+        return "UnifiedSource{" +
+                "step0=" + step0 +
+                ", step1=" + step1 +
+                ", step11=" + step11 +
+                ", step17=" + step17 +
+                ", step6=" + step6 +
+                '}';
+    }
 }

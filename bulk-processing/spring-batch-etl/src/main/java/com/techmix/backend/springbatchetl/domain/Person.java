@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
         "unified_source",
         "related_entities"
 })
-public class Example {
+public class Person {
 
     @JsonProperty("infocard")
     private Infocard infocard;
@@ -62,4 +62,13 @@ public class Example {
         this.relatedEntities = relatedEntities;
     }
 
+    @Override
+    public String toString() {
+        return "Person{" +
+                "infocard=" + infocard +
+                ", rawSource=" + rawSource +
+                ", unifiedSource=" + unifiedSource +
+                ", relatedEntities=" + relatedEntities +
+                '}';
+    }
 }

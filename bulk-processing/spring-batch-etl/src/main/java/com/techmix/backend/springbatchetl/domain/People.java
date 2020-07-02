@@ -24,4 +24,10 @@ public class People {
         this.family = family;
     }
 
+    @Override
+    public String toString() {
+        return "People{" +
+                "family=" + family +
+                '}';
+    }
 }

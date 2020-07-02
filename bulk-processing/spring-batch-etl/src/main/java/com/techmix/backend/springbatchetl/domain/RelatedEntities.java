@@ -49,4 +49,12 @@ public class RelatedEntities {
         this.companies = companies;
     }
 
+    @Override
+    public String toString() {
+        return "RelatedEntities{" +
+                "people=" + people +
+                ", documents=" + documents +
+                ", companies=" + companies +
+                '}';
+    }
 }
