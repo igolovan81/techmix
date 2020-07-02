@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
         "housePartNum_extendedstatus",
         "lastname",
         "middlename",
+        "passport",
         "postCategory",
         "postCode",
         "postType",
@@ -93,6 +94,13 @@ public class Step1 {
     private String lastname;
     @JsonProperty("middlename")
     private String middlename;
+
+    @JsonProperty("passport")
+    private String passport;
+
+    @JsonProperty("passport_extendedstatus")
+    private String passportExtendedStatus;
+
     @JsonProperty("postCategory")
     private String postCategory;
     @JsonProperty("postCode")
@@ -103,8 +111,13 @@ public class Step1 {
     private String previousFirstname;
     @JsonProperty("previous_lastname")
     private String previousLastname;
+
     @JsonProperty("previous_middlename")
     private String previousMiddlename;
+
+    @JsonProperty("public_person")
+    private String publicPerson;
+
     @JsonProperty("region")
     private String region;
     @JsonProperty("responsiblePosition")
@@ -115,12 +128,19 @@ public class Step1 {
     private String street;
     @JsonProperty("streetType")
     private String streetType;
+
     @JsonProperty("ukr_actualAddress")
     private String ukrActualAddress;
+
+    @JsonProperty("unzr")
+    private String unzr;
+
     @JsonProperty("workPlace")
     private String workPlace;
+
     @JsonProperty("workPost")
     private String workPost;
+
     @JsonProperty("dnt_organization_group")
     private String dntOrganizationGroup;
 
@@ -354,6 +374,49 @@ public class Step1 {
         this.middlename = middlename;
     }
 
+    @JsonProperty("passport")
+    public String getPassport() {
+        return passport;
+    }
+
+    @JsonProperty("passport")
+    public void setPassport(String passport) {
+        this.passport = passport;
+    }
+
+    @JsonProperty("passport_extendedstatus")
+    public String getPassportExtendedStatus() {
+        return passportExtendedStatus;
+    }
+
+    @JsonProperty("passport_extendedstatus")
+    public void setPassportExtendedStatus(String passportExtendedStatus) {
+        this.passportExtendedStatus = passportExtendedStatus;
+    }
+
+    @JsonProperty("public_person")
+    public String getPublicPerson() {
+        return publicPerson;
+    }
+
+    @JsonProperty("public_person")
+    public void setPublicPerson(String publicPerson) {
+        this.publicPerson = publicPerson;
+    }
+
+    @JsonProperty("unzr")
+    public String getUnzr() {
+        return unzr;
+    }
+
+    @JsonProperty("unzr")
+    public void setUnzr(String unzr) {
+        this.unzr = unzr;
+    }
+
+    @JsonProperty("unzr_extendedstatus")
+    private String unzrExtendedStatus;
+
     @JsonProperty("postCategory")
     public String getPostCategory() {
         return postCategory;
@@ -362,6 +425,16 @@ public class Step1 {
     @JsonProperty("postCategory")
     public void setPostCategory(String postCategory) {
         this.postCategory = postCategory;
+    }
+
+    @JsonProperty("unzr_extendedstatus")
+    public String getUnzrExtendedStatus() {
+        return unzrExtendedStatus;
+    }
+
+    @JsonProperty("unzr_extendedstatus")
+    public void setUnzrExtendedStatus(String unzrExtendedStatus) {
+        this.unzrExtendedStatus = unzrExtendedStatus;
     }
 
     @JsonProperty("postCode")

@@ -91,7 +91,7 @@ public class BatchConfiguration {
                 .headerCallback(writer -> writer.write("Movie Title,Movie Genres"))
                 .delimited()
                 .delimiter(",")
-                .names(new String[]{"title", "genre"})
+                .names(new String[]{"genre"})
                 .build();
     }
 
