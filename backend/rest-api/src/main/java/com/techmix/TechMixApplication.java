@@ -1,4 +1,4 @@
-package org.example;
+package com.techmix;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -6,14 +6,14 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class Main {
+public class TechMixApplication {
 
-  private static final Logger logger = LoggerFactory.getLogger(Main.class);
+  private static final Logger logger = LoggerFactory.getLogger(TechMixApplication.class);
 
   public static void main(String[] args) {
-    SpringApplication.run(Main.class, args);
+    SpringApplication.run(TechMixApplication.class, args);
 
-    logger.info("Application started successfully!");
+    logger.info("TechMix Backend API started successfully!");
     logger.debug("This is a debug message");
     logger.warn("This is a warning message");
 
@@ -41,6 +41,6 @@ public class Main {
       logger.error("An error occurred during operation", e);
     }
 
-    logger.info("Application execution completed");
+    logger.info("TechMix Backend API execution completed");
   }
 }
