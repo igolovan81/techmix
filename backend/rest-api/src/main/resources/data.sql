@@ -1,6 +1,6 @@
 -- Create Post table if it does not exist
 CREATE TABLE IF NOT EXISTS POST (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     title VARCHAR(255),
     content TEXT,
     created_at TIMESTAMP,
