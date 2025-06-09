@@ -1,12 +1,3 @@
--- Create Post table if it does not exist
-CREATE TABLE IF NOT EXISTS POST (
-    id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255),
-    content TEXT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
-);
-
 -- Test data for Post entity with 1000 unique, human-readable titles and content
 INSERT INTO POST (title, content, created_at, updated_at)
 VALUES ('How to Use Spring Boot Effectively',
