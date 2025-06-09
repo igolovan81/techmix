@@ -10,11 +10,11 @@
         <version>3.4.4</version>
     </parent>
 
-    <groupId>com.techmix</groupId>
-    <artifactId>techmix-backend</artifactId>
+    <groupId>com.testingai</groupId>
+    <artifactId>testing-ai-generation</artifactId>
     <version>1.0.0</version>
-    <name>TechMix Backend API</name>
-    <description>Backend REST API for TechMix application</description>
+    <name>Testing AI generation</name>
+    <description>Application for testing AI code generation capabilities</description>
 
     <properties>
         <maven.compiler.source>24</maven.compiler.source>
