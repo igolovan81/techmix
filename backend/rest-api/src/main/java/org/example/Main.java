@@ -1,19 +1,46 @@
 package org.example;
 
-// TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-public class Main {
-  public static void main(String[] args) {
-    // TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-    // to see how IntelliJ IDEA suggests fixing it.
-    System.out.printf("Hello and welcome!");
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+@SpringBootApplication
+public class Main {
+
+  private static final Logger logger = LoggerFactory.getLogger(Main.class);
+
+  public static void main(String[] args) {
+    SpringApplication.run(Main.class, args);
+
+    logger.info("Application started successfully!");
+    logger.debug("This is a debug message");
+    logger.warn("This is a warning message");
+
+    // Demonstrate different log levels
     for (int i = 1; i <= 5; i++) {
-      // TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon
-      // src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-      // for you, but you can always add more by pressing <shortcut
-      // actionId="ToggleLineBreakpoint"/>.
-      System.out.println("i = " + i);
+      logger.info("Processing iteration: {}", i);
+
+      if (i == 3) {
+        logger.warn("Reached iteration 3 - this might be important");
+      }
+
+      if (i == 5) {
+        logger.debug("Final iteration completed");
+      }
     }
+
+    // Example of logging with exception
+    try {
+      // Simulate some operation that might fail
+      if (Math.random() > 0.5) {
+        throw new RuntimeException("Simulated error for logging demonstration");
+      }
+      logger.info("Operation completed successfully");
+    } catch (Exception e) {
+      logger.error("An error occurred during operation", e);
+    }
+
+    logger.info("Application execution completed");
   }
 }
