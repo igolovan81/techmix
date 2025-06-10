@@ -51,7 +51,7 @@ services:
     restart: unless-stopped
 
   snyk:
-    image: snyk/snyk-cli
+    image: snyk/snyk-cli:docker
     container_name: snyk
     environment:
       - SNYK_TOKEN=${SNYK_TOKEN}
@@ -59,6 +59,26 @@ services:
       - ./:/project
     working_dir: /project
     entrypoint: ["tail", "-f", "/dev/null"]
+
+  backend:
+    build:
+      context: ./backend/rest-api
+    container_name: backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend/angular
+    container_name: frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
 
 volumes:
   sonarqube_data:
