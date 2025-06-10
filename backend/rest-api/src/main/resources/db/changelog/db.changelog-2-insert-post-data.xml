@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="2-insert-post-data" author="migration">
+        <insert tableName="POST">
+            <column name="title" value="How to Use Spring Boot Effectively"/>
+            <column name="content" value="Spring Boot simplifies the development of stand-alone, production-grade Spring based Applications. In this post, we explore best practices for using Spring Boot in your projects."/>
+            <column name="created_at" value="2023-01-01T00:00:00Z"/>
+            <column name="updated_at" value="2023-01-01T00:00:00Z"/>
+        </insert>
+        <insert tableName="POST">
+            <column name="title" value="Understanding Dependency Injection in Java"/>
+            <column name="content" value="Dependency Injection is a powerful technique in Java. This article explains the concept and demonstrates how to implement it using popular frameworks."/>
+            <column name="created_at" value="2023-01-02T00:00:00Z"/>
+            <column name="updated_at" value="2023-01-02T00:00:00Z"/>
+        </insert>
+        <insert tableName="POST">
+            <column name="title" value="Top 10 Tips for Writing Clean Code"/>
+            <column name="content" value="Writing clean code is essential for maintainability. Here are ten tips to help you write code that is easy to read and maintain."/>
+            <column name="created_at" value="2023-01-03T00:00:00Z"/>
+            <column name="updated_at" value="2023-01-03T00:00:00Z"/>
+        </insert>
+        <insert tableName="POST">
+            <column name="title" value="Beginner’s Guide to REST APIs"/>
+            <column name="content" value="REST APIs are everywhere. This beginner’s guide covers the basics of RESTful web services and how to build them."/>
+            <column name="created_at" value="2023-01-04T00:00:00Z"/>
+            <column name="updated_at" value="2023-01-04T00:00:00Z"/>
+        </insert>
+        <insert tableName="POST">
+            <column name="title" value="Mastering JPA and Hibernate"/>
+            <column name="content" value="JPA and Hibernate are the backbone of Java persistence. Learn how to use them effectively in your applications."/>
+            <column name="created_at" value="2023-01-05T00:00:00Z"/>
+            <column name="updated_at" value="2023-01-05T00:00:00Z"/>
+        </insert>
+        <!-- Additional <insert> tags omitted for brevity. Add more rows as needed. -->
+    </changeSet>
+
+</databaseChangeLog>

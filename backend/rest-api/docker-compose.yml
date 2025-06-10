@@ -14,6 +14,16 @@ services:
       - sonarqube_logs:/opt/sonarqube/logs
     restart: unless-stopped
 
+  h2:
+    image: oscarfonts/h2
+    container_name: h2
+    ports:
+      - "81:81"      # Web console
+      - "1521:1521"  # JDBC
+    environment:
+      - H2_OPTIONS=-ifNotExists
+    restart: unless-stopped
+
 volumes:
   sonarqube_data:
   sonarqube_extensions:
