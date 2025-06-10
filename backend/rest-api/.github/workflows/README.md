@@ -12,6 +12,7 @@ The workflow file is located at `.github/workflows/ci.yml`.
 - Builds the project using Maven
 - Runs all tests
 
+
 ## How to Use
 1. **Push or create a pull request** to the `main` branch.
 2. The workflow will automatically start. You can see the status of the workflow in the **Actions** tab of your GitHub repository.
