@@ -1,4 +1,4 @@
-package org.example.hackerrank;
+package org.example.hackerrank.algorithms;
 
 import static java.util.stream.Collectors.toList;
 

@@ -1,4 +1,4 @@
-package org.example.hackerrank;
+package org.example.hackerrank.algorithms;
 
 import java.io.*;
 import java.text.*;
