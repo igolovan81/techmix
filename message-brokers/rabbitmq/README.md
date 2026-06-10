@@ -8,6 +8,8 @@ A 3-node RabbitMQ Docker cluster and a Spring Boot demo app demonstrating four m
 - Maven 3.9+
 - Docker
 
+All commands below assume your working directory is `message-brokers/rabbitmq/`.
+
 ## Start the cluster
 
 ```bash
@@ -48,11 +50,11 @@ curl -X POST "http://localhost:8080/demo/routing?key=error&message=boom"
 
 ## Swagger UI
 
-http://localhost:8080/swagger-ui.html
+http://localhost:8080/swagger-ui/index.html
 
 ## Run performance tests
 
-Requires the cluster and app to be running (see above).
+Requires the cluster and app to be running (see above). Start the app in a separate terminal if needed, then run:
 
 ```bash
 cd spring-demo
