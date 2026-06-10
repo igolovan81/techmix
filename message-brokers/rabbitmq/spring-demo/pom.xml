@@ -19,6 +19,8 @@
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <gatling.version>3.13.1</gatling.version>
+        <gatling-maven-plugin.version>4.15.0</gatling-maven-plugin.version>
     </properties>
 
     <dependencies>
@@ -49,7 +51,7 @@
         <dependency>
             <groupId>io.gatling.highcharts</groupId>
             <artifactId>gatling-charts-highcharts</artifactId>
-            <version>3.13.1</version>
+            <version>${gatling.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -86,7 +88,7 @@
             <plugin>
                 <groupId>io.gatling</groupId>
                 <artifactId>gatling-maven-plugin</artifactId>
-                <version>4.15.0</version>
+                <version>${gatling-maven-plugin.version}</version>
             </plugin>
         </plugins>
     </build>
