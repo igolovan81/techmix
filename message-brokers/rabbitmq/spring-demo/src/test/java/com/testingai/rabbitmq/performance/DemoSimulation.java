@@ -16,27 +16,27 @@ public class DemoSimulation extends Simulation {
     ScenarioBuilder simpleScenario = scenario("Simple Queue")
             .exec(http("POST /demo/simple")
                     .post("/demo/simple")
-                    .queryParam("message", "perf-test")
+                    .formParam("message", "perf-test")
                     .check(status().is(200)));
 
     ScenarioBuilder workScenario = scenario("Work Queue")
-            .exec(http("POST /demo/work")
+            .exec(http("POST /demo/work (3 msgs)")
                     .post("/demo/work")
-                    .queryParam("message", "task..")
-                    .queryParam("count", "3")
+                    .formParam("message", "task..")
+                    .formParam("count", "3")
                     .check(status().is(200)));
 
     ScenarioBuilder pubsubScenario = scenario("PubSub")
             .exec(http("POST /demo/pubsub")
                     .post("/demo/pubsub")
-                    .queryParam("message", "perf-broadcast")
+                    .formParam("message", "perf-broadcast")
                     .check(status().is(200)));
 
     ScenarioBuilder routingScenario = scenario("Routing")
             .exec(http("POST /demo/routing")
                     .post("/demo/routing")
-                    .queryParam("key", "info")
-                    .queryParam("message", "perf-route")
+                    .formParam("key", "info")
+                    .formParam("message", "perf-route")
                     .check(status().is(200)));
 
     {
