@@ -13,10 +13,11 @@ public class WorkQueueConfig {
 
     public static final String QUEUE_NAME = "work.queue";
     public static final int MESSAGE_TTL_MS = 5000;
+    public static final int DELIVERY_LIMIT = 3;
 
     @Bean
     public Queue workQueue() {
-        return QueueBuilder.durable(QUEUE_NAME).quorum().ttl(MESSAGE_TTL_MS).build();
+        return QueueBuilder.durable(QUEUE_NAME).quorum().deliveryLimit(DELIVERY_LIMIT).ttl(MESSAGE_TTL_MS).build();
     }
 
     @Bean

@@ -14,4 +14,10 @@ class WorkQueueConfigTest {
         Queue queue = config.workQueue();
         assertThat(queue.getArguments()).containsEntry("x-message-ttl", 5000);
     }
+
+    @Test
+    void workQueue_shouldHaveDeliveryLimitOf3() {
+        Queue queue = config.workQueue();
+        assertThat(queue.getArguments()).containsEntry("x-delivery-limit", 3);
+    }
 }
