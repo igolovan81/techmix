@@ -44,13 +44,17 @@ public class PendingConsumer
     @Override
     public void onMessage(MapRecord<String, String, String> record) {
         try {
-            FailureSimulator.maybeThrow("pending");
-            log.info("[pending] processed id={} body={}", record.getId(), record.getValue());
+            process(record);
             redisTemplate.opsForStream()
                     .acknowledge(StreamKeys.PENDING, GROUP, record.getId());
         } catch (RuntimeException e) {
             log.warn("[pending] simulated failure id={} — left in PEL", record.getId());
         }
+    }
+
+    private void process(MapRecord<String, String, String> record) {
+        FailureSimulator.maybeThrow("pending");
+        log.info("[pending] processed id={} body={}", record.getId(), record.getValue());
     }
 
     @Scheduled(fixedDelay = 3000)
@@ -71,15 +75,22 @@ public class PendingConsumer
                                     CONSUMER,
                                     Duration.ofMillis(MIN_IDLE),
                                     pm.getId());
+                    if (claimed == null || claimed.isEmpty()) continue;
                     for (var rec : claimed) {
-                        log.info("[pending] reclaiming id={}", rec.getId());
-                        redisTemplate.opsForStream()
-                                .acknowledge(StreamKeys.PENDING, GROUP, rec.getId());
+                        try {
+                            log.info("[pending] reclaiming and reprocessing id={}", rec.getId());
+                            FailureSimulator.maybeThrow("pending-reclaim");
+                            redisTemplate.opsForStream()
+                                    .acknowledge(StreamKeys.PENDING, GROUP, rec.getId());
+                            log.info("[pending] reclaimed entry acknowledged id={}", rec.getId());
+                        } catch (RuntimeException e) {
+                            log.warn("[pending] reclaim attempt failed id={}, will retry in next cycle", rec.getId());
+                        }
                     }
                 }
             }
         } catch (Exception e) {
-            log.debug("[pending] reclaimer skipped: {}", e.getMessage());
+            log.warn("[pending] reclaimer error: {}", e.getMessage());
         }
     }
 }

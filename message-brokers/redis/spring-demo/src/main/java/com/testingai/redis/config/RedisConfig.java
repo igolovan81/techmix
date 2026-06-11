@@ -27,6 +27,7 @@ public class RedisConfig {
 
     private final RedisConnectionFactory connectionFactory;
     private final RedisTemplate<String, String> redisTemplate;
+    private StreamMessageListenerContainer<String, MapRecord<String, String, String>> streamContainer;
 
     public RedisConfig(RedisConnectionFactory connectionFactory) {
         this.connectionFactory = connectionFactory;
@@ -59,7 +60,7 @@ public class RedisConfig {
                 .build();
         var container = StreamMessageListenerContainer
                 .create(connectionFactory, options);
-        container.start();
+        this.streamContainer = container;
         return container;
     }
 
@@ -131,6 +132,9 @@ public class RedisConfig {
                     throw e;
                 }
             }
+        }
+        if (streamContainer != null) {
+            streamContainer.start();
         }
     }
 }
