@@ -1,9 +1,12 @@
 package com.testingai.rabbitmq.config;
 
+import org.springframework.amqp.core.AcknowledgeMode;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -50,5 +53,13 @@ public class RoutingConfig {
     @Bean
     public Binding bindingErrorOnly(DirectExchange routingExchange, Queue routingQueueError) {
         return BindingBuilder.bind(routingQueueError).to(routingExchange).with(KEY_ERROR);
+    }
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory routingContainerFactory(ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+        return factory;
     }
 }
