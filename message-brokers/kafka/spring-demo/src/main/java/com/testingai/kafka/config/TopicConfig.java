@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.boot.autoconfigure.kafka.ConcurrentKafkaListenerContainerFactoryConfigurer;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.TopicBuilder;
@@ -107,6 +109,23 @@ public class TopicConfig {
         return factory;
     }
 
+    // ── Non-transactional producer factory & template ──────────────────────
+    // Declared explicitly because @ConditionalOnMissingBean(ProducerFactory.class) and
+    // @ConditionalOnMissingBean(KafkaTemplate.class) in Spring Boot auto-config are both
+    // satisfied by the transactional beans below, so the auto-configured defaults are skipped.
+
+    @Bean
+    public ProducerFactory<String, String> kafkaProducerFactory(KafkaProperties kafkaProperties) {
+        return new DefaultKafkaProducerFactory<>(kafkaProperties.buildProducerProperties(null));
+    }
+
+    @Bean
+    @Primary
+    public KafkaTemplate<String, String> kafkaTemplate(
+            @Qualifier("kafkaProducerFactory") ProducerFactory<String, String> kafkaProducerFactory) {
+        return new KafkaTemplate<>(kafkaProducerFactory);
+    }
+
     // ── Transactional producer (exactly-once writes) ────────────────────────
 
     @Bean
@@ -120,7 +139,7 @@ public class TopicConfig {
 
     @Bean
     public KafkaTemplate<String, String> transactionalKafkaTemplate(
-            DefaultKafkaProducerFactory<String, String> transactionalProducerFactory) {
+            @Qualifier("transactionalProducerFactory") DefaultKafkaProducerFactory<String, String> transactionalProducerFactory) {
         return new KafkaTemplate<>(transactionalProducerFactory);
     }
 
