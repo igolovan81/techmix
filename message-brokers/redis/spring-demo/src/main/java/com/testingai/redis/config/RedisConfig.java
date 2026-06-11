@@ -13,6 +13,7 @@ import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer.StreamMessageListenerContainerOptions;
 
 import com.testingai.redis.simple.SimpleConsumer;
+import com.testingai.redis.workqueue.WorkQueueConsumer;
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import java.util.List;
@@ -63,6 +64,15 @@ public class RedisConfig {
     public SimpleConsumer simpleConsumer(
             StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
         return new SimpleConsumer(container);
+    }
+
+    @Bean
+    public WorkQueueConsumer workQueueConsumer(
+            RedisTemplate<String, String> redisTemplate,
+            StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
+        var consumer = new WorkQueueConsumer(redisTemplate);
+        consumer.registerWith(container);
+        return consumer;
     }
 
     @Bean
