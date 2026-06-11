@@ -27,6 +27,10 @@ public class WorkQueueConsumer {
         } catch (RuntimeException e) {
             log.warn("[Worker1] Failed, requeuing for retry: {}", e.getMessage());
             channel.basicNack(deliveryTag, false, true);
+        } catch (InterruptedException e) {
+            log.warn("[Worker1] Interrupted, requeuing: {}", message);
+            channel.basicNack(deliveryTag, false, true);
+            Thread.currentThread().interrupt();
         } catch (IOException e) {
             throw e;
         }
@@ -44,6 +48,10 @@ public class WorkQueueConsumer {
         } catch (RuntimeException e) {
             log.warn("[Worker2] Failed, requeuing for retry: {}", e.getMessage());
             channel.basicNack(deliveryTag, false, true);
+        } catch (InterruptedException e) {
+            log.warn("[Worker2] Interrupted, requeuing: {}", message);
+            channel.basicNack(deliveryTag, false, true);
+            Thread.currentThread().interrupt();
         } catch (IOException e) {
             throw e;
         }
