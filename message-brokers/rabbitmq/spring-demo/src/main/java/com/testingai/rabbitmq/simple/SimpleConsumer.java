@@ -2,6 +2,7 @@ package com.testingai.rabbitmq.simple;
 
 import com.rabbitmq.client.Channel;
 import com.testingai.rabbitmq.config.SimpleQueueConfig;
+import com.testingai.rabbitmq.util.FailureSimulator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
@@ -16,13 +17,17 @@ public class SimpleConsumer {
 
     @RabbitListener(queues = SimpleQueueConfig.QUEUE_NAME, containerFactory = "simpleContainerFactory")
     public void receive(String message, Channel channel,
-                        @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws IOException {
+                        @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
+                        @Header(AmqpHeaders.REDELIVERED) boolean redelivered) throws IOException {
         try {
+            FailureSimulator.maybeThrow("[SimpleConsumer]");
             log.info("[SimpleConsumer] Received: {}", message);
             channel.basicAck(deliveryTag, false);
-        } catch (Exception e) {
-            log.error("[SimpleConsumer] Failed: {}", message, e);
-            channel.basicNack(deliveryTag, false, true);
+        } catch (RuntimeException e) {
+            log.warn("[SimpleConsumer] Failed (redelivered={}), requeue={}: {}", redelivered, !redelivered, e.getMessage());
+            channel.basicNack(deliveryTag, false, !redelivered);
+        } catch (IOException e) {
+            throw e;
         }
     }
 }
