@@ -14,6 +14,9 @@ import org.springframework.data.redis.stream.StreamMessageListenerContainer.Stre
 
 import com.testingai.redis.fanout.FanoutConsumerA;
 import com.testingai.redis.fanout.FanoutConsumerB;
+import com.testingai.redis.pubsub.PubSubSubscriberA;
+import com.testingai.redis.pubsub.PubSubSubscriberB;
+import org.springframework.data.redis.listener.ChannelTopic;
 import com.testingai.redis.pending.PendingConsumer;
 import com.testingai.redis.simple.SimpleConsumer;
 import com.testingai.redis.trimming.TrimmingConsumer;
@@ -111,9 +114,13 @@ public class RedisConfig {
     }
 
     @Bean
-    public RedisMessageListenerContainer pubSubListenerContainer() {
+    public RedisMessageListenerContainer pubSubListenerContainer(
+            PubSubSubscriberA subscriberA,
+            PubSubSubscriberB subscriberB) {
         var container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
+        container.addMessageListener(subscriberA, new ChannelTopic(StreamKeys.PUBSUB_CHANNEL));
+        container.addMessageListener(subscriberB, new ChannelTopic(StreamKeys.PUBSUB_CHANNEL));
         return container;
     }
 
