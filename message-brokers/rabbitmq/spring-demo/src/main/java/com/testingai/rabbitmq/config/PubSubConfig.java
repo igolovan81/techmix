@@ -17,7 +17,11 @@ public class PubSubConfig {
     public static final String EXCHANGE_NAME = "pubsub.fanout";
     public static final String QUEUE_A = "pubsub.queue.a";
     public static final String QUEUE_B = "pubsub.queue.b";
+    public static final String RETRY_QUEUE_A = "pubsub.retry.queue.a";
+    public static final String RETRY_QUEUE_B = "pubsub.retry.queue.b";
     public static final int MESSAGE_TTL_MS = 5000;
+    public static final int RETRY_DELAY_MS = 2000;
+    public static final int MAX_RETRIES = 3;
 
     @Bean
     public FanoutExchange pubSubExchange() {
@@ -26,12 +30,38 @@ public class PubSubConfig {
 
     @Bean
     public Queue pubSubQueueA() {
-        return QueueBuilder.durable(QUEUE_A).ttl(MESSAGE_TTL_MS).build();
+        return QueueBuilder.durable(QUEUE_A)
+                .ttl(MESSAGE_TTL_MS)
+                .deadLetterExchange("")
+                .deadLetterRoutingKey(RETRY_QUEUE_A)
+                .build();
     }
 
     @Bean
     public Queue pubSubQueueB() {
-        return QueueBuilder.durable(QUEUE_B).ttl(MESSAGE_TTL_MS).build();
+        return QueueBuilder.durable(QUEUE_B)
+                .ttl(MESSAGE_TTL_MS)
+                .deadLetterExchange("")
+                .deadLetterRoutingKey(RETRY_QUEUE_B)
+                .build();
+    }
+
+    @Bean
+    public Queue pubSubRetryQueueA() {
+        return QueueBuilder.durable(RETRY_QUEUE_A)
+                .ttl(RETRY_DELAY_MS)
+                .deadLetterExchange("")
+                .deadLetterRoutingKey(QUEUE_A)
+                .build();
+    }
+
+    @Bean
+    public Queue pubSubRetryQueueB() {
+        return QueueBuilder.durable(RETRY_QUEUE_B)
+                .ttl(RETRY_DELAY_MS)
+                .deadLetterExchange("")
+                .deadLetterRoutingKey(QUEUE_B)
+                .build();
     }
 
     @Bean
