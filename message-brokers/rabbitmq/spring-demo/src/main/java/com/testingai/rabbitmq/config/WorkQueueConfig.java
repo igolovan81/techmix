@@ -12,10 +12,11 @@ import org.springframework.context.annotation.Configuration;
 public class WorkQueueConfig {
 
     public static final String QUEUE_NAME = "work.queue";
+    public static final int MESSAGE_TTL_MS = 5000;
 
     @Bean
     public Queue workQueue() {
-        return QueueBuilder.durable(QUEUE_NAME).quorum().build();
+        return QueueBuilder.durable(QUEUE_NAME).quorum().ttl(MESSAGE_TTL_MS).build();
     }
 
     @Bean
