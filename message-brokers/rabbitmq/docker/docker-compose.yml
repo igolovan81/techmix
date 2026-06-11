@@ -1,3 +1,5 @@
+name: rabbitmq-cluster
+
 services:
   rabbitmq1:
     image: rabbitmq:4-management
