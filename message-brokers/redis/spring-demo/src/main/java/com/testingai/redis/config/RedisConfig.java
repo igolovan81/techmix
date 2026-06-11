@@ -12,6 +12,8 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer.StreamMessageListenerContainerOptions;
 
+import com.testingai.redis.fanout.FanoutConsumerA;
+import com.testingai.redis.fanout.FanoutConsumerB;
 import com.testingai.redis.simple.SimpleConsumer;
 import com.testingai.redis.workqueue.WorkQueueConsumer;
 import jakarta.annotation.PostConstruct;
@@ -73,6 +75,18 @@ public class RedisConfig {
         var consumer = new WorkQueueConsumer(redisTemplate);
         consumer.registerWith(container);
         return consumer;
+    }
+
+    @Bean
+    public FanoutConsumerA fanoutConsumerA(
+            StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
+        return new FanoutConsumerA(container);
+    }
+
+    @Bean
+    public FanoutConsumerB fanoutConsumerB(
+            StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
+        return new FanoutConsumerB(container);
     }
 
     @Bean
