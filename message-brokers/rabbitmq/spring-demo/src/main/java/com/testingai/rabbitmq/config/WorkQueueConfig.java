@@ -1,7 +1,10 @@
 package com.testingai.rabbitmq.config;
 
+import org.springframework.amqp.core.AcknowledgeMode;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,5 +16,13 @@ public class WorkQueueConfig {
     @Bean
     public Queue workQueue() {
         return QueueBuilder.durable(QUEUE_NAME).quorum().build();
+    }
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory workQueueContainerFactory(ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+        return factory;
     }
 }
