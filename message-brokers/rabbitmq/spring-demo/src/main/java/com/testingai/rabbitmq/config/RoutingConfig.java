@@ -5,6 +5,7 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.context.annotation.Bean;
@@ -19,6 +20,7 @@ public class RoutingConfig {
     public static final String KEY_INFO = "info";
     public static final String KEY_WARNING = "warning";
     public static final String KEY_ERROR = "error";
+    public static final int MESSAGE_TTL_MS = 5000;
 
     @Bean
     public DirectExchange routingExchange() {
@@ -27,12 +29,12 @@ public class RoutingConfig {
 
     @Bean
     public Queue routingQueueAll() {
-        return new Queue(QUEUE_ALL, true);
+        return QueueBuilder.durable(QUEUE_ALL).ttl(MESSAGE_TTL_MS).build();
     }
 
     @Bean
     public Queue routingQueueError() {
-        return new Queue(QUEUE_ERROR, true);
+        return QueueBuilder.durable(QUEUE_ERROR).ttl(MESSAGE_TTL_MS).build();
     }
 
     @Bean
