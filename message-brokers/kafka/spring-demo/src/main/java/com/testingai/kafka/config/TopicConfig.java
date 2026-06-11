@@ -88,11 +88,11 @@ public class TopicConfig {
     @SuppressWarnings("unchecked")
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
             ConcurrentKafkaListenerContainerFactoryConfigurer configurer,
-            @Qualifier("kafkaConsumerFactory") ConsumerFactory<String, String> consumerFactory) {
+            @Qualifier("kafkaConsumerFactory") ConsumerFactory<Object, Object> consumerFactory) {
         var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
         configurer.configure(
                 (ConcurrentKafkaListenerContainerFactory<Object, Object>) (ConcurrentKafkaListenerContainerFactory<?, ?>) factory,
-                (ConsumerFactory<Object, Object>) (ConsumerFactory<?, ?>) consumerFactory);
+                consumerFactory);
         factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(500L, 2L)));
         return factory;
     }
