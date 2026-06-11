@@ -63,6 +63,104 @@ mvn gatling:test
 
 HTML report: `target/gatling/<timestamp>/index.html`
 
+## Architecture
+
+### Cluster topology
+
+Three RabbitMQ nodes form a cluster via Docker Compose. The Spring Boot app connects to `rabbitmq1`; quorum queues replicate their data across all three nodes using Raft consensus.
+
+```mermaid
+graph LR
+    App["Spring Boot App\n:8080"]
+    UI["Management UI\n:15672"]
+
+    subgraph cluster["Docker Compose Network"]
+        N1["rabbitmq1\n:5672 · :15672\n(seed)"]
+        N2["rabbitmq2\n:5673 · :15673"]
+        N3["rabbitmq3\n:5674 · :15674"]
+        N1 <-->|Raft| N2
+        N1 <-->|Raft| N3
+        N2 <-->|Raft| N3
+    end
+
+    App -->|AMQP :5672| N1
+    UI --> N1
+
+    subgraph quorum["Quorum queues — replicated across all nodes"]
+        Q1["work.queue"]
+        Q2["routing.queue.all"]
+        Q3["routing.queue.error"]
+    end
+
+    subgraph classic["Classic queues — single node"]
+        Q4["simple.queue"]
+        Q5["pubsub.queue.a/b"]
+        Q6["pubsub.retry.queue.a/b"]
+    end
+
+    cluster --- quorum
+    cluster --- classic
+```
+
+### Messaging patterns and retry flows
+
+```mermaid
+flowchart LR
+    REST(["REST API\n:8080"])
+
+    subgraph sp["Simple Pattern"]
+        SQ[("simple.queue\nclassic · TTL 5s")]
+        SC["SimpleConsumer"]
+        SQ --> SC
+        SC -->|"fail · nack requeue=true\n(first attempt only)"| SQ
+    end
+
+    subgraph wp["Work Queue Pattern"]
+        WQ[("work.queue\nquorum · TTL 5s\nx-delivery-limit=3")]
+        W1["Worker 1"]
+        W2["Worker 2"]
+        WQ --> W1
+        WQ --> W2
+        W1 -->|"fail · nack requeue=true"| WQ
+        W2 -->|"fail · nack requeue=true"| WQ
+    end
+
+    subgraph ps["Pub/Sub Pattern"]
+        FX{{"pubsub.fanout"}}
+        QA[("pubsub.queue.a\nclassic · TTL 5s")]
+        QB[("pubsub.queue.b\nclassic · TTL 5s")]
+        RA[("pubsub.retry.queue.a\nTTL 2s")]
+        RB[("pubsub.retry.queue.b\nTTL 2s")]
+        CA["ConsumerA"]
+        CB["ConsumerB"]
+        FX --> QA --> CA
+        FX --> QB --> CB
+        CA -->|"fail · nack requeue=false"| RA
+        RA -->|"DLX after 2s"| QA
+        CB -->|"fail · nack requeue=false"| RB
+        RB -->|"DLX after 2s"| QB
+    end
+
+    subgraph rp["Routing Pattern"]
+        DX{{"routing.direct"}}
+        QALL[("routing.queue.all\nquorum · x-delivery-limit=3")]
+        QERR[("routing.queue.error\nquorum · x-delivery-limit=3")]
+        RALL["ReceiveAll"]
+        RERR["ReceiveError"]
+        DX -->|"info / warning / error"| QALL
+        DX -->|"error"| QERR
+        QALL --> RALL
+        QERR --> RERR
+        RALL -->|"fail · nack requeue=true"| QALL
+        RERR -->|"fail · nack requeue=true"| QERR
+    end
+
+    REST -->|"POST /demo/simple"| SQ
+    REST -->|"POST /demo/work"| WQ
+    REST -->|"POST /demo/pubsub"| FX
+    REST -->|"POST /demo/routing"| DX
+```
+
 ## Queue characteristics
 
 Each queue is declared durable (survives broker restart) with a 5-second message TTL. Consumers use manual acknowledgment — messages are only removed from the queue after an explicit `basicAck`.
