@@ -16,6 +16,7 @@ import com.testingai.redis.fanout.FanoutConsumerA;
 import com.testingai.redis.fanout.FanoutConsumerB;
 import com.testingai.redis.pending.PendingConsumer;
 import com.testingai.redis.simple.SimpleConsumer;
+import com.testingai.redis.trimming.TrimmingConsumer;
 import com.testingai.redis.workqueue.WorkQueueConsumer;
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
@@ -98,6 +99,15 @@ public class RedisConfig {
     public FanoutConsumerB fanoutConsumerB(
             StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
         return new FanoutConsumerB(container);
+    }
+
+    @Bean
+    public TrimmingConsumer trimmingConsumer(
+            RedisTemplate<String, String> redisTemplate,
+            StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
+        var consumer = new TrimmingConsumer(redisTemplate);
+        consumer.registerWith(container);
+        return consumer;
     }
 
     @Bean
