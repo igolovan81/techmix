@@ -12,6 +12,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer.StreamMessageListenerContainerOptions;
 
+import com.testingai.redis.simple.SimpleConsumer;
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import java.util.List;
@@ -56,6 +57,12 @@ public class RedisConfig {
                 .create(connectionFactory, options);
         container.start();
         return container;
+    }
+
+    @Bean
+    public SimpleConsumer simpleConsumer(
+            StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
+        return new SimpleConsumer(container);
     }
 
     @Bean
