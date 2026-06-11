@@ -82,17 +82,27 @@ public class TopicConfig {
         return TopicBuilder.name(STREAMS_WORDCOUNT_OUTPUT).partitions(3).replicas(replicationFactor).build();
     }
 
+    // ── Default consumer factory ────────────────────────────────────────────
+    // Declared explicitly because @ConditionalOnMissingBean(ConsumerFactory.class)
+    // in Spring Boot auto-config is satisfied by readCommittedConsumerFactory,
+    // so the auto-configured kafkaConsumerFactory bean would never be created.
+
+    @Bean
+    public ConsumerFactory<String, String> kafkaConsumerFactory(KafkaProperties kafkaProperties) {
+        return new DefaultKafkaConsumerFactory<>(kafkaProperties.buildConsumerProperties(null));
+    }
+
     // ── Default listener container factory (with retry) ────────────────────
 
     @Bean
     @SuppressWarnings("unchecked")
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
             ConcurrentKafkaListenerContainerFactoryConfigurer configurer,
-            @Qualifier("kafkaConsumerFactory") ConsumerFactory<Object, Object> consumerFactory) {
+            @Qualifier("kafkaConsumerFactory") ConsumerFactory<String, String> consumerFactory) {
         var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
         configurer.configure(
                 (ConcurrentKafkaListenerContainerFactory<Object, Object>) (ConcurrentKafkaListenerContainerFactory<?, ?>) factory,
-                consumerFactory);
+                (ConsumerFactory<Object, Object>) (ConsumerFactory<?, ?>) consumerFactory);
         factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(500L, 2L)));
         return factory;
     }
