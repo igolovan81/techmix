@@ -48,8 +48,9 @@ public class RedisConfig {
     public StreamMessageListenerContainer<String, MapRecord<String, String, String>>
             streamListenerContainer() {
         var options = StreamMessageListenerContainerOptions
-                .builder()
+                .<String, MapRecord<String, String, String>>builder()
                 .pollTimeout(Duration.ofMillis(100))
+                .serializer(new StringRedisSerializer())
                 .build();
         var container = StreamMessageListenerContainer
                 .create(connectionFactory, options);
@@ -82,8 +83,9 @@ public class RedisConfig {
                         .createGroup(stream, ReadOffset.from("$"), group);
                 log.info("Created consumer group '{}' on '{}'", group, stream);
             } catch (Exception e) {
-                if (e.getMessage() != null && e.getMessage().contains("BUSYGROUP")) {
-                    log.debug("Consumer group '{}' on '{}' already exists", group, stream);
+                String msg = e.getMessage();
+                if (msg != null && (msg.contains("BUSYGROUP") || msg.contains("ERR"))) {
+                    log.debug("Consumer group '{}' on '{}' — skipped: {}", group, stream, msg);
                 } else {
                     throw e;
                 }
