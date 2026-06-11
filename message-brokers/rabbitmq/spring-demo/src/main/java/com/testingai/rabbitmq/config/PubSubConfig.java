@@ -1,9 +1,12 @@
 package com.testingai.rabbitmq.config;
 
+import org.springframework.amqp.core.AcknowledgeMode;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -37,5 +40,13 @@ public class PubSubConfig {
     @Bean
     public Binding bindingB(FanoutExchange pubSubExchange, Queue pubSubQueueB) {
         return BindingBuilder.bind(pubSubQueueB).to(pubSubExchange);
+    }
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory pubSubContainerFactory(ConnectionFactory connectionFactory) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+        return factory;
     }
 }
