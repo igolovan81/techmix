@@ -5,6 +5,7 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +17,7 @@ public class PubSubConfig {
     public static final String EXCHANGE_NAME = "pubsub.fanout";
     public static final String QUEUE_A = "pubsub.queue.a";
     public static final String QUEUE_B = "pubsub.queue.b";
+    public static final int MESSAGE_TTL_MS = 5000;
 
     @Bean
     public FanoutExchange pubSubExchange() {
@@ -24,12 +26,12 @@ public class PubSubConfig {
 
     @Bean
     public Queue pubSubQueueA() {
-        return new Queue(QUEUE_A, true);
+        return QueueBuilder.durable(QUEUE_A).ttl(MESSAGE_TTL_MS).build();
     }
 
     @Bean
     public Queue pubSubQueueB() {
-        return new Queue(QUEUE_B, true);
+        return QueueBuilder.durable(QUEUE_B).ttl(MESSAGE_TTL_MS).build();
     }
 
     @Bean
