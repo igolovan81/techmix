@@ -14,6 +14,7 @@ import org.springframework.data.redis.stream.StreamMessageListenerContainer.Stre
 
 import com.testingai.redis.fanout.FanoutConsumerA;
 import com.testingai.redis.fanout.FanoutConsumerB;
+import com.testingai.redis.pending.PendingConsumer;
 import com.testingai.redis.simple.SimpleConsumer;
 import com.testingai.redis.workqueue.WorkQueueConsumer;
 import jakarta.annotation.PostConstruct;
@@ -73,6 +74,15 @@ public class RedisConfig {
             RedisTemplate<String, String> redisTemplate,
             StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
         var consumer = new WorkQueueConsumer(redisTemplate);
+        consumer.registerWith(container);
+        return consumer;
+    }
+
+    @Bean
+    public PendingConsumer pendingConsumer(
+            RedisTemplate<String, String> redisTemplate,
+            StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
+        var consumer = new PendingConsumer(redisTemplate);
         consumer.registerWith(container);
         return consumer;
     }
