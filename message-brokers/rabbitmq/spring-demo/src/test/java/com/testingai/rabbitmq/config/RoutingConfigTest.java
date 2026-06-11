@@ -20,4 +20,16 @@ class RoutingConfigTest {
         Queue queue = config.routingQueueError();
         assertThat(queue.getArguments()).containsEntry("x-message-ttl", 5000);
     }
+
+    @Test
+    void routingQueueAll_shouldHaveDeliveryLimitOf3() {
+        Queue queue = config.routingQueueAll();
+        assertThat(queue.getArguments()).containsEntry("x-delivery-limit", 3);
+    }
+
+    @Test
+    void routingQueueError_shouldHaveDeliveryLimitOf3() {
+        Queue queue = config.routingQueueError();
+        assertThat(queue.getArguments()).containsEntry("x-delivery-limit", 3);
+    }
 }

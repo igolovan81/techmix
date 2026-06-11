@@ -21,6 +21,7 @@ public class RoutingConfig {
     public static final String KEY_WARNING = "warning";
     public static final String KEY_ERROR = "error";
     public static final int MESSAGE_TTL_MS = 5000;
+    public static final int DELIVERY_LIMIT = 3;
 
     @Bean
     public DirectExchange routingExchange() {
@@ -29,12 +30,12 @@ public class RoutingConfig {
 
     @Bean
     public Queue routingQueueAll() {
-        return QueueBuilder.durable(QUEUE_ALL).ttl(MESSAGE_TTL_MS).build();
+        return QueueBuilder.durable(QUEUE_ALL).quorum().deliveryLimit(DELIVERY_LIMIT).ttl(MESSAGE_TTL_MS).build();
     }
 
     @Bean
     public Queue routingQueueError() {
-        return QueueBuilder.durable(QUEUE_ERROR).ttl(MESSAGE_TTL_MS).build();
+        return QueueBuilder.durable(QUEUE_ERROR).quorum().deliveryLimit(DELIVERY_LIMIT).ttl(MESSAGE_TTL_MS).build();
     }
 
     @Bean
