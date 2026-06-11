@@ -29,7 +29,7 @@ class FailureSimulatorTest {
                 caught = e;
             }
         }
-        assertThat(caught).isNotNull();
+        assertThat(caught).as("Expected at least one RuntimeException in 1000 calls at 5% failure rate").isNotNull();
         assertThat(caught.getMessage()).contains("myContext");
     }
 }
