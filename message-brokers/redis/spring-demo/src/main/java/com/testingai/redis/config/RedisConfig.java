@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+
 import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.connection.stream.ReadOffset;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -143,8 +144,10 @@ public class RedisConfig {
                 log.info("Created consumer group '{}' on '{}'", group, stream);
             } catch (Exception e) {
                 String msg = e.getMessage();
-                if (msg != null && (msg.contains("BUSYGROUP") || msg.contains("ERR"))) {
-                    log.debug("Consumer group '{}' on '{}' — skipped: {}", group, stream, msg);
+                String causeMsg = e.getCause() != null ? e.getCause().getMessage() : "";
+                if ((msg != null && (msg.contains("BUSYGROUP") || msg.contains("ERR")))
+                        || causeMsg.contains("BUSYGROUP")) {
+                    log.debug("Consumer group '{}' on '{}' — skipped: {}", group, stream, causeMsg);
                 } else {
                     throw e;
                 }

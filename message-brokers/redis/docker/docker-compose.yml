@@ -1,24 +1,41 @@
 name: redis-cluster
 
+# Each node binds to a unique internal port (--port 637x) so that
+#   internal bus port (637x+10000 = 1637x) equals the announced bus port.
+# cluster-announce-ip is set to the Docker bridge gateway (subnet.1),
+#   which is the Mac host's IP as seen from inside containers.
+#   Inter-node cluster bus traffic routes: container → gateway:1637x → Docker
+#   port mapping → peer container's bus port. This works on any Mac Docker setup.
+
 services:
   redis1:
     image: redis:7.4
     container_name: redis1
     ports:
       - "6379:6379"
-    command: >
-      redis-server
-      --cluster-enabled yes
-      --cluster-config-file nodes.conf
-      --cluster-node-timeout 5000
-      --cluster-announce-ip 127.0.0.1
-      --cluster-announce-port 6379
-      --cluster-announce-bus-port 16379
-      --appendonly yes
+      - "16379:16379"
+    command:
+      - sh
+      - -c
+      - >
+        MY_IP=$$(hostname -I | awk '{print $$1}');
+        HOST_IP=$$(echo $$MY_IP | awk -F. '{print $$1"."$$2"."$$3".1"}');
+        exec redis-server
+        --port 6379
+        --cluster-enabled yes
+        --cluster-config-file /data/nodes.conf
+        --cluster-node-timeout 5000
+        --cluster-announce-ip $$HOST_IP
+        --cluster-announce-port 6379
+        --cluster-announce-bus-port 16379
+        --appendonly yes
+        --dir /data
+    volumes:
+      - redis1-data:/data
     networks:
       - redis_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6379", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -27,20 +44,30 @@ services:
     image: redis:7.4
     container_name: redis2
     ports:
-      - "6380:6379"
-    command: >
-      redis-server
-      --cluster-enabled yes
-      --cluster-config-file nodes.conf
-      --cluster-node-timeout 5000
-      --cluster-announce-ip 127.0.0.1
-      --cluster-announce-port 6380
-      --cluster-announce-bus-port 16380
-      --appendonly yes
+      - "6380:6380"
+      - "16380:16380"
+    command:
+      - sh
+      - -c
+      - >
+        MY_IP=$$(hostname -I | awk '{print $$1}');
+        HOST_IP=$$(echo $$MY_IP | awk -F. '{print $$1"."$$2"."$$3".1"}');
+        exec redis-server
+        --port 6380
+        --cluster-enabled yes
+        --cluster-config-file /data/nodes.conf
+        --cluster-node-timeout 5000
+        --cluster-announce-ip $$HOST_IP
+        --cluster-announce-port 6380
+        --cluster-announce-bus-port 16380
+        --appendonly yes
+        --dir /data
+    volumes:
+      - redis2-data:/data
     networks:
       - redis_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6380", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -49,20 +76,30 @@ services:
     image: redis:7.4
     container_name: redis3
     ports:
-      - "6381:6379"
-    command: >
-      redis-server
-      --cluster-enabled yes
-      --cluster-config-file nodes.conf
-      --cluster-node-timeout 5000
-      --cluster-announce-ip 127.0.0.1
-      --cluster-announce-port 6381
-      --cluster-announce-bus-port 16381
-      --appendonly yes
+      - "6381:6381"
+      - "16381:16381"
+    command:
+      - sh
+      - -c
+      - >
+        MY_IP=$$(hostname -I | awk '{print $$1}');
+        HOST_IP=$$(echo $$MY_IP | awk -F. '{print $$1"."$$2"."$$3".1"}');
+        exec redis-server
+        --port 6381
+        --cluster-enabled yes
+        --cluster-config-file /data/nodes.conf
+        --cluster-node-timeout 5000
+        --cluster-announce-ip $$HOST_IP
+        --cluster-announce-port 6381
+        --cluster-announce-bus-port 16381
+        --appendonly yes
+        --dir /data
+    volumes:
+      - redis3-data:/data
     networks:
       - redis_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6381", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -71,20 +108,30 @@ services:
     image: redis:7.4
     container_name: redis4
     ports:
-      - "6382:6379"
-    command: >
-      redis-server
-      --cluster-enabled yes
-      --cluster-config-file nodes.conf
-      --cluster-node-timeout 5000
-      --cluster-announce-ip 127.0.0.1
-      --cluster-announce-port 6382
-      --cluster-announce-bus-port 16382
-      --appendonly yes
+      - "6382:6382"
+      - "16382:16382"
+    command:
+      - sh
+      - -c
+      - >
+        MY_IP=$$(hostname -I | awk '{print $$1}');
+        HOST_IP=$$(echo $$MY_IP | awk -F. '{print $$1"."$$2"."$$3".1"}');
+        exec redis-server
+        --port 6382
+        --cluster-enabled yes
+        --cluster-config-file /data/nodes.conf
+        --cluster-node-timeout 5000
+        --cluster-announce-ip $$HOST_IP
+        --cluster-announce-port 6382
+        --cluster-announce-bus-port 16382
+        --appendonly yes
+        --dir /data
+    volumes:
+      - redis4-data:/data
     networks:
       - redis_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6382", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -93,20 +140,30 @@ services:
     image: redis:7.4
     container_name: redis5
     ports:
-      - "6383:6379"
-    command: >
-      redis-server
-      --cluster-enabled yes
-      --cluster-config-file nodes.conf
-      --cluster-node-timeout 5000
-      --cluster-announce-ip 127.0.0.1
-      --cluster-announce-port 6383
-      --cluster-announce-bus-port 16383
-      --appendonly yes
+      - "6383:6383"
+      - "16383:16383"
+    command:
+      - sh
+      - -c
+      - >
+        MY_IP=$$(hostname -I | awk '{print $$1}');
+        HOST_IP=$$(echo $$MY_IP | awk -F. '{print $$1"."$$2"."$$3".1"}');
+        exec redis-server
+        --port 6383
+        --cluster-enabled yes
+        --cluster-config-file /data/nodes.conf
+        --cluster-node-timeout 5000
+        --cluster-announce-ip $$HOST_IP
+        --cluster-announce-port 6383
+        --cluster-announce-bus-port 16383
+        --appendonly yes
+        --dir /data
+    volumes:
+      - redis5-data:/data
     networks:
       - redis_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6383", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -115,20 +172,30 @@ services:
     image: redis:7.4
     container_name: redis6
     ports:
-      - "6384:6379"
-    command: >
-      redis-server
-      --cluster-enabled yes
-      --cluster-config-file nodes.conf
-      --cluster-node-timeout 5000
-      --cluster-announce-ip 127.0.0.1
-      --cluster-announce-port 6384
-      --cluster-announce-bus-port 16384
-      --appendonly yes
+      - "6384:6384"
+      - "16384:16384"
+    command:
+      - sh
+      - -c
+      - >
+        MY_IP=$$(hostname -I | awk '{print $$1}');
+        HOST_IP=$$(echo $$MY_IP | awk -F. '{print $$1"."$$2"."$$3".1"}');
+        exec redis-server
+        --port 6384
+        --cluster-enabled yes
+        --cluster-config-file /data/nodes.conf
+        --cluster-node-timeout 5000
+        --cluster-announce-ip $$HOST_IP
+        --cluster-announce-port 6384
+        --cluster-announce-bus-port 16384
+        --appendonly yes
+        --dir /data
+    volumes:
+      - redis6-data:/data
     networks:
       - redis_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-p", "6384", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -151,8 +218,8 @@ services:
         condition: service_healthy
     command: >
       redis-cli --cluster create
-        redis1:6379 redis2:6379 redis3:6379
-        redis4:6379 redis5:6379 redis6:6379
+        redis1:6379 redis2:6380 redis3:6381
+        redis4:6382 redis5:6383 redis6:6384
         --cluster-replicas 1 --cluster-yes
     networks:
       - redis_network
@@ -170,3 +237,11 @@ services:
 networks:
   redis_network:
     driver: bridge
+
+volumes:
+  redis1-data:
+  redis2-data:
+  redis3-data:
+  redis4-data:
+  redis5-data:
+  redis6-data:
