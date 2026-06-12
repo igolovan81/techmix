@@ -1,0 +1,23 @@
+name: sqs-localstack
+
+services:
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs,sns
+      - DEFAULT_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - ./init-queues.sh:/etc/localstack/init/ready.d/init-queues.sh
+      - localstack-data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD", "awslocal", "sqs", "list-queues"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  localstack-data:

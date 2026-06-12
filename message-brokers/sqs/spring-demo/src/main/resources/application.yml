@@ -1,0 +1,20 @@
+server:
+  port: 8081
+
+spring:
+  cloud:
+    aws:
+      region:
+        static: us-east-1
+      credentials:
+        access-key: test
+        secret-key: test
+      sqs:
+        endpoint: http://localhost:4566
+      sns:
+        endpoint: http://localhost:4566
+
+logging:
+  level:
+    com.testingai: INFO
+    io.awspring.cloud.sqs: WARN
