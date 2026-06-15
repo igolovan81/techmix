@@ -1,0 +1,14 @@
+server:
+  port: 8082
+
+spring:
+  cloud:
+    azure:
+      servicebus:
+        connection-string: "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+
+logging:
+  level:
+    com.testingai: INFO
+    com.azure.messaging.servicebus: WARN
+    com.azure.core: WARN
