@@ -8,6 +8,7 @@ This repository contains runnable demos for four messaging technologies. Each de
 | [RabbitMQ](rabbitmq/) | 3-node quorum cluster | Task queues, complex routing, protocol flexibility |
 | [Redis Streams](redis/) | 6-node cluster | Lightweight queuing when Redis is already in the stack |
 | [Amazon SQS](sqs/) | LocalStack (SQS + SNS) | Managed cloud queuing in AWS workloads |
+| [Azure Service Bus](azure-service-bus/) | Service Bus Emulator | Enterprise messaging on Azure with sessions, transactions, SQL filters |
 
 ---
 
@@ -61,6 +62,19 @@ This repository contains runnable demos for four messaging technologies. Each de
 
 ---
 
+### Use Azure Service Bus when
+
+- **Running on Azure and need enterprise messaging guarantees.** Service Bus is the native Azure messaging backbone with SLA-backed delivery, geo-redundancy, and integration with Azure Event Grid, Logic Apps, and Azure Functions.
+- **Strict FIFO within a logical group is required.** Sessions (`RequiresSession=true`) guarantee ordered, exclusive delivery per `sessionId` — orders, workflow steps, or user-action sequences without a separate coordination layer.
+- **Content-based routing with SQL semantics.** Subscription filter rules evaluate SQL expressions against message application properties (`level = 'error'`). More expressive than SNS filter policies, simpler to operate than RabbitMQ exchanges for Azure shops.
+- **Atomic multi-message sends are critical.** `ServiceBusTransactionContext` wraps multiple `sendMessage` calls in a single AMQP transaction — commit or rollback as a unit without an external coordinator.
+- **Built-in dead-lettering with zero configuration.** Every queue and subscription ships with a dead-letter sub-queue. `MaxDeliveryCount` triggers automatic DLQ routing; no extra infrastructure or application code needed.
+- **Large message payloads or long lock durations.** Service Bus supports up to 256 KB (1 MB in Premium tier) and configurable `LockDuration` — better than SQS's hard 256 KB / 12-hour limits for some workloads.
+
+**Avoid Azure Service Bus when** you are not on Azure, need message replay (Service Bus deletes after consumption like SQS), require sub-millisecond latency, or need stream processing (use Kafka or Event Hubs instead).
+
+---
+
 ## Messaging patterns
 
 ### Simple queue
@@ -75,6 +89,7 @@ One producer, one consumer. Point-to-point delivery. The consumer removes the me
 | RabbitMQ | Classic queue, single consumer |
 | Redis Streams | `XREAD` without a consumer group |
 | SQS | Standard queue, single listener |
+| Azure Service Bus | Single queue, single `ServiceBusProcessorClient` |
 
 ---
 
@@ -90,6 +105,7 @@ Multiple consumers share a single queue; each message is delivered to exactly on
 | RabbitMQ | Quorum queue, multiple consumers with `prefetch=1` |
 | Redis Streams | Consumer group (`XREADGROUP`) — each member receives different entries |
 | SQS | Standard queue, multiple `@SqsListener` beans compete for messages |
+| Azure Service Bus | Multiple `ServiceBusProcessorClient` instances on the same queue compete natively |
 
 **Key difference:** Kafka work queues are partition-bound — parallelism is capped at the partition count. RabbitMQ and SQS do not have this constraint; you can add consumers freely without reconfiguring the queue.
 
@@ -107,6 +123,7 @@ One message is delivered to all subscribers independently. Each subscriber maint
 | RabbitMQ | Fanout exchange bound to multiple queues |
 | Redis Streams | Multiple consumer groups on the same stream |
 | SQS | SNS topic fan-out to multiple SQS queues |
+| Azure Service Bus | Topic + multiple subscriptions (TrueFilter); each subscription gets a copy |
 
 **Key difference:** Kafka and Redis Streams maintain per-group offsets so late subscribers can catch up. RabbitMQ and SQS deliver only messages published after the subscriber binds — missed messages are not replayed.
 
@@ -124,6 +141,7 @@ Messages are routed to different consumers based on attributes — a routing key
 | RabbitMQ | Direct or topic exchange with routing keys; broker makes the decision |
 | Redis Streams | Application-level — consumer filters by message fields |
 | SQS | SNS filter policies on subscriptions |
+| Azure Service Bus | Topic subscription SQL filter rules evaluated by the broker |
 
 **Key difference:** RabbitMQ is the most expressive — topic exchanges support wildcard routing keys (`logs.*.error`). Kafka partitioning is ordering-focused, not routing-focused.
 
@@ -141,6 +159,7 @@ A batch of messages is published or consumed atomically — either all succeed o
 | RabbitMQ | Publisher confirms + consumer acknowledgment (at-least-once; idempotency still needed) |
 | Redis Streams | `MULTI`/`EXEC` for local atomicity; no distributed transaction support |
 | SQS | FIFO queues offer exactly-once within a deduplication window (content-based dedup) |
+| Azure Service Bus | `ServiceBusTransactionContext` — atomic multi-message send, commit or rollback |
 
 **Key difference:** Kafka is the only broker here with native distributed exactly-once guarantees spanning multiple partitions and topics.
 
@@ -158,6 +177,7 @@ Messages that fail processing repeatedly are moved to a separate queue for inspe
 | RabbitMQ | DLX (dead-letter exchange) + `x-delivery-limit` on quorum queues |
 | Redis Streams | Application-level — move entries from PEL to a dedicated error stream after N reclaims |
 | SQS | `maxReceiveCount` on source queue + separate DLQ ARN; fully automatic |
+| Azure Service Bus | `MaxDeliveryCount` on queue/subscription → automatic DLQ sub-queue; zero config |
 
 **Key difference:** SQS handles the DLQ routing automatically with zero application code. All other brokers require some configuration or application logic.
 
@@ -175,6 +195,7 @@ Messages are delivered in the exact order they were produced, within a logical g
 | RabbitMQ | Single-consumer classic queue (ordering is lost with multiple consumers or quorum queues under failure) |
 | Redis Streams | Stream entries are ordered by ID; consumer groups read in insertion order |
 | SQS | FIFO queue with `MessageGroupId`; in-order per group, parallel across groups |
+| Azure Service Bus | Sessions (`RequiresSession=true`) — exclusive ordered delivery per `sessionId` |
 
 **Key difference:** Kafka and SQS FIFO are the two production-grade choices for ordered-at-scale delivery. Kafka ordering is partition-scoped; SQS FIFO ordering is group-scoped and fully managed.
 
@@ -192,6 +213,7 @@ The broker retains only the most recent record for each key. Older records with 
 | RabbitMQ | Not supported natively |
 | Redis Streams | Not applicable — use Redis Hashes/Strings for key-value semantics |
 | SQS | Not supported |
+| Azure Service Bus | Not supported — use Azure Cosmos DB or Azure Cache for Redis instead |
 
 **Kafka is the only broker in this set with native log compaction.**
 
@@ -209,6 +231,7 @@ Real-time stateful transformations, aggregations, and joins over a continuous ev
 | RabbitMQ | No native stream processing; requires an external engine (Flink, Spark) |
 | Redis Streams | Application-level aggregation in the consumer; no windowing or join primitives |
 | SQS | No native stream processing; requires Lambda or Kinesis Data Analytics |
+| Azure Service Bus | No native stream processing; use Azure Stream Analytics or Azure Functions |
 
 **Kafka Streams is the only embedded stream processing engine in this set.**
 
@@ -216,18 +239,19 @@ Real-time stateful transformations, aggregations, and joins over a continuous ev
 
 ## Quick decision matrix
 
-| Need | Kafka | RabbitMQ | Redis Streams | SQS |
-|---|:---:|:---:|:---:|:---:|
-| Very high throughput (>100k msg/s) | ✓ | — | ✓ | ✓ |
-| Message replay / audit log | ✓ | — | limited | — |
-| Complex routing (wildcards, headers) | — | ✓ | — | limited |
-| Managed / no-ops | — | — | — | ✓ |
-| Exactly-once delivery | ✓ | — | — | FIFO only |
-| Strict ordering at scale | ✓ | — | ✓ | FIFO |
-| Log compaction | ✓ | — | — | — |
-| Built-in stream processing | ✓ | — | — | — |
-| Protocol flexibility (MQTT, STOMP) | — | ✓ | — | — |
-| Sub-millisecond latency | — | — | ✓ | — |
-| Dead-letter queue (automatic) | config | config | manual | ✓ |
-| Already in AWS | — | — | — | ✓ |
-| Already have Redis | — | — | ✓ | — |
+| Need | Kafka | RabbitMQ | Redis Streams | SQS | Azure Service Bus |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Very high throughput (>100k msg/s) | ✓ | — | ✓ | ✓ | — |
+| Message replay / audit log | ✓ | — | limited | — | — |
+| Complex routing (wildcards, headers) | — | ✓ | — | limited | SQL filters |
+| Managed / no-ops | — | — | — | ✓ | ✓ |
+| Exactly-once delivery | ✓ | — | — | FIFO only | tx send |
+| Strict ordering at scale | ✓ | — | ✓ | FIFO | sessions |
+| Log compaction | ✓ | — | — | — | — |
+| Built-in stream processing | ✓ | — | — | — | — |
+| Protocol flexibility (MQTT, STOMP) | — | ✓ | — | — | — |
+| Sub-millisecond latency | — | — | ✓ | — | — |
+| Dead-letter queue (automatic) | config | config | manual | ✓ | ✓ |
+| Already in AWS | — | — | — | ✓ | — |
+| Already in Azure | — | — | — | — | ✓ |
+| Already have Redis | — | — | ✓ | — | — |
