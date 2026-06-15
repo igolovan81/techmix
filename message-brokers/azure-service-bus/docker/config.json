@@ -3,119 +3,117 @@
     "Namespaces": [
       {
         "Name": "sbemulatorns",
-        "Entities": {
-          "Queues": [
-            {
-              "Name": "simple-queue",
-              "Properties": {
-                "DeadLetteringOnMessageExpiration": false,
-                "DefaultMessageTimeToLive": "PT1H",
-                "LockDuration": "PT1M",
-                "MaxDeliveryCount": 10,
-                "RequiresSession": false
-              }
-            },
-            {
-              "Name": "work-queue",
-              "Properties": {
-                "DeadLetteringOnMessageExpiration": false,
-                "DefaultMessageTimeToLive": "PT1H",
-                "LockDuration": "PT1M",
-                "MaxDeliveryCount": 10,
-                "RequiresSession": false
-              }
-            },
-            {
-              "Name": "dlq-queue",
-              "Properties": {
-                "DeadLetteringOnMessageExpiration": false,
-                "DefaultMessageTimeToLive": "PT1H",
-                "LockDuration": "PT30S",
-                "MaxDeliveryCount": 3,
-                "RequiresSession": false
-              }
-            },
-            {
-              "Name": "session-queue",
-              "Properties": {
-                "DeadLetteringOnMessageExpiration": false,
-                "DefaultMessageTimeToLive": "PT1H",
-                "LockDuration": "PT1M",
-                "MaxDeliveryCount": 10,
-                "RequiresSession": true
-              }
-            },
-            {
-              "Name": "tx-queue",
-              "Properties": {
-                "DeadLetteringOnMessageExpiration": false,
-                "DefaultMessageTimeToLive": "PT1H",
-                "LockDuration": "PT1M",
-                "MaxDeliveryCount": 10,
-                "RequiresSession": false
-              }
+        "Queues": [
+          {
+            "Name": "simple-queue",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 10,
+              "RequiresSession": false
             }
-          ],
-          "Topics": [
-            {
-              "Name": "pubsub-topic",
-              "Properties": {
-                "DefaultMessageTimeToLive": "PT1H"
-              },
-              "Subscriptions": [
-                {
-                  "Name": "sub-a",
-                  "Properties": {
-                    "DefaultMessageTimeToLive": "PT1H",
-                    "LockDuration": "PT1M",
-                    "MaxDeliveryCount": 10
-                  }
-                },
-                {
-                  "Name": "sub-b",
-                  "Properties": {
-                    "DefaultMessageTimeToLive": "PT1H",
-                    "LockDuration": "PT1M",
-                    "MaxDeliveryCount": 10
-                  }
-                }
-              ]
+          },
+          {
+            "Name": "work-queue",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 10,
+              "RequiresSession": false
+            }
+          },
+          {
+            "Name": "dlq-queue",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "LockDuration": "PT30S",
+              "MaxDeliveryCount": 3,
+              "RequiresSession": false
+            }
+          },
+          {
+            "Name": "session-queue",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 10,
+              "RequiresSession": true
+            }
+          },
+          {
+            "Name": "tx-queue",
+            "Properties": {
+              "DeadLetteringOnMessageExpiration": false,
+              "DefaultMessageTimeToLive": "PT1H",
+              "LockDuration": "PT1M",
+              "MaxDeliveryCount": 10,
+              "RequiresSession": false
+            }
+          }
+        ],
+        "Topics": [
+          {
+            "Name": "pubsub-topic",
+            "Properties": {
+              "DefaultMessageTimeToLive": "PT1H"
             },
-            {
-              "Name": "routing-topic",
-              "Properties": {
-                "DefaultMessageTimeToLive": "PT1H"
+            "Subscriptions": [
+              {
+                "Name": "sub-a",
+                "Properties": {
+                  "DefaultMessageTimeToLive": "PT1H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 10
+                }
               },
-              "Subscriptions": [
-                {
-                  "Name": "sub-all",
-                  "Properties": {
-                    "DefaultMessageTimeToLive": "PT1H",
-                    "LockDuration": "PT1M",
-                    "MaxDeliveryCount": 10
-                  }
+              {
+                "Name": "sub-b",
+                "Properties": {
+                  "DefaultMessageTimeToLive": "PT1H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 10
+                }
+              }
+            ]
+          },
+          {
+            "Name": "routing-topic",
+            "Properties": {
+              "DefaultMessageTimeToLive": "PT1H"
+            },
+            "Subscriptions": [
+              {
+                "Name": "sub-all",
+                "Properties": {
+                  "DefaultMessageTimeToLive": "PT1H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 10
+                }
+              },
+              {
+                "Name": "sub-error",
+                "Properties": {
+                  "DefaultMessageTimeToLive": "PT1H",
+                  "LockDuration": "PT1M",
+                  "MaxDeliveryCount": 10
                 },
-                {
-                  "Name": "sub-error",
-                  "Properties": {
-                    "DefaultMessageTimeToLive": "PT1H",
-                    "LockDuration": "PT1M",
-                    "MaxDeliveryCount": 10
-                  },
-                  "Rules": [
-                    {
-                      "Name": "error-only",
-                      "Properties": {
-                        "FilterType": "SqlFilter",
-                        "SqlExpression": "level = 'error'"
-                      }
+                "Rules": [
+                  {
+                    "Name": "error-only",
+                    "Properties": {
+                      "FilterType": "SqlFilter",
+                      "SqlExpression": "level = 'error'"
                     }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     ],
     "Logging": {

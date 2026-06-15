@@ -3,6 +3,8 @@ package com.testingai.servicebus.performance;
 import io.gatling.javaapi.core.*;
 import io.gatling.javaapi.http.*;
 
+import java.time.Duration;
+
 import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.*;
 
@@ -10,7 +12,8 @@ public class DemoSimulation extends Simulation {
 
     private final HttpProtocolBuilder httpProtocol = http
             .baseUrl("http://localhost:8082")
-            .acceptHeader("application/json");
+            .acceptHeader("application/json")
+            .responseTimeout(Duration.ofSeconds(15));
 
     private final ScenarioBuilder simple = scenario("Simple Queue")
             .exec(http("simple").post("/api/simple/send").queryParam("message", "perf-message"));
@@ -51,6 +54,7 @@ public class DemoSimulation extends Simulation {
                 dlq.injectOpen(atOnceUsers(10)),
                 session.injectOpen(atOnceUsers(10)),
                 tx.injectOpen(atOnceUsers(10))
-        ).protocols(httpProtocol);
+        ).protocols(httpProtocol)
+         .maxDuration(Duration.ofMinutes(2));
     }
 }
