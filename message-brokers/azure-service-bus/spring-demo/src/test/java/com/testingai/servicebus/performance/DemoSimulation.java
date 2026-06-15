@@ -12,8 +12,7 @@ public class DemoSimulation extends Simulation {
 
     private final HttpProtocolBuilder httpProtocol = http
             .baseUrl("http://localhost:8082")
-            .acceptHeader("application/json")
-            .responseTimeout(Duration.ofSeconds(15));
+            .acceptHeader("application/json");
 
     private final ScenarioBuilder simple = scenario("Simple Queue")
             .exec(http("simple").post("/api/simple/send").queryParam("message", "perf-message"));
