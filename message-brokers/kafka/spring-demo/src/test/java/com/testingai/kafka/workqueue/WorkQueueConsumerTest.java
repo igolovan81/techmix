@@ -19,7 +19,7 @@ class WorkQueueConsumerTest {
     private WorkQueueConsumer consumer;
 
     @Test
-    void worker1_shouldNotThrowOnSuccess() throws InterruptedException {
+    void worker1_shouldNotThrowOnSuccess() {
         try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
             mock.when(() -> FailureSimulator.maybeThrow(anyString())).thenAnswer(inv -> null);
             assertThatCode(() -> consumer.worker1("task")).doesNotThrowAnyException();
@@ -37,7 +37,7 @@ class WorkQueueConsumerTest {
     }
 
     @Test
-    void worker2_shouldNotThrowOnSuccess() throws InterruptedException {
+    void worker2_shouldNotThrowOnSuccess() {
         try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
             mock.when(() -> FailureSimulator.maybeThrow(anyString())).thenAnswer(inv -> null);
             assertThatCode(() -> consumer.worker2("task")).doesNotThrowAnyException();

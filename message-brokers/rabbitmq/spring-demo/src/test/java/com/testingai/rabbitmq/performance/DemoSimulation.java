@@ -10,29 +10,29 @@ import static io.gatling.javaapi.http.HttpDsl.*;
 
 public class DemoSimulation extends Simulation {
 
-    HttpProtocolBuilder httpProtocol = http
+    private final HttpProtocolBuilder httpProtocol = http
             .baseUrl("http://localhost:8080");
 
-    ScenarioBuilder simpleScenario = scenario("Simple Queue")
+    private final ScenarioBuilder simpleScenario = scenario("Simple Queue")
             .exec(http("POST /demo/simple")
                     .post("/demo/simple")
                     .formParam("message", "perf-test")
                     .check(status().is(200)));
 
-    ScenarioBuilder workScenario = scenario("Work Queue")
+    private final ScenarioBuilder workScenario = scenario("Work Queue")
             .exec(http("POST /demo/work (3 msgs)")
                     .post("/demo/work")
                     .formParam("message", "task..")
                     .formParam("count", "3")
                     .check(status().is(200)));
 
-    ScenarioBuilder pubsubScenario = scenario("PubSub")
+    private final ScenarioBuilder pubsubScenario = scenario("PubSub")
             .exec(http("POST /demo/pubsub")
                     .post("/demo/pubsub")
                     .formParam("message", "perf-broadcast")
                     .check(status().is(200)));
 
-    ScenarioBuilder routingScenario = scenario("Routing")
+    private final ScenarioBuilder routingScenario = scenario("Routing")
             .exec(http("POST /demo/routing")
                     .post("/demo/routing")
                     .formParam("key", "info")

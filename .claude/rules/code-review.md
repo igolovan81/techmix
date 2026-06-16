@@ -34,3 +34,61 @@ All modules target Java 21. Flag code that reaches for a pre-modern idiom when a
 | Virtual threads (`Thread.ofVirtual()` / `Executors.newVirtualThreadPerTaskExecutor()`) | manually managed thread pools for I/O-bound work |
 
 Flag only when the older idiom is actually used in modified code — do not flag pre-existing code that was not touched by the PR.
+
+## Unnecessary `toString()` calls
+
+Do not call `.toString()` explicitly when the value is passed to an SLF4J logger placeholder (`{}`), string concatenation, or any context where `toString()` is called implicitly. Flag any of these patterns:
+
+```java
+// bad
+log.info("received: {}", someObject.toString());
+log.warn("value={}", ctx.getMessage().getBody().toString());
+
+// good
+log.info("received: {}", someObject);
+log.warn("value={}", ctx.getMessage().getBody());
+```
+
+Exception: `.toString()` is necessary when the result must be typed as `String` at compile time (e.g. passed to `assertThat(...).isEqualTo(String)` in tests, or assigned to a `String` variable).
+
+## `AutoCloseable` resources in long-running Spring components
+
+`ServiceBusProcessorClient` (and any other `AutoCloseable`) must not be left as a bare local variable in `ApplicationRunner.run()` — the method returns immediately, so `try`-with-resources would close the client before it can process anything.
+
+The correct pattern for long-running processors in a Spring component:
+
+```java
+// store as field, close on context shutdown
+private ServiceBusProcessorClient processorClient;
+
+@Override
+public void run(ApplicationArguments args) {
+    processorClient = clientBuilder.processor()...buildProcessorClient();
+    processorClient.start();
+}
+
+@PreDestroy
+public void close() {
+    processorClient.close();
+}
+```
+
+- Use `@PreDestroy` (from `jakarta.annotation`) to close the client when the Spring context shuts down.
+- If a single component owns multiple processor clients, declare a separate field for each and close all of them in `@PreDestroy`.
+- Do **not** declare the client as a local variable inside `run()` without immediately wrapping it in `try`-with-resources.
+
+## Field modifiers — `private final`
+
+All instance fields that are assigned once (at declaration or in the constructor) and never reassigned must be declared `private final`. This applies everywhere, including Gatling `Simulation` subclasses where `HttpProtocolBuilder` and `ScenarioBuilder` fields are commonly left package-private and non-final by mistake:
+
+```java
+// bad
+HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8080");
+ScenarioBuilder simpleScenario = scenario("Simple").exec(...);
+
+// good
+private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8080");
+private final ScenarioBuilder simpleScenario = scenario("Simple").exec(...);
+```
+
+Fields that are assigned in `@PostConstruct` / `ApplicationRunner.run()` / `@PreDestroy` lifecycle methods (like processor clients) are exempt from `final` but must still be `private`.

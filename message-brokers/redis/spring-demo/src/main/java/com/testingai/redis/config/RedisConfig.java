@@ -59,7 +59,7 @@ public class RedisConfig {
     public StreamMessageListenerContainer<String, MapRecord<String, String, String>>
             streamListenerContainer() {
         var options = StreamMessageListenerContainerOptions
-                .<String, MapRecord<String, String, String>>builder()
+                .builder()
                 .pollTimeout(Duration.ofMillis(100))
                 .serializer(new StringRedisSerializer())
                 .build();
