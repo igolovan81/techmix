@@ -18,29 +18,33 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TransactionalProducerTest {
 
-    @Mock private ServiceBusClientBuilder clientBuilder;
-    @Mock private ServiceBusClientBuilder.ServiceBusSenderClientBuilder senderClientBuilder;
-    @Mock private ServiceBusSenderClient senderClient;
-    @Mock private ServiceBusTransactionContext txContext;
+	@Mock
+	private ServiceBusClientBuilder clientBuilder;
+	@Mock
+	private ServiceBusClientBuilder.ServiceBusSenderClientBuilder senderClientBuilder;
+	@Mock
+	private ServiceBusSenderClient senderClient;
+	@Mock
+	private ServiceBusTransactionContext txContext;
 
-    private TransactionalProducer producer;
+	private TransactionalProducer producer;
 
-    @BeforeEach
-    void setUp() {
-        when(clientBuilder.sender()).thenReturn(senderClientBuilder);
-        when(senderClientBuilder.queueName(EntityNames.TX_QUEUE)).thenReturn(senderClientBuilder);
-        when(senderClientBuilder.buildClient()).thenReturn(senderClient);
-        when(senderClient.createTransaction()).thenReturn(txContext);
-        producer = new TransactionalProducer(clientBuilder);
-    }
+	@BeforeEach
+	void setUp() {
+		when(clientBuilder.sender()).thenReturn(senderClientBuilder);
+		when(senderClientBuilder.queueName(EntityNames.TX_QUEUE)).thenReturn(senderClientBuilder);
+		when(senderClientBuilder.buildClient()).thenReturn(senderClient);
+		when(senderClient.createTransaction()).thenReturn(txContext);
+		producer = new TransactionalProducer(clientBuilder);
+	}
 
-    @Test
-    void send_shouldCommitAllMessagesInOneTransaction() {
-        producer.send("hello", 3);
+	@Test
+	void send_shouldCommitAllMessagesInOneTransaction() {
+		producer.send("hello", 3);
 
-        verify(senderClient).createTransaction();
-        verify(senderClient, times(3)).sendMessage(any(ServiceBusMessage.class), eq(txContext));
-        verify(senderClient).commitTransaction(txContext);
-        verify(senderClient, never()).rollbackTransaction(any());
-    }
+		verify(senderClient).createTransaction();
+		verify(senderClient, times(3)).sendMessage(any(ServiceBusMessage.class), eq(txContext));
+		verify(senderClient).commitTransaction(txContext);
+		verify(senderClient, never()).rollbackTransaction(any());
+	}
 }

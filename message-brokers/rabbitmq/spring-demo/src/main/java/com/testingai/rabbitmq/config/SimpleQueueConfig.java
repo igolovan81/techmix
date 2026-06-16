@@ -11,19 +11,19 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SimpleQueueConfig {
 
-    public static final String QUEUE_NAME = "simple.queue";
-    public static final int MESSAGE_TTL_MS = 5000;
+	public static final String QUEUE_NAME = "simple.queue";
+	public static final int MESSAGE_TTL_MS = 5000;
 
-    @Bean
-    public Queue simpleQueue() {
-        return QueueBuilder.durable(QUEUE_NAME).ttl(MESSAGE_TTL_MS).build();
-    }
+	@Bean
+	public Queue simpleQueue() {
+		return QueueBuilder.durable(QUEUE_NAME).ttl(MESSAGE_TTL_MS).build();
+	}
 
-    @Bean
-    public SimpleRabbitListenerContainerFactory simpleContainerFactory(ConnectionFactory connectionFactory) {
-        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
-        factory.setConnectionFactory(connectionFactory);
-        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
-        return factory;
-    }
+	@Bean
+	public SimpleRabbitListenerContainerFactory simpleContainerFactory(ConnectionFactory connectionFactory) {
+		SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+		factory.setConnectionFactory(connectionFactory);
+		factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+		return factory;
+	}
 }

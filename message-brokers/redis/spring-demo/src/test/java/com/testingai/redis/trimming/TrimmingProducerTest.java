@@ -15,15 +15,18 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TrimmingProducerTest {
-    @Mock RedisTemplate<String, String> redisTemplate;
-    @Mock StreamOperations<String, Object, Object> streamOps;
-    @InjectMocks TrimmingProducer producer;
+	@Mock
+	RedisTemplate<String, String> redisTemplate;
+	@Mock
+	StreamOperations<String, Object, Object> streamOps;
+	@InjectMocks
+	TrimmingProducer producer;
 
-    @Test
-    void sendAddsAndTrimsStream() {
-        when(redisTemplate.opsForStream()).thenReturn(streamOps);
-        producer.send("hello");
-        verify(streamOps).add(any(), any(java.util.Map.class));
-        verify(streamOps).trim(StreamKeys.TRIMMED, StreamKeys.TRIM_MAX_LEN);
-    }
+	@Test
+	void sendAddsAndTrimsStream() {
+		when(redisTemplate.opsForStream()).thenReturn(streamOps);
+		producer.send("hello");
+		verify(streamOps).add(any(), any(java.util.Map.class));
+		verify(streamOps).trim(StreamKeys.TRIMMED, StreamKeys.TRIM_MAX_LEN);
+	}
 }

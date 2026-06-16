@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FanoutPublisher {
 
-    private final SnsTemplate snsTemplate;
+	private final SnsTemplate snsTemplate;
 
-    public void publish(String message) {
-        snsTemplate.convertAndSend(QueueNames.FANOUT_TOPIC_ARN, message);
-        log.info("[fanout] published: {}", message);
-    }
+	public void publish(String message) {
+		snsTemplate.convertAndSend(QueueNames.FANOUT_TOPIC_ARN, message);
+		log.info("[fanout] published: {}", message);
+	}
 }

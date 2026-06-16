@@ -9,9 +9,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class TransactionalConsumer {
 
-    @KafkaListener(topics = TopicConfig.TX_OUTPUT_TOPIC, groupId = "tx-group",
-                   containerFactory = "transactionalContainerFactory")
-    public void receive(String message) {
-        log.info("[TransactionalConsumer] read_committed: {}", message);
-    }
+	@KafkaListener(topics = TopicConfig.TX_OUTPUT_TOPIC, groupId = "tx-group", containerFactory = "transactionalContainerFactory")
+	public void receive(String message) {
+		log.info("[TransactionalConsumer] read_committed: {}", message);
+	}
 }

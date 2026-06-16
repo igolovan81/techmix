@@ -10,21 +10,18 @@ import org.springframework.data.redis.stream.StreamListener;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 
 @Slf4j
-public class FanoutConsumerA
-        implements StreamListener<String, MapRecord<String, String, String>> {
+public class FanoutConsumerA implements StreamListener<String, MapRecord<String, String, String>> {
 
-    public FanoutConsumerA() {}
+	public FanoutConsumerA() {
+	}
 
-    public FanoutConsumerA(
-            StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
-        container.receive(
-                Consumer.from("group-a", "consumer-a"),
-                StreamOffset.create(StreamKeys.FANOUT, ReadOffset.lastConsumed()),
-                this);
-    }
+	public FanoutConsumerA(StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
+		container.receive(Consumer.from("group-a", "consumer-a"),
+				StreamOffset.create(StreamKeys.FANOUT, ReadOffset.lastConsumed()), this);
+	}
 
-    @Override
-    public void onMessage(MapRecord<String, String, String> record) {
-        log.info("[fanout/group-a] received id={} body={}", record.getId(), record.getValue());
-    }
+	@Override
+	public void onMessage(MapRecord<String, String, String> record) {
+		log.info("[fanout/group-a] received id={} body={}", record.getId(), record.getValue());
+	}
 }

@@ -13,15 +13,15 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class SimpleProducerTest {
 
-    @Mock
-    private RabbitTemplate rabbitTemplate;
+	@Mock
+	private RabbitTemplate rabbitTemplate;
 
-    @InjectMocks
-    private SimpleProducer simpleProducer;
+	@InjectMocks
+	private SimpleProducer simpleProducer;
 
-    @Test
-    void send_shouldConvertAndSendToSimpleQueue() {
-        simpleProducer.send("hello");
-        verify(rabbitTemplate).convertAndSend(SimpleQueueConfig.QUEUE_NAME, "hello");
-    }
+	@Test
+	void send_shouldConvertAndSendToSimpleQueue() {
+		simpleProducer.send("hello");
+		verify(rabbitTemplate).convertAndSend(SimpleQueueConfig.QUEUE_NAME, "hello");
+	}
 }

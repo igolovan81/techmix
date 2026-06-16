@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SimpleConsumer {
 
-    @KafkaListener(topics = TopicConfig.SIMPLE_TOPIC, groupId = "simple-group")
-    public void receive(String message) {
-        FailureSimulator.maybeThrow("[SimpleConsumer]");
-        log.info("[SimpleConsumer] Received: {}", message);
-    }
+	@KafkaListener(topics = TopicConfig.SIMPLE_TOPIC, groupId = "simple-group")
+	public void receive(String message) {
+		FailureSimulator.maybeThrow("[SimpleConsumer]");
+		log.info("[SimpleConsumer] Received: {}", message);
+	}
 }

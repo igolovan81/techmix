@@ -10,11 +10,11 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 @ExtendWith(MockitoExtension.class)
 class TransactionalConsumerTest {
 
-    @InjectMocks
-    private TransactionalConsumer consumer;
+	@InjectMocks
+	private TransactionalConsumer consumer;
 
-    @Test
-    void receive_shouldNotThrow() {
-        assertThatCode(() -> consumer.receive("committed-message")).doesNotThrowAnyException();
-    }
+	@Test
+	void receive_shouldNotThrow() {
+		assertThatCode(() -> consumer.receive("committed-message")).doesNotThrowAnyException();
+	}
 }

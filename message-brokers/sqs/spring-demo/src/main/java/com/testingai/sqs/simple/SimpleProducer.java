@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SimpleProducer {
 
-    private final SqsTemplate sqsTemplate;
+	private final SqsTemplate sqsTemplate;
 
-    public void send(String message) {
-        sqsTemplate.send(QueueNames.SIMPLE, message);
-        log.info("[simple] sent: {}", message);
-    }
+	public void send(String message) {
+		sqsTemplate.send(QueueNames.SIMPLE, message);
+		log.info("[simple] sent: {}", message);
+	}
 }

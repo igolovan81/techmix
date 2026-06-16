@@ -17,38 +17,39 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class RoutingPublisherTest {
 
-    @Mock private ServiceBusClientBuilder clientBuilder;
-    @Mock private ServiceBusClientBuilder.ServiceBusSenderClientBuilder senderClientBuilder;
-    @Mock private ServiceBusSenderClient senderClient;
+	@Mock
+	private ServiceBusClientBuilder clientBuilder;
+	@Mock
+	private ServiceBusClientBuilder.ServiceBusSenderClientBuilder senderClientBuilder;
+	@Mock
+	private ServiceBusSenderClient senderClient;
 
-    private RoutingPublisher publisher;
+	private RoutingPublisher publisher;
 
-    @BeforeEach
-    void setUp() {
-        when(clientBuilder.sender()).thenReturn(senderClientBuilder);
-        when(senderClientBuilder.topicName(EntityNames.ROUTING_TOPIC)).thenReturn(senderClientBuilder);
-        when(senderClientBuilder.buildClient()).thenReturn(senderClient);
-        publisher = new RoutingPublisher(clientBuilder);
-    }
+	@BeforeEach
+	void setUp() {
+		when(clientBuilder.sender()).thenReturn(senderClientBuilder);
+		when(senderClientBuilder.topicName(EntityNames.ROUTING_TOPIC)).thenReturn(senderClientBuilder);
+		when(senderClientBuilder.buildClient()).thenReturn(senderClient);
+		publisher = new RoutingPublisher(clientBuilder);
+	}
 
-    @Test
-    void publish_shouldSendMessageWithLevelProperty() {
-        publisher.publish("error", "boom");
+	@Test
+	void publish_shouldSendMessageWithLevelProperty() {
+		publisher.publish("error", "boom");
 
-        ArgumentCaptor<ServiceBusMessage> captor = ArgumentCaptor.forClass(ServiceBusMessage.class);
-        verify(senderClient).sendMessage(captor.capture());
-        assertThat(captor.getValue().getBody().toString()).isEqualTo("boom");
-        assertThat(captor.getValue().getApplicationProperties().get(EntityNames.ROUTING_KEY))
-                .isEqualTo("error");
-    }
+		ArgumentCaptor<ServiceBusMessage> captor = ArgumentCaptor.forClass(ServiceBusMessage.class);
+		verify(senderClient).sendMessage(captor.capture());
+		assertThat(captor.getValue().getBody().toString()).isEqualTo("boom");
+		assertThat(captor.getValue().getApplicationProperties().get(EntityNames.ROUTING_KEY)).isEqualTo("error");
+	}
 
-    @Test
-    void publish_shouldSetLevelPropertyFromKey() {
-        publisher.publish("info", "hello");
+	@Test
+	void publish_shouldSetLevelPropertyFromKey() {
+		publisher.publish("info", "hello");
 
-        ArgumentCaptor<ServiceBusMessage> captor = ArgumentCaptor.forClass(ServiceBusMessage.class);
-        verify(senderClient).sendMessage(captor.capture());
-        assertThat(captor.getValue().getApplicationProperties().get(EntityNames.ROUTING_KEY))
-                .isEqualTo("info");
-    }
+		ArgumentCaptor<ServiceBusMessage> captor = ArgumentCaptor.forClass(ServiceBusMessage.class);
+		verify(senderClient).sendMessage(captor.capture());
+		assertThat(captor.getValue().getApplicationProperties().get(EntityNames.ROUTING_KEY)).isEqualTo("info");
+	}
 }

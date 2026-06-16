@@ -17,27 +17,30 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SessionProducerTest {
 
-    @Mock private ServiceBusClientBuilder clientBuilder;
-    @Mock private ServiceBusClientBuilder.ServiceBusSenderClientBuilder senderClientBuilder;
-    @Mock private ServiceBusSenderClient senderClient;
+	@Mock
+	private ServiceBusClientBuilder clientBuilder;
+	@Mock
+	private ServiceBusClientBuilder.ServiceBusSenderClientBuilder senderClientBuilder;
+	@Mock
+	private ServiceBusSenderClient senderClient;
 
-    private SessionProducer producer;
+	private SessionProducer producer;
 
-    @BeforeEach
-    void setUp() {
-        when(clientBuilder.sender()).thenReturn(senderClientBuilder);
-        when(senderClientBuilder.queueName(EntityNames.SESSION_QUEUE)).thenReturn(senderClientBuilder);
-        when(senderClientBuilder.buildClient()).thenReturn(senderClient);
-        producer = new SessionProducer(clientBuilder);
-    }
+	@BeforeEach
+	void setUp() {
+		when(clientBuilder.sender()).thenReturn(senderClientBuilder);
+		when(senderClientBuilder.queueName(EntityNames.SESSION_QUEUE)).thenReturn(senderClientBuilder);
+		when(senderClientBuilder.buildClient()).thenReturn(senderClient);
+		producer = new SessionProducer(clientBuilder);
+	}
 
-    @Test
-    void send_shouldSetSessionIdOnMessage() {
-        producer.send("hello", "session-42");
+	@Test
+	void send_shouldSetSessionIdOnMessage() {
+		producer.send("hello", "session-42");
 
-        ArgumentCaptor<ServiceBusMessage> captor = ArgumentCaptor.forClass(ServiceBusMessage.class);
-        verify(senderClient).sendMessage(captor.capture());
-        assertThat(captor.getValue().getSessionId()).isEqualTo("session-42");
-        assertThat(captor.getValue().getBody().toString()).isEqualTo("hello");
-    }
+		ArgumentCaptor<ServiceBusMessage> captor = ArgumentCaptor.forClass(ServiceBusMessage.class);
+		verify(senderClient).sendMessage(captor.capture());
+		assertThat(captor.getValue().getSessionId()).isEqualTo("session-42");
+		assertThat(captor.getValue().getBody().toString()).isEqualTo("hello");
+	}
 }

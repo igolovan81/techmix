@@ -12,12 +12,14 @@ import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class PubSubPublisherTest {
-    @Mock RedisTemplate<String, String> redisTemplate;
-    @InjectMocks PubSubPublisher publisher;
+	@Mock
+	RedisTemplate<String, String> redisTemplate;
+	@InjectMocks
+	PubSubPublisher publisher;
 
-    @Test
-    void publishSendsToChannel() {
-        publisher.publish("hello");
-        verify(redisTemplate).convertAndSend(StreamKeys.PUBSUB_CHANNEL, "hello");
-    }
+	@Test
+	void publishSendsToChannel() {
+		publisher.publish("hello");
+		verify(redisTemplate).convertAndSend(StreamKeys.PUBSUB_CHANNEL, "hello");
+	}
 }

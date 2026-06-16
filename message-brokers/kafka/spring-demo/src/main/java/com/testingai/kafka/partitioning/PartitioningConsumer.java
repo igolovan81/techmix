@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class PartitioningConsumer {
 
-    @KafkaListener(topics = TopicConfig.PARTITION_TOPIC, groupId = "partition-group")
-    public void receive(ConsumerRecord<String, String> record) {
-        log.info("[PartitioningConsumer] key={} partition={} value={}",
-                record.key(), record.partition(), record.value());
-    }
+	@KafkaListener(topics = TopicConfig.PARTITION_TOPIC, groupId = "partition-group")
+	public void receive(ConsumerRecord<String, String> record) {
+		log.info("[PartitioningConsumer] key={} partition={} value={}", record.key(), record.partition(),
+				record.value());
+	}
 }

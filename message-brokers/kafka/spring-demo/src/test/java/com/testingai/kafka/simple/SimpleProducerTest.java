@@ -13,15 +13,15 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class SimpleProducerTest {
 
-    @Mock
-    private KafkaTemplate<String, String> kafkaTemplate;
+	@Mock
+	private KafkaTemplate<String, String> kafkaTemplate;
 
-    @InjectMocks
-    private SimpleProducer producer;
+	@InjectMocks
+	private SimpleProducer producer;
 
-    @Test
-    void send_shouldSendMessageToSimpleTopic() {
-        producer.send("hello");
-        verify(kafkaTemplate).send(TopicConfig.SIMPLE_TOPIC, "hello");
-    }
+	@Test
+	void send_shouldSendMessageToSimpleTopic() {
+		producer.send("hello");
+		verify(kafkaTemplate).send(TopicConfig.SIMPLE_TOPIC, "hello");
+	}
 }

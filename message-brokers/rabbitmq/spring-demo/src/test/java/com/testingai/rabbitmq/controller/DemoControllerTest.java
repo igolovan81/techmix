@@ -17,53 +17,49 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(DemoController.class)
 class DemoControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+	@Autowired
+	private MockMvc mockMvc;
 
-    @MockitoBean
-    private SimpleProducer simpleProducer;
+	@MockitoBean
+	private SimpleProducer simpleProducer;
 
-    @MockitoBean
-    private WorkQueueProducer workQueueProducer;
+	@MockitoBean
+	private WorkQueueProducer workQueueProducer;
 
-    @MockitoBean
-    private PubSubProducer pubSubProducer;
+	@MockitoBean
+	private PubSubProducer pubSubProducer;
 
-    @MockitoBean
-    private RoutingProducer routingProducer;
+	@MockitoBean
+	private RoutingProducer routingProducer;
 
-    @Test
-    void simple_shouldReturn200AndDelegateSend() throws Exception {
-        mockMvc.perform(post("/demo/simple").param("message", "hello"))
-                .andExpect(status().isOk());
-        verify(simpleProducer).send("hello");
-    }
+	@Test
+	void simple_shouldReturn200AndDelegateSend() throws Exception {
+		mockMvc.perform(post("/demo/simple").param("message", "hello")).andExpect(status().isOk());
+		verify(simpleProducer).send("hello");
+	}
 
-    @Test
-    void work_shouldReturn200AndDelegateSendWithDefaultCount() throws Exception {
-        mockMvc.perform(post("/demo/work").param("message", "task"))
-                .andExpect(status().isOk());
-        verify(workQueueProducer).send("task", 5);
-    }
+	@Test
+	void work_shouldReturn200AndDelegateSendWithDefaultCount() throws Exception {
+		mockMvc.perform(post("/demo/work").param("message", "task")).andExpect(status().isOk());
+		verify(workQueueProducer).send("task", 5);
+	}
 
-    @Test
-    void work_shouldPassExplicitCount() throws Exception {
-        mockMvc.perform(post("/demo/work").param("message", "task..").param("count", "3"))
-                .andExpect(status().isOk());
-        verify(workQueueProducer).send("task..", 3);
-    }
+	@Test
+	void work_shouldPassExplicitCount() throws Exception {
+		mockMvc.perform(post("/demo/work").param("message", "task..").param("count", "3")).andExpect(status().isOk());
+		verify(workQueueProducer).send("task..", 3);
+	}
 
-    @Test
-    void pubsub_shouldReturn200AndDelegateSend() throws Exception {
-        mockMvc.perform(post("/demo/pubsub").param("message", "broadcast"))
-                .andExpect(status().isOk());
-        verify(pubSubProducer).send("broadcast");
-    }
+	@Test
+	void pubsub_shouldReturn200AndDelegateSend() throws Exception {
+		mockMvc.perform(post("/demo/pubsub").param("message", "broadcast")).andExpect(status().isOk());
+		verify(pubSubProducer).send("broadcast");
+	}
 
-    @Test
-    void routing_shouldReturn200AndDelegateSend() throws Exception {
-        mockMvc.perform(post("/demo/routing").param("key", "error").param("message", "boom"))
-                .andExpect(status().isOk());
-        verify(routingProducer).send("error", "boom");
-    }
+	@Test
+	void routing_shouldReturn200AndDelegateSend() throws Exception {
+		mockMvc.perform(post("/demo/routing").param("key", "error").param("message", "boom"))
+				.andExpect(status().isOk());
+		verify(routingProducer).send("error", "boom");
+	}
 }

@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SimpleProducer {
 
-    private final RabbitTemplate rabbitTemplate;
+	private final RabbitTemplate rabbitTemplate;
 
-    public void send(String message) {
-        rabbitTemplate.convertAndSend(SimpleQueueConfig.QUEUE_NAME, message);
-    }
+	public void send(String message) {
+		rabbitTemplate.convertAndSend(SimpleQueueConfig.QUEUE_NAME, message);
+	}
 }

@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class PubSubConsumerB {
 
-    @KafkaListener(topics = TopicConfig.PUBSUB_TOPIC, groupId = "group-b")
-    public void receive(String message) {
-        log.info("[PubSubConsumerB] Received: {}", message);
-    }
+	@KafkaListener(topics = TopicConfig.PUBSUB_TOPIC, groupId = "group-b")
+	public void receive(String message) {
+		log.info("[PubSubConsumerB] Received: {}", message);
+	}
 }

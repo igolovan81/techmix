@@ -15,33 +15,33 @@ import java.io.IOException;
 @Slf4j
 public class RoutingConsumer {
 
-    @RabbitListener(queues = RoutingConfig.QUEUE_ALL, containerFactory = "routingContainerFactory")
-    public void receiveAll(String message, Channel channel,
-                           @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws IOException {
-        try {
-            FailureSimulator.maybeThrow("[RoutingConsumer/ALL]");
-            log.info("[RoutingConsumer/ALL] Received: {}", message);
-            channel.basicAck(deliveryTag, false);
-        } catch (RuntimeException e) {
-            log.warn("[RoutingConsumer/ALL] Failed, requeuing for retry: {}", e.getMessage());
-            channel.basicNack(deliveryTag, false, true);
-        } catch (IOException e) {
-            throw e;
-        }
-    }
+	@RabbitListener(queues = RoutingConfig.QUEUE_ALL, containerFactory = "routingContainerFactory")
+	public void receiveAll(String message, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag)
+			throws IOException {
+		try {
+			FailureSimulator.maybeThrow("[RoutingConsumer/ALL]");
+			log.info("[RoutingConsumer/ALL] Received: {}", message);
+			channel.basicAck(deliveryTag, false);
+		} catch (RuntimeException e) {
+			log.warn("[RoutingConsumer/ALL] Failed, requeuing for retry: {}", e.getMessage());
+			channel.basicNack(deliveryTag, false, true);
+		} catch (IOException e) {
+			throw e;
+		}
+	}
 
-    @RabbitListener(queues = RoutingConfig.QUEUE_ERROR, containerFactory = "routingContainerFactory")
-    public void receiveError(String message, Channel channel,
-                             @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws IOException {
-        try {
-            FailureSimulator.maybeThrow("[RoutingConsumer/ERROR-ONLY]");
-            log.info("[RoutingConsumer/ERROR-ONLY] Received: {}", message);
-            channel.basicAck(deliveryTag, false);
-        } catch (RuntimeException e) {
-            log.warn("[RoutingConsumer/ERROR-ONLY] Failed, requeuing for retry: {}", e.getMessage());
-            channel.basicNack(deliveryTag, false, true);
-        } catch (IOException e) {
-            throw e;
-        }
-    }
+	@RabbitListener(queues = RoutingConfig.QUEUE_ERROR, containerFactory = "routingContainerFactory")
+	public void receiveError(String message, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag)
+			throws IOException {
+		try {
+			FailureSimulator.maybeThrow("[RoutingConsumer/ERROR-ONLY]");
+			log.info("[RoutingConsumer/ERROR-ONLY] Received: {}", message);
+			channel.basicAck(deliveryTag, false);
+		} catch (RuntimeException e) {
+			log.warn("[RoutingConsumer/ERROR-ONLY] Failed, requeuing for retry: {}", e.getMessage());
+			channel.basicNack(deliveryTag, false, true);
+		} catch (IOException e) {
+			throw e;
+		}
+	}
 }

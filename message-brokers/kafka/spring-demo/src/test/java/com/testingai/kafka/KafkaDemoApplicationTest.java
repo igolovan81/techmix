@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Test;
 
 class KafkaDemoApplicationTest {
 
-    @Test
-    void mainClassExists() {
-        new KafkaDemoApplication();
-    }
+	@Test
+	void mainClassExists() {
+		new KafkaDemoApplication();
+	}
 }

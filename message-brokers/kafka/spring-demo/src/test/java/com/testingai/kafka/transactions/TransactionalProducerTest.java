@@ -14,17 +14,17 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class TransactionalProducerTest {
 
-    @Mock
-    private KafkaTemplate<String, String> transactionalKafkaTemplate;
+	@Mock
+	private KafkaTemplate<String, String> transactionalKafkaTemplate;
 
-    @InjectMocks
-    private TransactionalProducer producer;
+	@InjectMocks
+	private TransactionalProducer producer;
 
-    @Test
-    @SuppressWarnings("unchecked")
-    void send_shouldCallExecuteInTransaction() {
-        when(transactionalKafkaTemplate.executeInTransaction(any())).thenReturn(null);
-        producer.send("hello", 3);
-        verify(transactionalKafkaTemplate).executeInTransaction(any());
-    }
+	@Test
+	@SuppressWarnings("unchecked")
+	void send_shouldCallExecuteInTransaction() {
+		when(transactionalKafkaTemplate.executeInTransaction(any())).thenReturn(null);
+		producer.send("hello", 3);
+		verify(transactionalKafkaTemplate).executeInTransaction(any());
+	}
 }

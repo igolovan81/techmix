@@ -13,15 +13,15 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class PartitioningProducerTest {
 
-    @Mock
-    private KafkaTemplate<String, String> kafkaTemplate;
+	@Mock
+	private KafkaTemplate<String, String> kafkaTemplate;
 
-    @InjectMocks
-    private PartitioningProducer producer;
+	@InjectMocks
+	private PartitioningProducer producer;
 
-    @Test
-    void send_shouldSendWithKeyToPartitionTopic() {
-        producer.send("error", "something broke");
-        verify(kafkaTemplate).send(TopicConfig.PARTITION_TOPIC, "error", "something broke");
-    }
+	@Test
+	void send_shouldSendWithKeyToPartitionTopic() {
+		producer.send("error", "something broke");
+		verify(kafkaTemplate).send(TopicConfig.PARTITION_TOPIC, "error", "something broke");
+	}
 }

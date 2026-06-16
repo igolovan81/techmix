@@ -9,11 +9,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class WorkQueueProducer {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
+	private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public void send(String message, int count) {
-        for (int i = 0; i < count; i++) {
-            kafkaTemplate.send(TopicConfig.WORK_TOPIC, message);
-        }
-    }
+	public void send(String message, int count) {
+		for (int i = 0; i < count; i++) {
+			kafkaTemplate.send(TopicConfig.WORK_TOPIC, message);
+		}
+	}
 }

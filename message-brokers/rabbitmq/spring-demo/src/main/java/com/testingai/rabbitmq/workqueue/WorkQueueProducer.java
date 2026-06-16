@@ -9,11 +9,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class WorkQueueProducer {
 
-    private final RabbitTemplate rabbitTemplate;
+	private final RabbitTemplate rabbitTemplate;
 
-    public void send(String message, int count) {
-        for (int i = 1; i <= count; i++) {
-            rabbitTemplate.convertAndSend(WorkQueueConfig.QUEUE_NAME, i + ": " + message);
-        }
-    }
+	public void send(String message, int count) {
+		for (int i = 1; i <= count; i++) {
+			rabbitTemplate.convertAndSend(WorkQueueConfig.QUEUE_NAME, i + ": " + message);
+		}
+	}
 }

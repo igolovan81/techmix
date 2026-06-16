@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class StreamsProducer {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
+	private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public void send(String message) {
-        kafkaTemplate.send(TopicConfig.STREAMS_INPUT_TOPIC, message);
-        log.info("[StreamsProducer] Sent: {}", message);
-    }
+	public void send(String message) {
+		kafkaTemplate.send(TopicConfig.STREAMS_INPUT_TOPIC, message);
+		log.info("[StreamsProducer] Sent: {}", message);
+	}
 }

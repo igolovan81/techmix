@@ -11,29 +11,24 @@ import org.springframework.data.redis.stream.StreamListener;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 
 @Slf4j
-public class TrimmingConsumer
-        implements StreamListener<String, MapRecord<String, String, String>> {
+public class TrimmingConsumer implements StreamListener<String, MapRecord<String, String, String>> {
 
-    private final RedisTemplate<String, String> redisTemplate;
+	private final RedisTemplate<String, String> redisTemplate;
 
-    public TrimmingConsumer(RedisTemplate<String, String> redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
+	public TrimmingConsumer(RedisTemplate<String, String> redisTemplate) {
+		this.redisTemplate = redisTemplate;
+	}
 
-    public void registerWith(
-            StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
-        container.receive(
-                Consumer.from("trimmed-group", "trimmer-1"),
-                StreamOffset.create(StreamKeys.TRIMMED, ReadOffset.lastConsumed()),
-                this);
-    }
+	public void registerWith(StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
+		container.receive(Consumer.from("trimmed-group", "trimmer-1"),
+				StreamOffset.create(StreamKeys.TRIMMED, ReadOffset.lastConsumed()), this);
+	}
 
-    @Override
-    public void onMessage(MapRecord<String, String, String> record) {
-        log.info("[trimming] received id={} body={}", record.getId(), record.getValue());
-        redisTemplate.opsForStream()
-                .acknowledge(StreamKeys.TRIMMED, "trimmed-group", record.getId());
-        Long length = redisTemplate.opsForStream().size(StreamKeys.TRIMMED);
-        log.info("[trimming] stream length after ack: {}", length);
-    }
+	@Override
+	public void onMessage(MapRecord<String, String, String> record) {
+		log.info("[trimming] received id={} body={}", record.getId(), record.getValue());
+		redisTemplate.opsForStream().acknowledge(StreamKeys.TRIMMED, "trimmed-group", record.getId());
+		Long length = redisTemplate.opsForStream().size(StreamKeys.TRIMMED);
+		log.info("[trimming] stream length after ack: {}", length);
+	}
 }

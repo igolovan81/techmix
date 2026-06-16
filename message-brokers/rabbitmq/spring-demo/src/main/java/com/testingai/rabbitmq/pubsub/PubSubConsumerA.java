@@ -17,25 +17,26 @@ import java.util.Map;
 @Slf4j
 public class PubSubConsumerA {
 
-    @RabbitListener(queues = PubSubConfig.QUEUE_A, containerFactory = "pubSubContainerFactory")
-    public void receive(String message, Channel channel,
-                        @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
-                        @Header(value = "x-death", required = false) List<Map<String, Object>> xDeath) throws IOException {
-        try {
-            FailureSimulator.maybeThrow("[PubSubConsumerA]");
-            log.info("[PubSubConsumerA] Received: {}", message);
-            channel.basicAck(deliveryTag, false);
-        } catch (RuntimeException e) {
-            long retryCount = xDeath == null ? 0L : (Long) xDeath.get(0).get("count");
-            if (retryCount >= PubSubConfig.MAX_RETRIES) {
-                log.error("[PubSubConsumerA] Max retries ({}) exceeded, discarding: {}", PubSubConfig.MAX_RETRIES, message);
-                channel.basicAck(deliveryTag, false);
-            } else {
-                log.warn("[PubSubConsumerA] Failed (retry {}/{}), sending to retry queue: {}", retryCount + 1, PubSubConfig.MAX_RETRIES, e.getMessage());
-                channel.basicNack(deliveryTag, false, false);
-            }
-        } catch (IOException e) {
-            throw e;
-        }
-    }
+	@RabbitListener(queues = PubSubConfig.QUEUE_A, containerFactory = "pubSubContainerFactory")
+	public void receive(String message, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag,
+			@Header(value = "x-death", required = false) List<Map<String, Object>> xDeath) throws IOException {
+		try {
+			FailureSimulator.maybeThrow("[PubSubConsumerA]");
+			log.info("[PubSubConsumerA] Received: {}", message);
+			channel.basicAck(deliveryTag, false);
+		} catch (RuntimeException e) {
+			long retryCount = xDeath == null ? 0L : (Long) xDeath.get(0).get("count");
+			if (retryCount >= PubSubConfig.MAX_RETRIES) {
+				log.error("[PubSubConsumerA] Max retries ({}) exceeded, discarding: {}", PubSubConfig.MAX_RETRIES,
+						message);
+				channel.basicAck(deliveryTag, false);
+			} else {
+				log.warn("[PubSubConsumerA] Failed (retry {}/{}), sending to retry queue: {}", retryCount + 1,
+						PubSubConfig.MAX_RETRIES, e.getMessage());
+				channel.basicNack(deliveryTag, false, false);
+			}
+		} catch (IOException e) {
+			throw e;
+		}
+	}
 }

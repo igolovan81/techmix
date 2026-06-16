@@ -13,29 +13,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class WorkQueueConsumerA implements ApplicationRunner {
 
-    private final ServiceBusClientBuilder clientBuilder;
-    private ServiceBusProcessorClient processorClient;
+	private final ServiceBusClientBuilder clientBuilder;
+	private ServiceBusProcessorClient processorClient;
 
-    public WorkQueueConsumerA(ServiceBusClientBuilder clientBuilder) {
-        this.clientBuilder = clientBuilder;
-    }
+	public WorkQueueConsumerA(ServiceBusClientBuilder clientBuilder) {
+		this.clientBuilder = clientBuilder;
+	}
 
-    @Override
-    public void run(ApplicationArguments args) {
-        processorClient = clientBuilder
-                .processor()
-                .queueName(EntityNames.WORK_QUEUE)
-                .processMessage(ctx -> {
-                    log.info("[work][A] received: {}", ctx.getMessage().getBody());
-                    ctx.complete();
-                })
-                .processError(ctx -> log.error("[work][A] error", ctx.getException()))
-                .buildProcessorClient();
-        processorClient.start();
-    }
+	@Override
+	public void run(ApplicationArguments args) {
+		processorClient = clientBuilder.processor().queueName(EntityNames.WORK_QUEUE).processMessage(ctx -> {
+			log.info("[work][A] received: {}", ctx.getMessage().getBody());
+			ctx.complete();
+		}).processError(ctx -> log.error("[work][A] error", ctx.getException())).buildProcessorClient();
+		processorClient.start();
+	}
 
-    @PreDestroy
-    public void close() {
-        processorClient.close();
-    }
+	@PreDestroy
+	public void close() {
+		processorClient.close();
+	}
 }

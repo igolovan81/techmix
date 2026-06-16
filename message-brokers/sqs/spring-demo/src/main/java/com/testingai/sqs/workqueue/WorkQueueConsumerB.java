@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class WorkQueueConsumerB {
 
-    @SqsListener(QueueNames.WORK)
-    public void receive(String message) {
-        log.info("[work-queue][consumer-B] received: {}", message);
-    }
+	@SqsListener(QueueNames.WORK)
+	public void receive(String message) {
+		log.info("[work-queue][consumer-B] received: {}", message);
+	}
 }

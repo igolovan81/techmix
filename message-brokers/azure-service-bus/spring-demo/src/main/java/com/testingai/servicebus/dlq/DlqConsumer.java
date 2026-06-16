@@ -15,46 +15,36 @@ import org.springframework.stereotype.Component;
 @Component
 public class DlqConsumer implements ApplicationRunner {
 
-    private final ServiceBusClientBuilder clientBuilder;
-    private ServiceBusProcessorClient mainProcessor;
-    private ServiceBusProcessorClient dlqProcessor;
+	private final ServiceBusClientBuilder clientBuilder;
+	private ServiceBusProcessorClient mainProcessor;
+	private ServiceBusProcessorClient dlqProcessor;
 
-    public DlqConsumer(ServiceBusClientBuilder clientBuilder) {
-        this.clientBuilder = clientBuilder;
-    }
+	public DlqConsumer(ServiceBusClientBuilder clientBuilder) {
+		this.clientBuilder = clientBuilder;
+	}
 
-    @Override
-    public void run(ApplicationArguments args) {
-        mainProcessor = clientBuilder
-                .processor()
-                .queueName(EntityNames.DLQ_QUEUE)
-                .processMessage(ctx -> {
-                    FailureSimulator.maybeThrow("dlq");
-                    log.info("[dlq] processed: {}", ctx.getMessage().getBody());
-                    ctx.complete();
-                })
-                .processError(ctx -> log.error("[dlq] error", ctx.getException()))
-                .buildProcessorClient();
-        mainProcessor.start();
+	@Override
+	public void run(ApplicationArguments args) {
+		mainProcessor = clientBuilder.processor().queueName(EntityNames.DLQ_QUEUE).processMessage(ctx -> {
+			FailureSimulator.maybeThrow("dlq");
+			log.info("[dlq] processed: {}", ctx.getMessage().getBody());
+			ctx.complete();
+		}).processError(ctx -> log.error("[dlq] error", ctx.getException())).buildProcessorClient();
+		mainProcessor.start();
 
-        dlqProcessor = clientBuilder
-                .processor()
-                .queueName(EntityNames.DLQ_QUEUE)
-                .subQueue(SubQueue.DEAD_LETTER_QUEUE)
-                .processMessage(ctx -> {
-                    log.warn("[dlq] dead-lettered after {} attempts: {}",
-                            ctx.getMessage().getDeliveryCount(),
-                            ctx.getMessage().getBody());
-                    ctx.complete();
-                })
-                .processError(ctx -> log.error("[dlq] DLQ processor error", ctx.getException()))
-                .buildProcessorClient();
-        dlqProcessor.start();
-    }
+		dlqProcessor = clientBuilder.processor().queueName(EntityNames.DLQ_QUEUE).subQueue(SubQueue.DEAD_LETTER_QUEUE)
+				.processMessage(ctx -> {
+					log.warn("[dlq] dead-lettered after {} attempts: {}", ctx.getMessage().getDeliveryCount(),
+							ctx.getMessage().getBody());
+					ctx.complete();
+				}).processError(ctx -> log.error("[dlq] DLQ processor error", ctx.getException()))
+				.buildProcessorClient();
+		dlqProcessor.start();
+	}
 
-    @PreDestroy
-    public void close() {
-        mainProcessor.close();
-        dlqProcessor.close();
-    }
+	@PreDestroy
+	public void close() {
+		mainProcessor.close();
+		dlqProcessor.close();
+	}
 }

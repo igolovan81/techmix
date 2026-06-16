@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class FanoutConsumerA {
 
-    @SqsListener(QueueNames.FANOUT_A)
-    public void receive(String message) {
-        log.info("[fanout][consumer-A] received: {}", message);
-    }
+	@SqsListener(QueueNames.FANOUT_A)
+	public void receive(String message) {
+		log.info("[fanout][consumer-A] received: {}", message);
+	}
 }

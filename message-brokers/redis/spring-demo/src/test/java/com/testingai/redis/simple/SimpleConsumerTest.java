@@ -7,12 +7,11 @@ import java.util.Map;
 
 class SimpleConsumerTest {
 
-    @Test
-    void onMessageLogsPayload() {
-        var consumer = new SimpleConsumer();
-        var record = MapRecord.create(
-                "test-stream", Map.of("message", "hello"));
-        // No exception thrown = pass
-        consumer.onMessage(record);
-    }
+	@Test
+	void onMessageLogsPayload() {
+		var consumer = new SimpleConsumer();
+		var record = MapRecord.create("test-stream", Map.of("message", "hello"));
+		// No exception thrown = pass
+		consumer.onMessage(record);
+	}
 }

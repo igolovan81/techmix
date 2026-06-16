@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PubSubProducer {
 
-    private final RabbitTemplate rabbitTemplate;
+	private final RabbitTemplate rabbitTemplate;
 
-    public void send(String message) {
-        rabbitTemplate.convertAndSend(PubSubConfig.EXCHANGE_NAME, "", message);
-    }
+	public void send(String message) {
+		rabbitTemplate.convertAndSend(PubSubConfig.EXCHANGE_NAME, "", message);
+	}
 }

@@ -10,20 +10,20 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class TransactionalProducer {
 
-    private final KafkaTemplate<String, String> transactionalKafkaTemplate;
+	private final KafkaTemplate<String, String> transactionalKafkaTemplate;
 
-    public TransactionalProducer(
-            @Qualifier("transactionalKafkaTemplate") KafkaTemplate<String, String> transactionalKafkaTemplate) {
-        this.transactionalKafkaTemplate = transactionalKafkaTemplate;
-    }
+	public TransactionalProducer(
+			@Qualifier("transactionalKafkaTemplate") KafkaTemplate<String, String> transactionalKafkaTemplate) {
+		this.transactionalKafkaTemplate = transactionalKafkaTemplate;
+	}
 
-    public void send(String message, int count) {
-        transactionalKafkaTemplate.executeInTransaction(ops -> {
-            for (int i = 0; i < count; i++) {
-                ops.send(TopicConfig.TX_OUTPUT_TOPIC, "tx-key-" + i, message + "-" + i);
-            }
-            log.info("[TransactionalProducer] Committed {} messages in one transaction", count);
-            return null;
-        });
-    }
+	public void send(String message, int count) {
+		transactionalKafkaTemplate.executeInTransaction(ops -> {
+			for (int i = 0; i < count; i++) {
+				ops.send(TopicConfig.TX_OUTPUT_TOPIC, "tx-key-" + i, message + "-" + i);
+			}
+			log.info("[TransactionalProducer] Committed {} messages in one transaction", count);
+			return null;
+		});
+	}
 }

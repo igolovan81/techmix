@@ -17,26 +17,29 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class WorkQueueProducerTest {
 
-    @Mock private ServiceBusClientBuilder clientBuilder;
-    @Mock private ServiceBusClientBuilder.ServiceBusSenderClientBuilder senderClientBuilder;
-    @Mock private ServiceBusSenderClient senderClient;
+	@Mock
+	private ServiceBusClientBuilder clientBuilder;
+	@Mock
+	private ServiceBusClientBuilder.ServiceBusSenderClientBuilder senderClientBuilder;
+	@Mock
+	private ServiceBusSenderClient senderClient;
 
-    private WorkQueueProducer producer;
+	private WorkQueueProducer producer;
 
-    @BeforeEach
-    void setUp() {
-        when(clientBuilder.sender()).thenReturn(senderClientBuilder);
-        when(senderClientBuilder.queueName(EntityNames.WORK_QUEUE)).thenReturn(senderClientBuilder);
-        when(senderClientBuilder.buildClient()).thenReturn(senderClient);
-        producer = new WorkQueueProducer(clientBuilder);
-    }
+	@BeforeEach
+	void setUp() {
+		when(clientBuilder.sender()).thenReturn(senderClientBuilder);
+		when(senderClientBuilder.queueName(EntityNames.WORK_QUEUE)).thenReturn(senderClientBuilder);
+		when(senderClientBuilder.buildClient()).thenReturn(senderClient);
+		producer = new WorkQueueProducer(clientBuilder);
+	}
 
-    @Test
-    void send_shouldSendMessageToWorkQueue() {
-        producer.send("task-1");
+	@Test
+	void send_shouldSendMessageToWorkQueue() {
+		producer.send("task-1");
 
-        ArgumentCaptor<ServiceBusMessage> captor = ArgumentCaptor.forClass(ServiceBusMessage.class);
-        verify(senderClient).sendMessage(captor.capture());
-        assertThat(captor.getValue().getBody().toString()).isEqualTo("task-1");
-    }
+		ArgumentCaptor<ServiceBusMessage> captor = ArgumentCaptor.forClass(ServiceBusMessage.class);
+		verify(senderClient).sendMessage(captor.capture());
+		assertThat(captor.getValue().getBody().toString()).isEqualTo("task-1");
+	}
 }

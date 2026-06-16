@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PubSubPublisher {
 
-    private final SnsTemplate snsTemplate;
+	private final SnsTemplate snsTemplate;
 
-    public void publish(String message) {
-        snsTemplate.convertAndSend(QueueNames.PUBSUB_TOPIC_ARN, message);
-        log.info("[pubsub] published: {}", message);
-    }
+	public void publish(String message) {
+		snsTemplate.convertAndSend(QueueNames.PUBSUB_TOPIC_ARN, message);
+		log.info("[pubsub] published: {}", message);
+	}
 }

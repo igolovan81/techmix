@@ -13,29 +13,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class SimpleConsumer implements ApplicationRunner {
 
-    private final ServiceBusClientBuilder clientBuilder;
-    private ServiceBusProcessorClient processorClient;
+	private final ServiceBusClientBuilder clientBuilder;
+	private ServiceBusProcessorClient processorClient;
 
-    public SimpleConsumer(ServiceBusClientBuilder clientBuilder) {
-        this.clientBuilder = clientBuilder;
-    }
+	public SimpleConsumer(ServiceBusClientBuilder clientBuilder) {
+		this.clientBuilder = clientBuilder;
+	}
 
-    @Override
-    public void run(ApplicationArguments args) {
-        processorClient = clientBuilder
-                .processor()
-                .queueName(EntityNames.SIMPLE_QUEUE)
-                .processMessage(ctx -> {
-                    log.info("[simple] received: {}", ctx.getMessage().getBody());
-                    ctx.complete();
-                })
-                .processError(ctx -> log.error("[simple] error", ctx.getException()))
-                .buildProcessorClient();
-        processorClient.start();
-    }
+	@Override
+	public void run(ApplicationArguments args) {
+		processorClient = clientBuilder.processor().queueName(EntityNames.SIMPLE_QUEUE).processMessage(ctx -> {
+			log.info("[simple] received: {}", ctx.getMessage().getBody());
+			ctx.complete();
+		}).processError(ctx -> log.error("[simple] error", ctx.getException())).buildProcessorClient();
+		processorClient.start();
+	}
 
-    @PreDestroy
-    public void close() {
-        processorClient.close();
-    }
+	@PreDestroy
+	public void close() {
+		processorClient.close();
+	}
 }

@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class CompactionConsumer {
 
-    @KafkaListener(topics = TopicConfig.COMPACTED_TOPIC, groupId = "compaction-group")
-    public void receive(ConsumerRecord<String, String> record) {
-        log.info("[CompactionConsumer] key={} value={}", record.key(), record.value());
-    }
+	@KafkaListener(topics = TopicConfig.COMPACTED_TOPIC, groupId = "compaction-group")
+	public void receive(ConsumerRecord<String, String> record) {
+		log.info("[CompactionConsumer] key={} value={}", record.key(), record.value());
+	}
 }

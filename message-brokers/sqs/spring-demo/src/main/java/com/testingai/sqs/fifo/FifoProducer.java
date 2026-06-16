@@ -11,13 +11,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class FifoProducer {
 
-    private final SqsTemplate sqsTemplate;
+	private final SqsTemplate sqsTemplate;
 
-    public void send(String message, String groupId) {
-        sqsTemplate.send(to -> to
-                .queue(QueueNames.FIFO)
-                .payload(message)
-                .header("message-group-id", groupId));
-        log.info("[fifo] sent group={} message={}", groupId, message);
-    }
+	public void send(String message, String groupId) {
+		sqsTemplate.send(to -> to.queue(QueueNames.FIFO).payload(message).header("message-group-id", groupId));
+		log.info("[fifo] sent group={} message={}", groupId, message);
+	}
 }

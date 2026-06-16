@@ -11,12 +11,11 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class TrimmingProducer {
-    private final RedisTemplate<String, String> redisTemplate;
+	private final RedisTemplate<String, String> redisTemplate;
 
-    public void send(String message) {
-        var id = redisTemplate.opsForStream()
-                .add(StreamKeys.TRIMMED, Map.of("message", message));
-        redisTemplate.opsForStream().trim(StreamKeys.TRIMMED, StreamKeys.TRIM_MAX_LEN);
-        log.info("[trimming] sent id={} message={}", id, message);
-    }
+	public void send(String message) {
+		var id = redisTemplate.opsForStream().add(StreamKeys.TRIMMED, Map.of("message", message));
+		redisTemplate.opsForStream().trim(StreamKeys.TRIMMED, StreamKeys.TRIM_MAX_LEN);
+		log.info("[trimming] sent id={} message={}", id, message);
+	}
 }

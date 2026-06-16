@@ -15,25 +15,23 @@ import static org.mockito.Mockito.mockStatic;
 @ExtendWith(MockitoExtension.class)
 class SimpleConsumerTest {
 
-    @InjectMocks
-    private SimpleConsumer consumer;
+	@InjectMocks
+	private SimpleConsumer consumer;
 
-    @Test
-    void receive_shouldNotThrowOnSuccess() {
-        try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
-            mock.when(() -> FailureSimulator.maybeThrow(anyString())).thenAnswer(inv -> null);
-            assertThatCode(() -> consumer.receive("hello")).doesNotThrowAnyException();
-        }
-    }
+	@Test
+	void receive_shouldNotThrowOnSuccess() {
+		try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
+			mock.when(() -> FailureSimulator.maybeThrow(anyString())).thenAnswer(inv -> null);
+			assertThatCode(() -> consumer.receive("hello")).doesNotThrowAnyException();
+		}
+	}
 
-    @Test
-    void receive_shouldPropagateExceptionOnSimulatedFailure() {
-        try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
-            mock.when(() -> FailureSimulator.maybeThrow(anyString()))
-                    .thenThrow(new RuntimeException("Simulated"));
-            assertThatThrownBy(() -> consumer.receive("hello"))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("Simulated");
-        }
-    }
+	@Test
+	void receive_shouldPropagateExceptionOnSimulatedFailure() {
+		try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
+			mock.when(() -> FailureSimulator.maybeThrow(anyString())).thenThrow(new RuntimeException("Simulated"));
+			assertThatThrownBy(() -> consumer.receive("hello")).isInstanceOf(RuntimeException.class)
+					.hasMessageContaining("Simulated");
+		}
+	}
 }

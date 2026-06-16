@@ -13,15 +13,15 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class PubSubProducerTest {
 
-    @Mock
-    private RabbitTemplate rabbitTemplate;
+	@Mock
+	private RabbitTemplate rabbitTemplate;
 
-    @InjectMocks
-    private PubSubProducer pubSubProducer;
+	@InjectMocks
+	private PubSubProducer pubSubProducer;
 
-    @Test
-    void send_shouldPublishToFanoutExchangeWithEmptyRoutingKey() {
-        pubSubProducer.send("broadcast");
-        verify(rabbitTemplate).convertAndSend(PubSubConfig.EXCHANGE_NAME, "", "broadcast");
-    }
+	@Test
+	void send_shouldPublishToFanoutExchangeWithEmptyRoutingKey() {
+		pubSubProducer.send("broadcast");
+		verify(rabbitTemplate).convertAndSend(PubSubConfig.EXCHANGE_NAME, "", "broadcast");
+	}
 }

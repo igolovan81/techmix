@@ -16,22 +16,21 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class WorkQueueProducerTest {
 
-    @Mock
-    private RabbitTemplate rabbitTemplate;
+	@Mock
+	private RabbitTemplate rabbitTemplate;
 
-    @InjectMocks
-    private WorkQueueProducer workQueueProducer;
+	@InjectMocks
+	private WorkQueueProducer workQueueProducer;
 
-    @Test
-    void send_shouldSendExactlyCountMessages() {
-        workQueueProducer.send("task", 3);
-        verify(rabbitTemplate, times(3))
-                .convertAndSend(eq(WorkQueueConfig.QUEUE_NAME), anyString());
-    }
+	@Test
+	void send_shouldSendExactlyCountMessages() {
+		workQueueProducer.send("task", 3);
+		verify(rabbitTemplate, times(3)).convertAndSend(eq(WorkQueueConfig.QUEUE_NAME), anyString());
+	}
 
-    @Test
-    void send_shouldPrependSequenceNumberToMessage() {
-        workQueueProducer.send("task", 1);
-        verify(rabbitTemplate).convertAndSend(WorkQueueConfig.QUEUE_NAME, "1: task");
-    }
+	@Test
+	void send_shouldPrependSequenceNumberToMessage() {
+		workQueueProducer.send("task", 1);
+		verify(rabbitTemplate).convertAndSend(WorkQueueConfig.QUEUE_NAME, "1: task");
+	}
 }

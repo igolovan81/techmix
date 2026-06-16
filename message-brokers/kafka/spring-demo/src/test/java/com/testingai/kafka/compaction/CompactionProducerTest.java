@@ -13,15 +13,15 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class CompactionProducerTest {
 
-    @Mock
-    private KafkaTemplate<String, String> kafkaTemplate;
+	@Mock
+	private KafkaTemplate<String, String> kafkaTemplate;
 
-    @InjectMocks
-    private CompactionProducer producer;
+	@InjectMocks
+	private CompactionProducer producer;
 
-    @Test
-    void send_shouldSendKeyValueToCompactedTopic() {
-        producer.send("user-1", "Alice");
-        verify(kafkaTemplate).send(TopicConfig.COMPACTED_TOPIC, "user-1", "Alice");
-    }
+	@Test
+	void send_shouldSendKeyValueToCompactedTopic() {
+		producer.send("user-1", "Alice");
+		verify(kafkaTemplate).send(TopicConfig.COMPACTED_TOPIC, "user-1", "Alice");
+	}
 }

@@ -15,41 +15,39 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SimpleConsumerTest {
 
-    @InjectMocks
-    private SimpleConsumer consumer;
+	@InjectMocks
+	private SimpleConsumer consumer;
 
-    @Mock
-    private Channel channel;
+	@Mock
+	private Channel channel;
 
-    @Test
-    void receive_shouldAckOnSuccess() throws Exception {
-        try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
-            mock.when(() -> FailureSimulator.maybeThrow(anyString())).thenAnswer(inv -> null);
-            consumer.receive("hello", channel, 1L, false);
-            verify(channel).basicAck(1L, false);
-            verify(channel, never()).basicNack(anyLong(), anyBoolean(), anyBoolean());
-        }
-    }
+	@Test
+	void receive_shouldAckOnSuccess() throws Exception {
+		try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
+			mock.when(() -> FailureSimulator.maybeThrow(anyString())).thenAnswer(inv -> null);
+			consumer.receive("hello", channel, 1L, false);
+			verify(channel).basicAck(1L, false);
+			verify(channel, never()).basicNack(anyLong(), anyBoolean(), anyBoolean());
+		}
+	}
 
-    @Test
-    void receive_shouldNackWithRequeueOnFirstFailure() throws Exception {
-        try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
-            mock.when(() -> FailureSimulator.maybeThrow(anyString()))
-                    .thenThrow(new RuntimeException("Simulated"));
-            consumer.receive("hello", channel, 1L, false);
-            verify(channel).basicNack(1L, false, true);
-            verify(channel, never()).basicAck(anyLong(), anyBoolean());
-        }
-    }
+	@Test
+	void receive_shouldNackWithRequeueOnFirstFailure() throws Exception {
+		try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
+			mock.when(() -> FailureSimulator.maybeThrow(anyString())).thenThrow(new RuntimeException("Simulated"));
+			consumer.receive("hello", channel, 1L, false);
+			verify(channel).basicNack(1L, false, true);
+			verify(channel, never()).basicAck(anyLong(), anyBoolean());
+		}
+	}
 
-    @Test
-    void receive_shouldNackWithoutRequeueOnRedeliveredFailure() throws Exception {
-        try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
-            mock.when(() -> FailureSimulator.maybeThrow(anyString()))
-                    .thenThrow(new RuntimeException("Simulated"));
-            consumer.receive("hello", channel, 1L, true);
-            verify(channel).basicNack(1L, false, false);
-            verify(channel, never()).basicAck(anyLong(), anyBoolean());
-        }
-    }
+	@Test
+	void receive_shouldNackWithoutRequeueOnRedeliveredFailure() throws Exception {
+		try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
+			mock.when(() -> FailureSimulator.maybeThrow(anyString())).thenThrow(new RuntimeException("Simulated"));
+			consumer.receive("hello", channel, 1L, true);
+			verify(channel).basicNack(1L, false, false);
+			verify(channel, never()).basicAck(anyLong(), anyBoolean());
+		}
+	}
 }

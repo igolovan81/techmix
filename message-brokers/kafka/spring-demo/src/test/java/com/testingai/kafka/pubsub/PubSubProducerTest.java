@@ -13,15 +13,15 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class PubSubProducerTest {
 
-    @Mock
-    private KafkaTemplate<String, String> kafkaTemplate;
+	@Mock
+	private KafkaTemplate<String, String> kafkaTemplate;
 
-    @InjectMocks
-    private PubSubProducer producer;
+	@InjectMocks
+	private PubSubProducer producer;
 
-    @Test
-    void send_shouldBroadcastToPubSubTopic() {
-        producer.send("broadcast");
-        verify(kafkaTemplate).send(TopicConfig.PUBSUB_TOPIC, "broadcast");
-    }
+	@Test
+	void send_shouldBroadcastToPubSubTopic() {
+		producer.send("broadcast");
+		verify(kafkaTemplate).send(TopicConfig.PUBSUB_TOPIC, "broadcast");
+	}
 }

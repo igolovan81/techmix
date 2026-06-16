@@ -13,30 +13,26 @@ import org.springframework.stereotype.Component;
 @Component
 public class RoutingConsumerError implements ApplicationRunner {
 
-    private final ServiceBusClientBuilder clientBuilder;
-    private ServiceBusProcessorClient processorClient;
+	private final ServiceBusClientBuilder clientBuilder;
+	private ServiceBusProcessorClient processorClient;
 
-    public RoutingConsumerError(ServiceBusClientBuilder clientBuilder) {
-        this.clientBuilder = clientBuilder;
-    }
+	public RoutingConsumerError(ServiceBusClientBuilder clientBuilder) {
+		this.clientBuilder = clientBuilder;
+	}
 
-    @Override
-    public void run(ApplicationArguments args) {
-        processorClient = clientBuilder
-                .processor()
-                .topicName(EntityNames.ROUTING_TOPIC)
-                .subscriptionName(EntityNames.ROUTING_SUB_ERROR)
-                .processMessage(ctx -> {
-                    log.info("[routing][sub-error] received: {}", ctx.getMessage().getBody());
-                    ctx.complete();
-                })
-                .processError(ctx -> log.error("[routing][sub-error] error", ctx.getException()))
-                .buildProcessorClient();
-        processorClient.start();
-    }
+	@Override
+	public void run(ApplicationArguments args) {
+		processorClient = clientBuilder.processor().topicName(EntityNames.ROUTING_TOPIC)
+				.subscriptionName(EntityNames.ROUTING_SUB_ERROR).processMessage(ctx -> {
+					log.info("[routing][sub-error] received: {}", ctx.getMessage().getBody());
+					ctx.complete();
+				}).processError(ctx -> log.error("[routing][sub-error] error", ctx.getException()))
+				.buildProcessorClient();
+		processorClient.start();
+	}
 
-    @PreDestroy
-    public void close() {
-        processorClient.close();
-    }
+	@PreDestroy
+	public void close() {
+		processorClient.close();
+	}
 }

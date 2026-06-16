@@ -10,11 +10,11 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 @ExtendWith(MockitoExtension.class)
 class PubSubConsumerBTest {
 
-    @InjectMocks
-    private PubSubConsumerB consumer;
+	@InjectMocks
+	private PubSubConsumerB consumer;
 
-    @Test
-    void receive_shouldNotThrow() {
-        assertThatCode(() -> consumer.receive("broadcast")).doesNotThrowAnyException();
-    }
+	@Test
+	void receive_shouldNotThrow() {
+		assertThatCode(() -> consumer.receive("broadcast")).doesNotThrowAnyException();
+	}
 }

@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PubSubProducer {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
+	private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public void send(String message) {
-        kafkaTemplate.send(TopicConfig.PUBSUB_TOPIC, message);
-    }
+	public void send(String message) {
+		kafkaTemplate.send(TopicConfig.PUBSUB_TOPIC, message);
+	}
 }

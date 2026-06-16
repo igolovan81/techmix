@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PartitioningProducer {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
+	private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public void send(String key, String message) {
-        kafkaTemplate.send(TopicConfig.PARTITION_TOPIC, key, message);
-    }
+	public void send(String key, String message) {
+		kafkaTemplate.send(TopicConfig.PARTITION_TOPIC, key, message);
+	}
 }

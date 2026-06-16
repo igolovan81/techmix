@@ -17,21 +17,21 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class SimpleProducerTest {
 
-    @Mock
-    RedisTemplate<String, String> redisTemplate;
+	@Mock
+	RedisTemplate<String, String> redisTemplate;
 
-    @Mock
-    StreamOperations<String, Object, Object> streamOps;
+	@Mock
+	StreamOperations<String, Object, Object> streamOps;
 
-    @InjectMocks
-    SimpleProducer producer;
+	@InjectMocks
+	SimpleProducer producer;
 
-    @Test
-    void sendAddsMessageToSimpleStream() {
-        doReturn(streamOps).when(redisTemplate).opsForStream();
+	@Test
+	void sendAddsMessageToSimpleStream() {
+		doReturn(streamOps).when(redisTemplate).opsForStream();
 
-        producer.send("hello");
+		producer.send("hello");
 
-        verify(streamOps).add(eq(StreamKeys.SIMPLE), any(java.util.Map.class));
-    }
+		verify(streamOps).add(eq(StreamKeys.SIMPLE), any(java.util.Map.class));
+	}
 }

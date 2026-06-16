@@ -4,13 +4,14 @@ import java.util.random.RandomGenerator;
 
 public class FailureSimulator {
 
-    private static final double FAILURE_RATE = 0.05;
+	private static final double FAILURE_RATE = 0.05;
 
-    private FailureSimulator() {}
+	private FailureSimulator() {
+	}
 
-    public static void maybeThrow(String context) {
-        if (RandomGenerator.getDefault().nextDouble() < FAILURE_RATE) {
-            throw new RuntimeException("Simulated failure in " + context);
-        }
-    }
+	public static void maybeThrow(String context) {
+		if (RandomGenerator.getDefault().nextDouble() < FAILURE_RATE) {
+			throw new RuntimeException("Simulated failure in " + context);
+		}
+	}
 }

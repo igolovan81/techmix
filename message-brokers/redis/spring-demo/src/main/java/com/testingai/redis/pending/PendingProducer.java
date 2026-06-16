@@ -11,11 +11,10 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class PendingProducer {
-    private final RedisTemplate<String, String> redisTemplate;
+	private final RedisTemplate<String, String> redisTemplate;
 
-    public void send(String message) {
-        var id = redisTemplate.opsForStream()
-                .add(StreamKeys.PENDING, Map.of("message", message));
-        log.info("[pending] sent id={} message={}", id, message);
-    }
+	public void send(String message) {
+		var id = redisTemplate.opsForStream().add(StreamKeys.PENDING, Map.of("message", message));
+		log.info("[pending] sent id={} message={}", id, message);
+	}
 }

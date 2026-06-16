@@ -13,11 +13,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SimpleProducer {
 
-    private final RedisTemplate<String, String> redisTemplate;
+	private final RedisTemplate<String, String> redisTemplate;
 
-    public void send(String message) {
-        var id = redisTemplate.opsForStream()
-                .add(StreamKeys.SIMPLE, Map.of("message", message));
-        log.info("[simple] sent id={} message={}", id, message);
-    }
+	public void send(String message) {
+		var id = redisTemplate.opsForStream().add(StreamKeys.SIMPLE, Map.of("message", message));
+		log.info("[simple] sent id={} message={}", id, message);
+	}
 }

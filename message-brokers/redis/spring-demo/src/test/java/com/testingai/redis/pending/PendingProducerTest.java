@@ -16,14 +16,17 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PendingProducerTest {
-    @Mock RedisTemplate<String, String> redisTemplate;
-    @Mock StreamOperations<String, Object, Object> streamOps;
-    @InjectMocks PendingProducer producer;
+	@Mock
+	RedisTemplate<String, String> redisTemplate;
+	@Mock
+	StreamOperations<String, Object, Object> streamOps;
+	@InjectMocks
+	PendingProducer producer;
 
-    @Test
-    void sendAddsMessageToPendingStream() {
-        when(redisTemplate.opsForStream()).thenReturn(streamOps);
-        producer.send("hello");
-        verify(streamOps).add(eq(StreamKeys.PENDING), any(java.util.Map.class));
-    }
+	@Test
+	void sendAddsMessageToPendingStream() {
+		when(redisTemplate.opsForStream()).thenReturn(streamOps);
+		producer.send("hello");
+		verify(streamOps).add(eq(StreamKeys.PENDING), any(java.util.Map.class));
+	}
 }

@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DlqProducer {
 
-    private final SqsTemplate sqsTemplate;
+	private final SqsTemplate sqsTemplate;
 
-    public void send(String message) {
-        sqsTemplate.send(QueueNames.RETRY, message);
-        log.info("[retry] sent: {}", message);
-    }
+	public void send(String message) {
+		sqsTemplate.send(QueueNames.RETRY, message);
+		log.info("[retry] sent: {}", message);
+	}
 }

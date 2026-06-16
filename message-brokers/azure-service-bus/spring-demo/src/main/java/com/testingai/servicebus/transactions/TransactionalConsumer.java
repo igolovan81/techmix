@@ -13,29 +13,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class TransactionalConsumer implements ApplicationRunner {
 
-    private final ServiceBusClientBuilder clientBuilder;
-    private ServiceBusProcessorClient processorClient;
+	private final ServiceBusClientBuilder clientBuilder;
+	private ServiceBusProcessorClient processorClient;
 
-    public TransactionalConsumer(ServiceBusClientBuilder clientBuilder) {
-        this.clientBuilder = clientBuilder;
-    }
+	public TransactionalConsumer(ServiceBusClientBuilder clientBuilder) {
+		this.clientBuilder = clientBuilder;
+	}
 
-    @Override
-    public void run(ApplicationArguments args) {
-        processorClient = clientBuilder
-                .processor()
-                .queueName(EntityNames.TX_QUEUE)
-                .processMessage(ctx -> {
-                    log.info("[transaction] received: {}", ctx.getMessage().getBody());
-                    ctx.complete();
-                })
-                .processError(ctx -> log.error("[transaction] error", ctx.getException()))
-                .buildProcessorClient();
-        processorClient.start();
-    }
+	@Override
+	public void run(ApplicationArguments args) {
+		processorClient = clientBuilder.processor().queueName(EntityNames.TX_QUEUE).processMessage(ctx -> {
+			log.info("[transaction] received: {}", ctx.getMessage().getBody());
+			ctx.complete();
+		}).processError(ctx -> log.error("[transaction] error", ctx.getException())).buildProcessorClient();
+		processorClient.start();
+	}
 
-    @PreDestroy
-    public void close() {
-        processorClient.close();
-    }
+	@PreDestroy
+	public void close() {
+		processorClient.close();
+	}
 }

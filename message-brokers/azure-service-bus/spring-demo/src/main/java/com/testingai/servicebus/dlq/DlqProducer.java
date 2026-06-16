@@ -11,17 +11,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class DlqProducer {
 
-    private final ServiceBusSenderClient senderClient;
+	private final ServiceBusSenderClient senderClient;
 
-    public DlqProducer(ServiceBusClientBuilder clientBuilder) {
-        this.senderClient = clientBuilder
-                .sender()
-                .queueName(EntityNames.DLQ_QUEUE)
-                .buildClient();
-    }
+	public DlqProducer(ServiceBusClientBuilder clientBuilder) {
+		this.senderClient = clientBuilder.sender().queueName(EntityNames.DLQ_QUEUE).buildClient();
+	}
 
-    public void send(String message) {
-        senderClient.sendMessage(new ServiceBusMessage(message));
-        log.info("[dlq] sent: {}", message);
-    }
+	public void send(String message) {
+		senderClient.sendMessage(new ServiceBusMessage(message));
+		log.info("[dlq] sent: {}", message);
+	}
 }

@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class PubSubSubscriberB {
 
-    @SqsListener(QueueNames.PUBSUB_B)
-    public void receive(String message) {
-        log.info("[pubsub][subscriber-B] received: {}", message);
-    }
+	@SqsListener(QueueNames.PUBSUB_B)
+	public void receive(String message) {
+		log.info("[pubsub][subscriber-B] received: {}", message);
+	}
 }

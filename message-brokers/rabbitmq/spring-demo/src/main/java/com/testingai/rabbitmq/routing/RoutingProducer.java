@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RoutingProducer {
 
-    private final RabbitTemplate rabbitTemplate;
+	private final RabbitTemplate rabbitTemplate;
 
-    public void send(String routingKey, String message) {
-        rabbitTemplate.convertAndSend(RoutingConfig.EXCHANGE_NAME, routingKey, message);
-    }
+	public void send(String routingKey, String message) {
+		rabbitTemplate.convertAndSend(RoutingConfig.EXCHANGE_NAME, routingKey, message);
+	}
 }

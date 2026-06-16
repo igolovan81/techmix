@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=$(git rev-parse --show-toplevel)
+
+# Collect staged Java files that live inside message-brokers
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep '^message-brokers/.*\.java$' || true)
+
+if [ -z "$STAGED_JAVA" ]; then
+    exit 0
+fi
+
+echo "[pre-commit] Applying Spotless formatting to staged Java files..."
+(cd "$ROOT/message-brokers" && mvn spotless:apply --quiet)
+
+# Re-stage the originally staged files (now formatted)
+echo "$STAGED_JAVA" | xargs git add
+
+echo "[pre-commit] Spotless formatting applied."

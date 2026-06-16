@@ -22,35 +22,35 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class WorkQueueConsumerTest {
 
-    @Mock RedisTemplate<String, String> redisTemplate;
-    @Mock StreamOperations<String, Object, Object> streamOps;
-    @InjectMocks WorkQueueConsumer consumer;
+	@Mock
+	RedisTemplate<String, String> redisTemplate;
+	@Mock
+	StreamOperations<String, Object, Object> streamOps;
+	@InjectMocks
+	WorkQueueConsumer consumer;
 
-    @Test
-    void onMessageAcknowledgesOnSuccess() {
-        when(redisTemplate.opsForStream()).thenReturn(streamOps);
-        var record = MapRecord.create(StreamKeys.WORK, Map.of("message", "task"))
-                .withId(RecordId.of("1-0"));
+	@Test
+	void onMessageAcknowledgesOnSuccess() {
+		when(redisTemplate.opsForStream()).thenReturn(streamOps);
+		var record = MapRecord.create(StreamKeys.WORK, Map.of("message", "task")).withId(RecordId.of("1-0"));
 
-        try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
-            mock.when(() -> FailureSimulator.maybeThrow(any())).thenAnswer(inv -> null);
-            consumer.onMessage(record);
-        }
+		try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
+			mock.when(() -> FailureSimulator.maybeThrow(any())).thenAnswer(inv -> null);
+			consumer.onMessage(record);
+		}
 
-        verify(streamOps).acknowledge(eq(StreamKeys.WORK), eq("work-group"), any(RecordId.class));
-    }
+		verify(streamOps).acknowledge(eq(StreamKeys.WORK), eq("work-group"), any(RecordId.class));
+	}
 
-    @Test
-    void onMessageSkipsAckOnFailure() {
-        var record = MapRecord.create(StreamKeys.WORK, Map.of("message", "task"))
-                .withId(RecordId.of("1-0"));
+	@Test
+	void onMessageSkipsAckOnFailure() {
+		var record = MapRecord.create(StreamKeys.WORK, Map.of("message", "task")).withId(RecordId.of("1-0"));
 
-        try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
-            mock.when(() -> FailureSimulator.maybeThrow(any()))
-                    .thenThrow(new RuntimeException("simulated"));
-            consumer.onMessage(record);
-        }
+		try (MockedStatic<FailureSimulator> mock = mockStatic(FailureSimulator.class)) {
+			mock.when(() -> FailureSimulator.maybeThrow(any())).thenThrow(new RuntimeException("simulated"));
+			consumer.onMessage(record);
+		}
 
-        verify(redisTemplate, never()).opsForStream();
-    }
+		verify(redisTemplate, never()).opsForStream();
+	}
 }

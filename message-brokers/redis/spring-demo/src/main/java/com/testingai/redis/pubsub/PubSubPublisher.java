@@ -10,10 +10,10 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class PubSubPublisher {
-    private final RedisTemplate<String, String> redisTemplate;
+	private final RedisTemplate<String, String> redisTemplate;
 
-    public void publish(String message) {
-        redisTemplate.convertAndSend(StreamKeys.PUBSUB_CHANNEL, message);
-        log.info("[pubsub] published message={}", message);
-    }
+	public void publish(String message) {
+		redisTemplate.convertAndSend(StreamKeys.PUBSUB_CHANNEL, message);
+		log.info("[pubsub] published message={}", message);
+	}
 }

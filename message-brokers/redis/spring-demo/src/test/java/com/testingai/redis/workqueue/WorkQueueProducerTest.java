@@ -17,16 +17,19 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class WorkQueueProducerTest {
 
-    @Mock RedisTemplate<String, String> redisTemplate;
-    @Mock StreamOperations<String, Object, Object> streamOps;
-    @InjectMocks WorkQueueProducer producer;
+	@Mock
+	RedisTemplate<String, String> redisTemplate;
+	@Mock
+	StreamOperations<String, Object, Object> streamOps;
+	@InjectMocks
+	WorkQueueProducer producer;
 
-    @Test
-    void sendAddsMessageToWorkStream() {
-        when(redisTemplate.opsForStream()).thenReturn(streamOps);
+	@Test
+	void sendAddsMessageToWorkStream() {
+		when(redisTemplate.opsForStream()).thenReturn(streamOps);
 
-        producer.send("task-1");
+		producer.send("task-1");
 
-        verify(streamOps).add(eq(StreamKeys.WORK), any(java.util.Map.class));
-    }
+		verify(streamOps).add(eq(StreamKeys.WORK), any(java.util.Map.class));
+	}
 }

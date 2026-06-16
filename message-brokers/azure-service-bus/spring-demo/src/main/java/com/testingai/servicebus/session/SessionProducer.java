@@ -11,19 +11,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class SessionProducer {
 
-    private final ServiceBusSenderClient senderClient;
+	private final ServiceBusSenderClient senderClient;
 
-    public SessionProducer(ServiceBusClientBuilder clientBuilder) {
-        this.senderClient = clientBuilder
-                .sender()
-                .queueName(EntityNames.SESSION_QUEUE)
-                .buildClient();
-    }
+	public SessionProducer(ServiceBusClientBuilder clientBuilder) {
+		this.senderClient = clientBuilder.sender().queueName(EntityNames.SESSION_QUEUE).buildClient();
+	}
 
-    public void send(String message, String sessionId) {
-        ServiceBusMessage msg = new ServiceBusMessage(message);
-        msg.setSessionId(sessionId);
-        senderClient.sendMessage(msg);
-        log.info("[session] sessionId={} sent={}", sessionId, message);
-    }
+	public void send(String message, String sessionId) {
+		ServiceBusMessage msg = new ServiceBusMessage(message);
+		msg.setSessionId(sessionId);
+		senderClient.sendMessage(msg);
+		log.info("[session] sessionId={} sent={}", sessionId, message);
+	}
 }

@@ -11,17 +11,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class PubSubPublisher {
 
-    private final ServiceBusSenderClient senderClient;
+	private final ServiceBusSenderClient senderClient;
 
-    public PubSubPublisher(ServiceBusClientBuilder clientBuilder) {
-        this.senderClient = clientBuilder
-                .sender()
-                .topicName(EntityNames.PUBSUB_TOPIC)
-                .buildClient();
-    }
+	public PubSubPublisher(ServiceBusClientBuilder clientBuilder) {
+		this.senderClient = clientBuilder.sender().topicName(EntityNames.PUBSUB_TOPIC).buildClient();
+	}
 
-    public void publish(String message) {
-        senderClient.sendMessage(new ServiceBusMessage(message));
-        log.info("[pubsub] published: {}", message);
-    }
+	public void publish(String message) {
+		senderClient.sendMessage(new ServiceBusMessage(message));
+		log.info("[pubsub] published: {}", message);
+	}
 }

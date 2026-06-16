@@ -9,31 +9,31 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class TopicConfigTest {
 
-    private TopicConfig config;
+	private TopicConfig config;
 
-    @BeforeEach
-    void setUp() {
-        config = new TopicConfig();
-        ReflectionTestUtils.setField(config, "replicationFactor", 1);
-    }
+	@BeforeEach
+	void setUp() {
+		config = new TopicConfig();
+		ReflectionTestUtils.setField(config, "replicationFactor", 1);
+	}
 
-    @Test
-    void simpleTopic_hasOnePartition() {
-        NewTopic topic = config.simpleTopic();
-        assertThat(topic.name()).isEqualTo("simple.topic");
-        assertThat(topic.numPartitions()).isEqualTo(1);
-    }
+	@Test
+	void simpleTopic_hasOnePartition() {
+		NewTopic topic = config.simpleTopic();
+		assertThat(topic.name()).isEqualTo("simple.topic");
+		assertThat(topic.numPartitions()).isEqualTo(1);
+	}
 
-    @Test
-    void workTopic_hasThreePartitions() {
-        NewTopic topic = config.workTopic();
-        assertThat(topic.name()).isEqualTo("work.topic");
-        assertThat(topic.numPartitions()).isEqualTo(3);
-    }
+	@Test
+	void workTopic_hasThreePartitions() {
+		NewTopic topic = config.workTopic();
+		assertThat(topic.name()).isEqualTo("work.topic");
+		assertThat(topic.numPartitions()).isEqualTo(3);
+	}
 
-    @Test
-    void compactedTopic_hasCompactPolicy() {
-        NewTopic topic = config.compactedTopic();
-        assertThat(topic.configs()).containsEntry("cleanup.policy", "compact");
-    }
+	@Test
+	void compactedTopic_hasCompactPolicy() {
+		NewTopic topic = config.compactedTopic();
+		assertThat(topic.configs()).containsEntry("cleanup.policy", "compact");
+	}
 }

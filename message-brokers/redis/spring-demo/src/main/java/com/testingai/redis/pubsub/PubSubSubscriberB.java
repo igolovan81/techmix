@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class PubSubSubscriberB implements MessageListener {
 
-    @Override
-    public void onMessage(Message message, byte[] pattern) {
-        String body = message != null ? new String(message.getBody()) : "(null)";
-        log.info("[pubsub/subscriber-b] received: {}", body);
-    }
+	@Override
+	public void onMessage(Message message, byte[] pattern) {
+		String body = message != null ? new String(message.getBody()) : "(null)";
+		log.info("[pubsub/subscriber-b] received: {}", body);
+	}
 }

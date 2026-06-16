@@ -13,21 +13,21 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class RoutingProducerTest {
 
-    @Mock
-    private RabbitTemplate rabbitTemplate;
+	@Mock
+	private RabbitTemplate rabbitTemplate;
 
-    @InjectMocks
-    private RoutingProducer routingProducer;
+	@InjectMocks
+	private RoutingProducer routingProducer;
 
-    @Test
-    void send_shouldPublishToDirectExchangeWithGivenRoutingKey() {
-        routingProducer.send("error", "something broke");
-        verify(rabbitTemplate).convertAndSend(RoutingConfig.EXCHANGE_NAME, "error", "something broke");
-    }
+	@Test
+	void send_shouldPublishToDirectExchangeWithGivenRoutingKey() {
+		routingProducer.send("error", "something broke");
+		verify(rabbitTemplate).convertAndSend(RoutingConfig.EXCHANGE_NAME, "error", "something broke");
+	}
 
-    @Test
-    void send_shouldPublishToDirectExchangeWithInfoKey() {
-        routingProducer.send("info", "all good");
-        verify(rabbitTemplate).convertAndSend(RoutingConfig.EXCHANGE_NAME, "info", "all good");
-    }
+	@Test
+	void send_shouldPublishToDirectExchangeWithInfoKey() {
+		routingProducer.send("info", "all good");
+		verify(rabbitTemplate).convertAndSend(RoutingConfig.EXCHANGE_NAME, "info", "all good");
+	}
 }

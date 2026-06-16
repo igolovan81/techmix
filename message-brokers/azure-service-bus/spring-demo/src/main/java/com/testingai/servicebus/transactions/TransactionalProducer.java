@@ -12,27 +12,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class TransactionalProducer {
 
-    private final ServiceBusSenderClient senderClient;
+	private final ServiceBusSenderClient senderClient;
 
-    public TransactionalProducer(ServiceBusClientBuilder clientBuilder) {
-        this.senderClient = clientBuilder
-                .sender()
-                .queueName(EntityNames.TX_QUEUE)
-                .buildClient();
-    }
+	public TransactionalProducer(ServiceBusClientBuilder clientBuilder) {
+		this.senderClient = clientBuilder.sender().queueName(EntityNames.TX_QUEUE).buildClient();
+	}
 
-    public void send(String message, int count) {
-        ServiceBusTransactionContext transaction = senderClient.createTransaction();
-        try {
-            for (int i = 0; i < count; i++) {
-                senderClient.sendMessage(new ServiceBusMessage(message + "-" + i), transaction);
-            }
-            senderClient.commitTransaction(transaction);
-            log.info("[transaction] committed {} messages", count);
-        } catch (Exception e) {
-            senderClient.rollbackTransaction(transaction);
-            log.error("[transaction] rolled back", e);
-            throw e;
-        }
-    }
+	public void send(String message, int count) {
+		ServiceBusTransactionContext transaction = senderClient.createTransaction();
+		try {
+			for (int i = 0; i < count; i++) {
+				senderClient.sendMessage(new ServiceBusMessage(message + "-" + i), transaction);
+			}
+			senderClient.commitTransaction(transaction);
+			log.info("[transaction] committed {} messages", count);
+		} catch (Exception e) {
+			senderClient.rollbackTransaction(transaction);
+			log.error("[transaction] rolled back", e);
+			throw e;
+		}
+	}
 }

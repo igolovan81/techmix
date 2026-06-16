@@ -11,12 +11,12 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 @ExtendWith(MockitoExtension.class)
 class CompactionConsumerTest {
 
-    @InjectMocks
-    private CompactionConsumer consumer;
+	@InjectMocks
+	private CompactionConsumer consumer;
 
-    @Test
-    void receive_shouldNotThrow() {
-        var record = new ConsumerRecord<>("compacted.topic", 0, 0L, "user-1", "Alice");
-        assertThatCode(() -> consumer.receive(record)).doesNotThrowAnyException();
-    }
+	@Test
+	void receive_shouldNotThrow() {
+		var record = new ConsumerRecord<>("compacted.topic", 0, 0L, "user-1", "Alice");
+		assertThatCode(() -> consumer.receive(record)).doesNotThrowAnyException();
+	}
 }

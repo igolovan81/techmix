@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class FifoConsumer {
 
-    @SqsListener(QueueNames.FIFO)
-    public void receive(String message) {
-        log.info("[fifo] received (ordered): {}", message);
-    }
+	@SqsListener(QueueNames.FIFO)
+	public void receive(String message) {
+		log.info("[fifo] received (ordered): {}", message);
+	}
 }

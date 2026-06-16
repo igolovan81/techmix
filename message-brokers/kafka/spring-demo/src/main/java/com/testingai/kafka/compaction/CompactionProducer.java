@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class CompactionProducer {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
+	private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public void send(String key, String value) {
-        kafkaTemplate.send(TopicConfig.COMPACTED_TOPIC, key, value);
-        log.info("[CompactionProducer] Sent key={} value={}", key, value);
-    }
+	public void send(String key, String value) {
+		kafkaTemplate.send(TopicConfig.COMPACTED_TOPIC, key, value);
+		log.info("[CompactionProducer] Sent key={} value={}", key, value);
+	}
 }

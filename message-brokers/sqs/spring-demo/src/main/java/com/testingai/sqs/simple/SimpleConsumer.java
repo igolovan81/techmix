@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class SimpleConsumer {
 
-    @SqsListener(QueueNames.SIMPLE)
-    public void receive(String message) {
-        log.info("[simple] received: {}", message);
-    }
+	@SqsListener(QueueNames.SIMPLE)
+	public void receive(String message) {
+		log.info("[simple] received: {}", message);
+	}
 }

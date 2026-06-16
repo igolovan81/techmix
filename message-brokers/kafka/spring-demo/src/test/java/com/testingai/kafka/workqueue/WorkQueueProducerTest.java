@@ -14,15 +14,15 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class WorkQueueProducerTest {
 
-    @Mock
-    private KafkaTemplate<String, String> kafkaTemplate;
+	@Mock
+	private KafkaTemplate<String, String> kafkaTemplate;
 
-    @InjectMocks
-    private WorkQueueProducer producer;
+	@InjectMocks
+	private WorkQueueProducer producer;
 
-    @Test
-    void send_shouldSendCountMessagesToWorkTopic() {
-        producer.send("task", 3);
-        verify(kafkaTemplate, times(3)).send(TopicConfig.WORK_TOPIC, "task");
-    }
+	@Test
+	void send_shouldSendCountMessagesToWorkTopic() {
+		producer.send("task", 3);
+		verify(kafkaTemplate, times(3)).send(TopicConfig.WORK_TOPIC, "task");
+	}
 }

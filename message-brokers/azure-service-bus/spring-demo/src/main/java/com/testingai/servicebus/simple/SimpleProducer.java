@@ -11,17 +11,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class SimpleProducer {
 
-    private final ServiceBusSenderClient senderClient;
+	private final ServiceBusSenderClient senderClient;
 
-    public SimpleProducer(ServiceBusClientBuilder clientBuilder) {
-        this.senderClient = clientBuilder
-                .sender()
-                .queueName(EntityNames.SIMPLE_QUEUE)
-                .buildClient();
-    }
+	public SimpleProducer(ServiceBusClientBuilder clientBuilder) {
+		this.senderClient = clientBuilder.sender().queueName(EntityNames.SIMPLE_QUEUE).buildClient();
+	}
 
-    public void send(String message) {
-        senderClient.sendMessage(new ServiceBusMessage(message));
-        log.info("[simple] sent: {}", message);
-    }
+	public void send(String message) {
+		senderClient.sendMessage(new ServiceBusMessage(message));
+		log.info("[simple] sent: {}", message);
+	}
 }

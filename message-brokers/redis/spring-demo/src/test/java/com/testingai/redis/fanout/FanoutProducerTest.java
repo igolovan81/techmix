@@ -16,14 +16,17 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FanoutProducerTest {
-    @Mock RedisTemplate<String, String> redisTemplate;
-    @Mock StreamOperations<String, Object, Object> streamOps;
-    @InjectMocks FanoutProducer producer;
+	@Mock
+	RedisTemplate<String, String> redisTemplate;
+	@Mock
+	StreamOperations<String, Object, Object> streamOps;
+	@InjectMocks
+	FanoutProducer producer;
 
-    @Test
-    void sendAddsMessageToFanoutStream() {
-        when(redisTemplate.opsForStream()).thenReturn(streamOps);
-        producer.send("broadcast");
-        verify(streamOps).add(eq(StreamKeys.FANOUT), any(java.util.Map.class));
-    }
+	@Test
+	void sendAddsMessageToFanoutStream() {
+		when(redisTemplate.opsForStream()).thenReturn(streamOps);
+		producer.send("broadcast");
+		verify(streamOps).add(eq(StreamKeys.FANOUT), any(java.util.Map.class));
+	}
 }

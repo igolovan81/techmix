@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class RedisDemoApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(RedisDemoApplication.class, args);
-    }
+	public static void main(String[] args) {
+		SpringApplication.run(RedisDemoApplication.class, args);
+	}
 }

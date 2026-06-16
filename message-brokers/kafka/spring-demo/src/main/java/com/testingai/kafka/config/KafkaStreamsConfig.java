@@ -13,15 +13,12 @@ import java.util.Arrays;
 @EnableKafkaStreams
 public class KafkaStreamsConfig {
 
-    @Bean
-    public KStream<String, String> wordCountStream(StreamsBuilder builder) {
-        KStream<String, String> input = builder.stream(TopicConfig.STREAMS_INPUT_TOPIC);
-        input.flatMapValues(value -> Arrays.asList(value.toLowerCase().split("\\s+")))
-             .groupBy((key, word) -> word)
-             .count(Materialized.as("word-count-store"))
-             .toStream()
-             .mapValues(Object::toString)
-             .to(TopicConfig.STREAMS_WORDCOUNT_OUTPUT);
-        return input;
-    }
+	@Bean
+	public KStream<String, String> wordCountStream(StreamsBuilder builder) {
+		KStream<String, String> input = builder.stream(TopicConfig.STREAMS_INPUT_TOPIC);
+		input.flatMapValues(value -> Arrays.asList(value.toLowerCase().split("\\s+"))).groupBy((key, word) -> word)
+				.count(Materialized.as("word-count-store")).toStream().mapValues(Object::toString)
+				.to(TopicConfig.STREAMS_WORDCOUNT_OUTPUT);
+		return input;
+	}
 }

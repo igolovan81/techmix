@@ -92,3 +92,27 @@ private final ScenarioBuilder simpleScenario = scenario("Simple").exec(...);
 ```
 
 Fields that are assigned in `@PostConstruct` / `ApplicationRunner.run()` / `@PreDestroy` lifecycle methods (like processor clients) are exempt from `final` but must still be `private`.
+
+## Redundant `throws` declarations and `InterruptedException` handling
+
+Do not declare checked exceptions in a `throws` clause unless the method body can actually throw them. Flag redundant `throws` on methods and test cases.
+
+When `InterruptedException` cannot propagate (e.g. on a `@KafkaListener` or Spring event handler where the framework controls the call), catch it and restore the interrupt flag instead of declaring `throws`:
+
+```java
+// bad — throws propagates out of a listener where it has no effect
+public void worker(String msg) throws InterruptedException {
+    Thread.sleep(1000);
+}
+
+// good — catch and restore the interrupt flag
+public void worker(String msg) {
+    try {
+        Thread.sleep(1000);
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+    }
+}
+```
+
+Test methods should not declare `throws InterruptedException` (or any other checked exception) unless the method under test declares it — remove the clause when the production code no longer propagates the exception.

@@ -11,12 +11,12 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 @ExtendWith(MockitoExtension.class)
 class WordCountConsumerTest {
 
-    @InjectMocks
-    private WordCountConsumer consumer;
+	@InjectMocks
+	private WordCountConsumer consumer;
 
-    @Test
-    void receive_shouldNotThrow() {
-        var record = new ConsumerRecord<>("streams-wordcount-output", 0, 0L, "hello", "3");
-        assertThatCode(() -> consumer.receive(record)).doesNotThrowAnyException();
-    }
+	@Test
+	void receive_shouldNotThrow() {
+		var record = new ConsumerRecord<>("streams-wordcount-output", 0, 0L, "hello", "3");
+		assertThatCode(() -> consumer.receive(record)).doesNotThrowAnyException();
+	}
 }

@@ -13,30 +13,25 @@ import org.springframework.stereotype.Component;
 @Component
 public class PubSubSubscriberA implements ApplicationRunner {
 
-    private final ServiceBusClientBuilder clientBuilder;
-    private ServiceBusProcessorClient processorClient;
+	private final ServiceBusClientBuilder clientBuilder;
+	private ServiceBusProcessorClient processorClient;
 
-    public PubSubSubscriberA(ServiceBusClientBuilder clientBuilder) {
-        this.clientBuilder = clientBuilder;
-    }
+	public PubSubSubscriberA(ServiceBusClientBuilder clientBuilder) {
+		this.clientBuilder = clientBuilder;
+	}
 
-    @Override
-    public void run(ApplicationArguments args) {
-        processorClient = clientBuilder
-                .processor()
-                .topicName(EntityNames.PUBSUB_TOPIC)
-                .subscriptionName(EntityNames.PUBSUB_SUB_A)
-                .processMessage(ctx -> {
-                    log.info("[pubsub][sub-a] received: {}", ctx.getMessage().getBody());
-                    ctx.complete();
-                })
-                .processError(ctx -> log.error("[pubsub][sub-a] error", ctx.getException()))
-                .buildProcessorClient();
-        processorClient.start();
-    }
+	@Override
+	public void run(ApplicationArguments args) {
+		processorClient = clientBuilder.processor().topicName(EntityNames.PUBSUB_TOPIC)
+				.subscriptionName(EntityNames.PUBSUB_SUB_A).processMessage(ctx -> {
+					log.info("[pubsub][sub-a] received: {}", ctx.getMessage().getBody());
+					ctx.complete();
+				}).processError(ctx -> log.error("[pubsub][sub-a] error", ctx.getException())).buildProcessorClient();
+		processorClient.start();
+	}
 
-    @PreDestroy
-    public void close() {
-        processorClient.close();
-    }
+	@PreDestroy
+	public void close() {
+		processorClient.close();
+	}
 }
