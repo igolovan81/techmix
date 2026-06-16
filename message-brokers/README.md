@@ -1,6 +1,6 @@
 # Message Brokers — Use-Case Guide
 
-This repository contains runnable demos for four messaging technologies. Each demo runs a realistic cluster via Docker Compose and a Spring Boot app that exercises the key patterns.
+This repository contains runnable demos for six messaging technologies. Each demo runs a realistic broker via Docker Compose and a Spring Boot app that exercises the key patterns.
 
 | Broker | Demo | Best fit |
 |---|---|---|
@@ -9,6 +9,7 @@ This repository contains runnable demos for four messaging technologies. Each de
 | [Redis Streams](redis/) | 6-node cluster | Lightweight queuing when Redis is already in the stack |
 | [Amazon SQS](sqs/) | LocalStack (SQS + SNS) | Managed cloud queuing in AWS workloads |
 | [Azure Service Bus](azure-service-bus/) | Service Bus Emulator | Enterprise messaging on Azure with sessions, transactions, SQL filters |
+| [Apache Pulsar](pulsar/) | Standalone broker | Multi-tenant streaming with flexible subscription types |
 
 ---
 
@@ -90,6 +91,7 @@ One producer, one consumer. Point-to-point delivery. The consumer removes the me
 | Redis Streams | `XREAD` without a consumer group |
 | SQS | Standard queue, single listener |
 | Azure Service Bus | Single queue, single `ServiceBusProcessorClient` |
+| Apache Pulsar | Topic with one Exclusive subscription |
 
 ---
 
@@ -106,6 +108,7 @@ Multiple consumers share a single queue; each message is delivered to exactly on
 | Redis Streams | Consumer group (`XREADGROUP`) — each member receives different entries |
 | SQS | Standard queue, multiple `@SqsListener` beans compete for messages |
 | Azure Service Bus | Multiple `ServiceBusProcessorClient` instances on the same queue compete natively |
+| Apache Pulsar | Shared subscription — multiple consumers on the same subscription name; broker round-robins |
 
 **Key difference:** Kafka work queues are partition-bound — parallelism is capped at the partition count. RabbitMQ and SQS do not have this constraint; you can add consumers freely without reconfiguring the queue.
 
@@ -124,6 +127,7 @@ One message is delivered to all subscribers independently. Each subscriber maint
 | Redis Streams | Multiple consumer groups on the same stream |
 | SQS | SNS topic fan-out to multiple SQS queues |
 | Azure Service Bus | Topic + multiple subscriptions (TrueFilter); each subscription gets a copy |
+| Apache Pulsar | Multiple named subscriptions on the same topic; each maintains its own cursor independently |
 
 **Key difference:** Kafka and Redis Streams maintain per-group offsets so late subscribers can catch up. RabbitMQ and SQS deliver only messages published after the subscriber binds — missed messages are not replayed.
 
@@ -142,6 +146,7 @@ Messages are routed to different consumers based on attributes — a routing key
 | Redis Streams | Application-level — consumer filters by message fields |
 | SQS | SNS filter policies on subscriptions |
 | Azure Service Bus | Topic subscription SQL filter rules evaluated by the broker |
+| Apache Pulsar | Key_Shared subscription — broker routes messages with the same key to the same consumer instance; ordering preserved per key |
 
 **Key difference:** RabbitMQ is the most expressive — topic exchanges support wildcard routing keys (`logs.*.error`). Kafka partitioning is ordering-focused, not routing-focused.
 
@@ -160,6 +165,7 @@ A batch of messages is published or consumed atomically — either all succeed o
 | Redis Streams | `MULTI`/`EXEC` for local atomicity; no distributed transaction support |
 | SQS | FIFO queues offer exactly-once within a deduplication window (content-based dedup) |
 | Azure Service Bus | `ServiceBusTransactionContext` — atomic multi-message send, commit or rollback |
+| Apache Pulsar | Native transactions (`PulsarClient.newTransaction()`) spanning multiple topics; requires `transactionCoordinatorEnabled=true` on the broker |
 
 **Key difference:** Kafka is the only broker here with native distributed exactly-once guarantees spanning multiple partitions and topics.
 
@@ -178,6 +184,7 @@ Messages that fail processing repeatedly are moved to a separate queue for inspe
 | Redis Streams | Application-level — move entries from PEL to a dedicated error stream after N reclaims |
 | SQS | `maxReceiveCount` on source queue + separate DLQ ARN; fully automatic |
 | Azure Service Bus | `MaxDeliveryCount` on queue/subscription → automatic DLQ sub-queue; zero config |
+| Apache Pulsar | `DeadLetterPolicy` on the consumer — after `maxRedeliverCount` the message is moved to a configurable dead-letter topic automatically |
 
 **Key difference:** SQS handles the DLQ routing automatically with zero application code. All other brokers require some configuration or application logic.
 
@@ -196,6 +203,7 @@ Messages are delivered in the exact order they were produced, within a logical g
 | Redis Streams | Stream entries are ordered by ID; consumer groups read in insertion order |
 | SQS | FIFO queue with `MessageGroupId`; in-order per group, parallel across groups |
 | Azure Service Bus | Sessions (`RequiresSession=true`) — exclusive ordered delivery per `sessionId` |
+| Apache Pulsar | Key_Shared subscription — per-key ordering across multiple consumers without partition pre-assignment |
 
 **Key difference:** Kafka and SQS FIFO are the two production-grade choices for ordered-at-scale delivery. Kafka ordering is partition-scoped; SQS FIFO ordering is group-scoped and fully managed.
 
@@ -214,8 +222,9 @@ The broker retains only the most recent record for each key. Older records with 
 | Redis Streams | Not applicable — use Redis Hashes/Strings for key-value semantics |
 | SQS | Not supported |
 | Azure Service Bus | Not supported — use Azure Cosmos DB or Azure Cache for Redis instead |
+| Apache Pulsar | Topic compaction via `pulsar-admin topics compact` — retains only the latest value per key on demand or on a schedule |
 
-**Kafka is the only broker in this set with native log compaction.**
+**Kafka and Pulsar are the only brokers in this set with native log compaction.**
 
 ---
 
@@ -232,26 +241,49 @@ Real-time stateful transformations, aggregations, and joins over a continuous ev
 | Redis Streams | Application-level aggregation in the consumer; no windowing or join primitives |
 | SQS | No native stream processing; requires Lambda or Kinesis Data Analytics |
 | Azure Service Bus | No native stream processing; use Azure Stream Analytics or Azure Functions |
+| Apache Pulsar | Pulsar Functions — lightweight serverless functions deployed to the broker; Pulsar IO connectors for source/sink integration; no embedded joins or windowing |
 
-**Kafka Streams is the only embedded stream processing engine in this set.**
+**Kafka Streams is the only embedded full-featured stream processing engine in this set. Pulsar Functions cover simple stateless transformations.**
+
+---
+
+### Wire protocols
+
+The transport protocol a broker uses determines how clients connect, what libraries are available, and whether heterogeneous producers and consumers can interoperate.
+
+| Broker | Primary protocol | Notes |
+|---|---|---|
+| Kafka | Kafka binary protocol (TCP) | Custom, Kafka-specific. All official and community clients (Java, Go, Python, Rust, …) implement it. No universal AMQP/MQTT interop without a bridge. |
+| RabbitMQ | AMQP 0-9-1 (TCP) | First-class support; also speaks AMQP 1.0, MQTT 3/5, STOMP, and WebSocket via built-in plugins. Most protocol-flexible broker in this set. |
+| Redis Streams | RESP / RESP3 (TCP) | Redis Serialization Protocol — simple line-oriented text framing. Any Redis client can use Streams; no additional library needed. |
+| SQS | HTTPS REST (JSON/query) | AWS-managed HTTP API. IAM signs every request. No persistent TCP connection; polling model. |
+| Azure Service Bus | AMQP 1.0 (TCP) | Default and recommended for throughput/sessions. Also supports HTTPS REST for fire-and-forget or firewall-restricted environments. |
+| Apache Pulsar | Pulsar binary (TCP :6650) + HTTP admin (:8080) | Custom binary protocol for data; REST for admin and schema registry. Protocol adaptors (optional plugins) add Kafka, AMQP, and MQTT compatibility. |
+
+**Interoperability summary:**
+- **AMQP 1.0** is the most portable open standard: Azure Service Bus speaks it natively; RabbitMQ supports it via plugin; Pulsar via optional adaptor.
+- **MQTT** is the IoT standard: RabbitMQ and Pulsar support it; Kafka requires a bridge (e.g., HiveMQ Kafka extension).
+- **Kafka protocol** compatibility mode is available in Pulsar (KoP — Kafka-on-Pulsar) and Confluent Cluster Linking, letting existing Kafka clients connect without code changes.
 
 ---
 
 ## Quick decision matrix
 
-| Need | Kafka | RabbitMQ | Redis Streams | SQS | Azure Service Bus |
-|---|:---:|:---:|:---:|:---:|:---:|
-| Very high throughput (>100k msg/s) | ✓ | — | ✓ | ✓ | — |
-| Message replay / audit log | ✓ | — | limited | — | — |
-| Complex routing (wildcards, headers) | — | ✓ | — | limited | SQL filters |
-| Managed / no-ops | — | — | — | ✓ | ✓ |
-| Exactly-once delivery | ✓ | — | — | FIFO only | tx send |
-| Strict ordering at scale | ✓ | — | ✓ | FIFO | sessions |
-| Log compaction | ✓ | — | — | — | — |
-| Built-in stream processing | ✓ | — | — | — | — |
-| Protocol flexibility (MQTT, STOMP) | — | ✓ | — | — | — |
-| Sub-millisecond latency | — | — | ✓ | — | — |
-| Dead-letter queue (automatic) | config | config | manual | ✓ | ✓ |
-| Already in AWS | — | — | — | ✓ | — |
-| Already in Azure | — | — | — | — | ✓ |
-| Already have Redis | — | — | ✓ | — | — |
+| Need | Kafka | RabbitMQ | Redis Streams | SQS | Azure Service Bus | Apache Pulsar |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Very high throughput (>100k msg/s) | ✓ | — | ✓ | ✓ | — | ✓ |
+| Message replay / audit log | ✓ | — | limited | — | — | ✓ |
+| Complex routing (wildcards, headers) | — | ✓ | — | limited | SQL filters | Key_Shared |
+| Managed / no-ops | — | — | — | ✓ | ✓ | — |
+| Exactly-once delivery | ✓ | — | — | FIFO only | tx send | ✓ |
+| Strict ordering at scale | ✓ | — | ✓ | FIFO | sessions | Key_Shared |
+| Log compaction | ✓ | — | — | — | — | ✓ |
+| Built-in stream processing | ✓ | — | — | — | — | functions |
+| Protocol flexibility (MQTT, STOMP) | — | ✓ | — | — | — | — |
+| Sub-millisecond latency | — | — | ✓ | — | — | — |
+| Dead-letter queue (automatic) | config | config | manual | ✓ | ✓ | config |
+| Multi-tenancy (namespaces) | — | limited | — | — | — | ✓ |
+| Flexible subscription types | — | — | — | — | — | ✓ |
+| Already in AWS | — | — | — | ✓ | — | — |
+| Already in Azure | — | — | — | — | ✓ | — |
+| Already have Redis | — | — | ✓ | — | — | — |
