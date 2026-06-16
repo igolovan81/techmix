@@ -1,0 +1,9 @@
+spring:
+  pulsar:
+    client:
+      service-url: pulsar://localhost:6650
+    administration:
+      service-http-url: http://localhost:8085
+
+server:
+  port: 8083

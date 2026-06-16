@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-### Message broker demos (all five modules — run from the module root)
+### Message broker demos (all six modules — run from the module root)
 
 ```bash
 cd message-brokers/<broker>/spring-demo
@@ -49,6 +49,7 @@ docker compose -f message-brokers/azure-service-bus/docker/docker-compose.yml up
 docker compose -f message-brokers/rabbitmq/docker/docker-compose.yml up -d
 docker compose -f message-brokers/redis/docker/docker-compose.yml up -d
 docker compose -f message-brokers/sqs/docker/docker-compose.yml up -d
+docker compose -f message-brokers/pulsar/docker/docker-compose.yml up -d
 ```
 
 ## Architecture
@@ -60,12 +61,12 @@ docker compose -f message-brokers/sqs/docker/docker-compose.yml up -d
 | `backend/rest-api/` | Spring Boot REST API (JPA, Liquibase, Spring Security, H2 in tests) |
 | `backend/hackerrank/` | Isolated Maven project for algorithm problems |
 | `frontend/angular/` | Angular 20 with SSR via Express |
-| `message-brokers/<broker>/spring-demo/` | Five independent Spring Boot 3.4.4 demo apps (Java 21, Lombok) |
+| `message-brokers/<broker>/spring-demo/` | Six independent Spring Boot 3.4.4 demo apps (Java 21, Lombok) |
 | `docker-compose.yml` | Shared infrastructure stack |
 
 ### Message broker demos
 
-Each broker demo is a standalone Spring Boot app. The same internal structure repeats across all five:
+Each broker demo is a standalone Spring Boot app. The same internal structure repeats across all six:
 
 - **`DemoController`** — single REST controller that triggers all messaging patterns
 - **Package-per-pattern** — `simple/`, `workqueue/`, `pubsub/`, plus broker-specific packages
@@ -82,6 +83,7 @@ Each broker demo is a standalone Spring Boot app. The same internal structure re
 | SQS | `fifo/`, `fanout/` (SNS→SQS), `dlq/` | 8081 | LocalStack :4566 (region us-east-1) |
 | Redis | `pending/` (PEL recovery), `fanout/`, `trimming/` | 8080 (default) | 6-node cluster :6379–:6384 (Redis Streams) |
 | RabbitMQ | `routing/` | 8080 (default) | :5672 guest/guest |
+| Apache Pulsar | `routing/` (Key_Shared), `transactions/` | 8083 | Standalone :6650, admin :8085 |
 
 ### Backend REST API
 

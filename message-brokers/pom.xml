@@ -23,6 +23,7 @@
         <module>rabbitmq/spring-demo</module>
         <module>redis/spring-demo</module>
         <module>sqs/spring-demo</module>
+        <module>pulsar/spring-demo</module>
     </modules>
 
     <properties>

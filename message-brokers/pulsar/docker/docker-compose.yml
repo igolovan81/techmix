@@ -1,0 +1,20 @@
+name: pulsar-standalone
+
+services:
+  pulsar:
+    image: apachepulsar/pulsar:3.3.3
+    container_name: pulsar
+    command: bin/pulsar standalone
+    environment:
+      PULSAR_PREFIX_transactionCoordinatorEnabled: "true"
+      PULSAR_PREFIX_brokerDeleteInactiveTopicsEnabled: "false"
+      PULSAR_MEM: "-Xms512m -Xmx512m -XX:MaxDirectMemorySize=256m"
+    ports:
+      - "6650:6650"   # binary protocol
+      - "8085:8080"   # admin HTTP (remapped to avoid conflict with backend :8080)
+    healthcheck:
+      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
