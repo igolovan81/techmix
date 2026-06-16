@@ -26,13 +26,9 @@ public class DlqConsumer implements ApplicationRunner {
                 .processor()
                 .queueName(EntityNames.DLQ_QUEUE)
                 .processMessage(ctx -> {
-                    if (FailureSimulator.shouldFail()) {
-                        log.warn("[dlq] simulating failure for: {}", ctx.getMessage().getBody().toString());
-                        ctx.abandon();
-                    } else {
-                        log.info("[dlq] processed: {}", ctx.getMessage().getBody().toString());
-                        ctx.complete();
-                    }
+                    FailureSimulator.maybeThrow("dlq");
+                    log.info("[dlq] processed: {}", ctx.getMessage().getBody().toString());
+                    ctx.complete();
                 })
                 .processError(ctx -> log.error("[dlq] error", ctx.getException()))
                 .buildProcessorClient();
