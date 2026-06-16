@@ -86,3 +86,12 @@ Each broker demo is a standalone Spring Boot app. The same internal structure re
 ### Backend REST API
 
 Standard layered architecture: `controller → service → repository → entity`. H2 in-memory for tests, Postgres in production. Liquibase manages schema migrations. `fmt-maven-plugin` (Google Java Format) is wired into the build — run `mvn fmt:format` before committing Java changes.
+
+## Coding Standards (`.claude/rules/`)
+
+Detailed coding conventions are in `.claude/rules/` — autoloaded by Claude Code when editing matching file paths:
+
+- `.claude/rules/code-review.md` — review rules for all Java and TypeScript sources;
+  `FailureSimulator` consistency across message broker modules (5% `FAILURE_RATE`, `maybeThrow(String context)`, Kafka module as reference);
+  modern Java 17/21 LTS feature preference (records, sealed classes, pattern matching for `instanceof` and `switch`, record patterns,
+  text blocks, `SequencedCollection` API, virtual threads) — flagged only on lines modified by the PR
