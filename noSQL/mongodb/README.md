@@ -42,6 +42,9 @@ Expected: one `PRIMARY`, two `SECONDARY`.
 
 mongo-express: http://localhost:8091
 
+Grafana: http://localhost:3002 (admin/admin)
+Prometheus: http://localhost:9095
+
 ## Run the app
 
 ```bash
@@ -156,6 +159,17 @@ flowchart LR
 |---|---|---|
 | `products` | CRUD, Transactions | `id`, `name`, `price`, `stock` |
 | `orders` | Transactions, Change Streams, Aggregation | `id`, `productId`, `quantity`, `unitPrice`, `lineTotal`, `status` — `unitPrice`/`lineTotal` are snapshotted from the product's price at order time |
+
+## Monitoring
+
+`mongodb-exporter` polls the replica set over the MongoDB wire protocol (the same hostnames the app and mongo-express already use) and exposes Prometheus-format metrics — no changes to the `mongo1`/`mongo2`/`mongo3` containers themselves. Prometheus scrapes it every 15 seconds; Grafana visualizes the result.
+
+| URL | Purpose |
+|---|---|
+| http://localhost:9095 | Prometheus — query metrics directly, check scrape target health under `/targets` |
+| http://localhost:3002 | Grafana (admin/admin) — pre-loaded "MongoDB Demo Cluster" dashboard |
+
+**Dashboard panels:** replica set member state, replication lag, op counters (ties to the CRUD pattern), active connections, resident memory, document counts for `products`/`orders` (ties to the demo's domain data growth).
 
 ## Replica set admin commands
 
