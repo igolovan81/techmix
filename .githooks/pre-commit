@@ -3,15 +3,22 @@ set -euo pipefail
 
 ROOT=$(git rev-parse --show-toplevel)
 
-# Collect staged Java files that live inside message-brokers
-STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep '^message-brokers/.*\.java$' || true)
+# Collect staged Java files and the Maven reactor root each one belongs to
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(message-brokers|noSQL)/.*\.java$' || true)
 
 if [ -z "$STAGED_JAVA" ]; then
     exit 0
 fi
 
-echo "[pre-commit] Applying Spotless formatting to staged Java files..."
-(cd "$ROOT/message-brokers" && mvn spotless:apply --quiet)
+if echo "$STAGED_JAVA" | grep -q '^message-brokers/'; then
+    echo "[pre-commit] Applying Spotless formatting to staged message-brokers Java files..."
+    (cd "$ROOT/message-brokers" && mvn spotless:apply --quiet)
+fi
+
+if echo "$STAGED_JAVA" | grep -q '^noSQL/'; then
+    echo "[pre-commit] Applying Spotless formatting to staged noSQL Java files..."
+    (cd "$ROOT/noSQL" && mvn spotless:apply --quiet)
+fi
 
 # Re-stage the originally staged files (now formatted)
 echo "$STAGED_JAVA" | xargs git add

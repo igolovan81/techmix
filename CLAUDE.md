@@ -15,6 +15,17 @@ mvn test -Dtest=ClassName            # single test class
 mvn gatling:test                     # load test — requires the app to be running first
 ```
 
+### NoSQL database demos (run from the module root)
+
+```bash
+cd noSQL/<database>/spring-demo
+
+mvn clean package                    # build
+mvn test                             # unit tests (Gatling excluded automatically)
+mvn test -Dtest=ClassName            # single test class
+mvn gatling:test                     # load test — requires the app to be running first
+```
+
 ### Backend REST API
 
 ```bash
@@ -62,6 +73,7 @@ docker compose -f message-brokers/pulsar/docker/docker-compose.yml up -d
 | `backend/hackerrank/` | Isolated Maven project for algorithm problems |
 | `frontend/angular/` | Angular 20 with SSR via Express |
 | `message-brokers/<broker>/spring-demo/` | Six independent Spring Boot 3.4.4 demo apps (Java 21, Lombok) |
+| `noSQL/<database>/spring-demo/` | NoSQL database demo apps, same conventions as `message-brokers/` (currently: MongoDB) |
 | `docker-compose.yml` | Shared infrastructure stack |
 
 ### Message broker demos
