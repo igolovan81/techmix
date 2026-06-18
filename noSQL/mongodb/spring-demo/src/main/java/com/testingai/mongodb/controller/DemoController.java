@@ -4,6 +4,7 @@ import com.testingai.mongodb.aggregation.OrderAggregationService;
 import com.testingai.mongodb.aggregation.StatusSummary;
 import com.testingai.mongodb.crud.Product;
 import com.testingai.mongodb.crud.ProductService;
+import com.testingai.mongodb.search.ProductSearchService;
 import com.testingai.mongodb.transaction.Order;
 import com.testingai.mongodb.transaction.OrderService;
 import com.testingai.mongodb.transaction.PlaceOrderRequest;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -27,6 +29,7 @@ public class DemoController {
 	private final ProductService productService;
 	private final OrderService orderService;
 	private final OrderAggregationService aggregationService;
+	private final ProductSearchService productSearchService;
 
 	@PostMapping("/products")
 	public Product createProduct(@RequestBody Product product) {
@@ -46,6 +49,16 @@ public class DemoController {
 	@DeleteMapping("/products/{id}")
 	public void deleteProduct(@PathVariable String id) {
 		productService.delete(id);
+	}
+
+	@GetMapping("/products/search")
+	public List<Product> searchProducts(@RequestParam String q) {
+		return productSearchService.searchByText(q);
+	}
+
+	@GetMapping("/products/price-range")
+	public List<Product> productsByPriceRange(@RequestParam double min, @RequestParam double max) {
+		return productSearchService.findByPriceRange(min, max);
 	}
 
 	@PostMapping("/orders")

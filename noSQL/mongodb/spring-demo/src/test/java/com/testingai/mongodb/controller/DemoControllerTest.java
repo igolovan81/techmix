@@ -5,6 +5,7 @@ import com.testingai.mongodb.aggregation.OrderAggregationService;
 import com.testingai.mongodb.aggregation.StatusSummary;
 import com.testingai.mongodb.crud.Product;
 import com.testingai.mongodb.crud.ProductService;
+import com.testingai.mongodb.search.ProductSearchService;
 import com.testingai.mongodb.transaction.Order;
 import com.testingai.mongodb.transaction.OrderService;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,8 @@ class DemoControllerTest {
 	private OrderService orderService;
 	@MockitoBean
 	private OrderAggregationService aggregationService;
+	@MockitoBean
+	private ProductSearchService productSearchService;
 
 	@Test
 	void createProduct_shouldReturn200AndDelegate() throws Exception {
@@ -89,5 +92,24 @@ class DemoControllerTest {
 		mockMvc.perform(get("/demo/aggregation")).andExpect(status().isOk());
 
 		verify(aggregationService).summarizeByStatus();
+	}
+
+	@Test
+	void searchProducts_shouldReturn200AndDelegate() throws Exception {
+		when(productSearchService.searchByText("Widget")).thenReturn(List.of());
+
+		mockMvc.perform(get("/demo/products/search").param("q", "Widget")).andExpect(status().isOk());
+
+		verify(productSearchService).searchByText("Widget");
+	}
+
+	@Test
+	void productsByPriceRange_shouldReturn200AndDelegate() throws Exception {
+		when(productSearchService.findByPriceRange(5.0, 50.0)).thenReturn(List.of());
+
+		mockMvc.perform(get("/demo/products/price-range").param("min", "5.0").param("max", "50.0"))
+				.andExpect(status().isOk());
+
+		verify(productSearchService).findByPriceRange(5.0, 50.0);
 	}
 }
