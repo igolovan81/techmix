@@ -95,6 +95,35 @@ services:
     networks:
       - kafka_network
 
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: kafka-exporter
+    command:
+      - --kafka.server=kafka1:29092
+      - --kafka.server=kafka2:29092
+      - --kafka.server=kafka3:29092
+    depends_on:
+      kafka1:
+        condition: service_healthy
+    networks:
+      - kafka_network
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: kafka-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+    depends_on:
+      - kafka-exporter
+    networks:
+      - kafka_network
+
 networks:
   kafka_network:
     driver: bridge
