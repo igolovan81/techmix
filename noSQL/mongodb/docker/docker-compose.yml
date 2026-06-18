@@ -94,6 +94,35 @@ services:
     networks:
       - mongo_network
 
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.44
+    container_name: mongodb-exporter
+    command:
+      - --mongodb.uri=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0
+      - --no-mongodb.direct-connect
+      - --collect-all
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+    networks:
+      - mongo_network
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: mongodb-prometheus
+    ports:
+      - "9095:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+    depends_on:
+      - mongodb-exporter
+    networks:
+      - mongo_network
+
 networks:
   mongo_network:
     driver: bridge
