@@ -76,6 +76,12 @@ curl -X POST "http://localhost:8084/demo/orders" \
 # Aggregation — revenue and order count per status
 curl "http://localhost:8084/demo/aggregation"
 
+# Full-text search by product name
+curl "http://localhost:8084/demo/products/search?q=Widget"
+
+# Range query backed by the compound (price, stock) index
+curl "http://localhost:8084/demo/products/price-range?min=5&max=50"
+
 # Delete a product
 curl -X DELETE "http://localhost:8084/demo/products/<id>"
 ```
@@ -157,8 +163,21 @@ flowchart LR
 
 | Collection | Pattern(s) | Notes |
 |---|---|---|
-| `products` | CRUD, Transactions | `id`, `name`, `price`, `stock` |
+| `products` | CRUD, Transactions, Indexing & Search | `id`, `name`, `price`, `stock` — text index on `name`, compound index on `(price, stock)` |
 | `orders` | Transactions, Change Streams, Aggregation | `id`, `productId`, `quantity`, `unitPrice`, `lineTotal`, `status` — `unitPrice`/`lineTotal` are snapshotted from the product's price at order time |
+
+## Verify the indexes are used
+
+```bash
+# Confirm the indexes exist
+docker exec mongo1 mongosh ecommerce --quiet --eval "db.products.getIndexes()"
+
+# Text search uses the text index (look for IXSCAN on the text index in the plan)
+docker exec mongo1 mongosh ecommerce --quiet --eval 'db.products.find({ $text: { $search: "Widget" } }).explain("executionStats")'
+
+# Price-range query uses the compound index (look for IXSCAN on price_1_stock_1)
+docker exec mongo1 mongosh ecommerce --quiet --eval 'db.products.find({ price: { $gte: 5, $lte: 50 } }).sort({ stock: -1 }).explain("executionStats")'
+```
 
 ## Monitoring
 
