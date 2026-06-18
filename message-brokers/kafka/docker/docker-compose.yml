@@ -124,6 +124,23 @@ services:
     networks:
       - kafka_network
 
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: kafka-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - kafka_network
+
 networks:
   kafka_network:
     driver: bridge
