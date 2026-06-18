@@ -25,6 +25,9 @@ docker exec kafka1 kafka-broker-api-versions --bootstrap-server localhost:9092
 
 Kafka UI: http://localhost:8090
 
+Grafana: http://localhost:3001 (admin/admin)
+Prometheus: http://localhost:9091
+
 ## Run the app
 
 ```bash
@@ -246,6 +249,17 @@ docker exec -it kafka1 kafka-console-producer --bootstrap-server localhost:9092 
 | http://localhost:8090 | Cluster overview — broker count, topic count, throughput |
 | http://localhost:8090/ui/clusters/local/topics | Per-topic partition list, message counts, configs |
 | http://localhost:8090/ui/clusters/local/consumer-groups | Consumer group lag per partition |
+
+## Monitoring
+
+`kafka-exporter` polls the cluster over the Kafka protocol (the same `INTERNAL` listener Kafka UI uses) and exposes Prometheus-format metrics — no changes to the broker containers themselves. Prometheus scrapes it every 15 seconds; Grafana visualizes the result.
+
+| URL | Purpose |
+|---|---|
+| http://localhost:9091 | Prometheus — query metrics directly, check scrape target health under `/targets` |
+| http://localhost:3001 | Grafana (admin/admin) — pre-loaded "Kafka Demo Cluster" dashboard |
+
+**Dashboard panels:** messages in/sec per topic, consumer group lag, under-replicated partitions (replication health), broker count, partition count per topic, topic count.
 
 ## Stop the cluster
 
