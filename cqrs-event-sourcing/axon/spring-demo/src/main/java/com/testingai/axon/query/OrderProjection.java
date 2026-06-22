@@ -54,7 +54,7 @@ public class OrderProjection {
 	}
 
 	@QueryHandler
-	public List<OrderSummary> handle(FindAllOrdersQuery query) {
-		return List.copyOf(orders.values());
+	public OrderSummaries handle(FindAllOrdersQuery query) {
+		return new OrderSummaries(List.copyOf(orders.values()));
 	}
 }

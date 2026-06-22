@@ -1,10 +1,12 @@
 package com.testingai.axon.command;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.testingai.axon.event.OrderCancelledEvent;
 import com.testingai.axon.event.OrderConfirmedEvent;
 import com.testingai.axon.event.OrderCreatedEvent;
 import com.testingai.axon.event.OrderLineAddedEvent;
 import com.testingai.axon.util.FailureSimulator;
+import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.CommandHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
@@ -13,7 +15,10 @@ import org.axonframework.spring.stereotype.Aggregate;
 import static org.axonframework.modelling.command.AggregateLifecycle.apply;
 
 @Aggregate(snapshotTriggerDefinition = "orderSnapshotTriggerDefinition")
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class OrderAggregate {
+
+	private static final String BUSINESS_RULE_VIOLATION = "BUSINESS_RULE_VIOLATION";
 
 	@AggregateIdentifier
 	private String orderId;
@@ -32,7 +37,8 @@ public class OrderAggregate {
 	@CommandHandler
 	public void handle(ConfirmOrderCommand command) {
 		if (confirmed) {
-			throw new IllegalStateException("Order " + command.orderId() + " is already confirmed");
+			throw new CommandExecutionException("Order " + command.orderId() + " is already confirmed", null,
+					BUSINESS_RULE_VIOLATION);
 		}
 		FailureSimulator.maybeThrow("confirm-order");
 		apply(new OrderConfirmedEvent(command.orderId()));
@@ -41,7 +47,8 @@ public class OrderAggregate {
 	@CommandHandler
 	public void handle(CancelOrderCommand command) {
 		if (confirmed) {
-			throw new IllegalStateException("Cannot cancel order " + command.orderId() + " after it is confirmed");
+			throw new CommandExecutionException("Cannot cancel order " + command.orderId() + " after it is confirmed",
+					null, BUSINESS_RULE_VIOLATION);
 		}
 		apply(new OrderCancelledEvent(command.orderId()));
 	}

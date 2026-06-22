@@ -5,6 +5,7 @@ import com.testingai.axon.event.OrderConfirmedEvent;
 import com.testingai.axon.event.OrderCreatedEvent;
 import com.testingai.axon.event.OrderLineAddedEvent;
 import com.testingai.axon.util.FailureSimulator;
+import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.test.aggregate.AggregateTestFixture;
 import org.axonframework.test.aggregate.FixtureConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +58,7 @@ class OrderAggregateTest {
 			mocked.when(() -> FailureSimulator.maybeThrow(anyString())).thenAnswer(invocation -> null);
 
 			fixture.given(new OrderCreatedEvent(ORDER_ID, CUSTOMER_ID), new OrderConfirmedEvent(ORDER_ID))
-					.when(new ConfirmOrderCommand(ORDER_ID)).expectException(IllegalStateException.class)
+					.when(new ConfirmOrderCommand(ORDER_ID)).expectException(CommandExecutionException.class)
 					.expectNoEvents();
 		}
 	}
@@ -82,6 +83,7 @@ class OrderAggregateTest {
 	@Test
 	void cancel_whenAlreadyConfirmed_shouldRejectAndEmitNoEvents() {
 		fixture.given(new OrderCreatedEvent(ORDER_ID, CUSTOMER_ID), new OrderConfirmedEvent(ORDER_ID))
-				.when(new CancelOrderCommand(ORDER_ID)).expectException(IllegalStateException.class).expectNoEvents();
+				.when(new CancelOrderCommand(ORDER_ID)).expectException(CommandExecutionException.class)
+				.expectNoEvents();
 	}
 }

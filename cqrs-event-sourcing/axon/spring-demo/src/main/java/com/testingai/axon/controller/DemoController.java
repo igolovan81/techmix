@@ -6,11 +6,11 @@ import com.testingai.axon.command.ConfirmOrderCommand;
 import com.testingai.axon.command.CreateOrderCommand;
 import com.testingai.axon.query.FindAllOrdersQuery;
 import com.testingai.axon.query.FindOrderQuery;
+import com.testingai.axon.query.OrderSummaries;
 import com.testingai.axon.query.OrderSummary;
 import com.testingai.axon.replay.ReplayService;
 import lombok.RequiredArgsConstructor;
 import org.axonframework.commandhandling.gateway.CommandGateway;
-import org.axonframework.messaging.responsetypes.ResponseTypes;
 import org.axonframework.queryhandling.QueryGateway;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -68,8 +68,7 @@ public class DemoController {
 
 	@GetMapping
 	public List<OrderSummary> getAllOrders() {
-		return queryGateway.query(new FindAllOrdersQuery(), ResponseTypes.multipleInstancesOf(OrderSummary.class))
-				.join();
+		return queryGateway.query(new FindAllOrdersQuery(), OrderSummaries.class).join().orders();
 	}
 
 	@PostMapping("/replay")

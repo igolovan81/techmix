@@ -1,6 +1,10 @@
 axon:
   axonserver:
     servers: localhost:8124
+  serializer:
+    general: jackson
+    events: jackson
+    messages: jackson
   eventhandling:
     processors:
       order-projection:

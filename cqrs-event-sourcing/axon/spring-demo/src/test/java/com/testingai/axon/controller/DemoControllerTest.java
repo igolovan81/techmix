@@ -7,11 +7,11 @@ import com.testingai.axon.command.ConfirmOrderCommand;
 import com.testingai.axon.command.CreateOrderCommand;
 import com.testingai.axon.query.FindAllOrdersQuery;
 import com.testingai.axon.query.FindOrderQuery;
+import com.testingai.axon.query.OrderSummaries;
 import com.testingai.axon.query.OrderSummary;
 import com.testingai.axon.replay.ReplayService;
 import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
-import org.axonframework.messaging.responsetypes.ResponseTypes;
 import org.axonframework.queryhandling.QueryGateway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,7 +75,7 @@ class DemoControllerTest {
 	@Test
 	void confirmOrder_whenAlreadyConfirmed_shouldReturn409() throws Exception {
 		when(commandGateway.sendAndWait(new ConfirmOrderCommand("order-1")))
-				.thenThrow(new CommandExecutionException("failed", new IllegalStateException("already confirmed")));
+				.thenThrow(new CommandExecutionException("already confirmed", null, "BUSINESS_RULE_VIOLATION"));
 
 		mockMvc.perform(post("/demo/orders/order-1/confirm")).andExpect(status().isConflict());
 	}
@@ -106,9 +106,8 @@ class DemoControllerTest {
 
 	@Test
 	void getAllOrders_shouldReturn200() throws Exception {
-		when(queryGateway.query(eq(new FindAllOrdersQuery()),
-				eq(ResponseTypes.multipleInstancesOf(OrderSummary.class))))
-				.thenReturn(CompletableFuture.completedFuture(List.of()));
+		when(queryGateway.query(eq(new FindAllOrdersQuery()), eq(OrderSummaries.class)))
+				.thenReturn(CompletableFuture.completedFuture(new OrderSummaries(List.of())));
 
 		mockMvc.perform(get("/demo/orders")).andExpect(status().isOk());
 	}

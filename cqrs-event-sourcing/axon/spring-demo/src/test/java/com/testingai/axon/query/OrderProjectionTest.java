@@ -68,7 +68,7 @@ class OrderProjectionTest {
 		projection.on(new OrderCreatedEvent("order-1", CUSTOMER_ID));
 		projection.on(new OrderCreatedEvent("order-2", CUSTOMER_ID));
 
-		List<OrderSummary> summaries = projection.handle(new FindAllOrdersQuery());
+		List<OrderSummary> summaries = projection.handle(new FindAllOrdersQuery()).orders();
 
 		assertThat(summaries).hasSize(2).extracting(OrderSummary::orderId).containsExactlyInAnyOrder("order-1",
 				"order-2");
@@ -80,6 +80,6 @@ class OrderProjectionTest {
 
 		projection.onReset();
 
-		assertThat(projection.handle(new FindAllOrdersQuery())).isEmpty();
+		assertThat(projection.handle(new FindAllOrdersQuery()).orders()).isEmpty();
 	}
 }

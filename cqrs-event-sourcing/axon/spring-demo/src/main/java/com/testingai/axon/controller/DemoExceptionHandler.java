@@ -11,10 +11,7 @@ public class DemoExceptionHandler {
 
 	@ExceptionHandler(CommandExecutionException.class)
 	public ResponseEntity<String> handleCommandExecutionException(CommandExecutionException exception) {
-		Throwable cause = exception.getCause() != null ? exception.getCause() : exception;
-		HttpStatus status = cause instanceof IllegalStateException
-				? HttpStatus.CONFLICT
-				: HttpStatus.INTERNAL_SERVER_ERROR;
-		return ResponseEntity.status(status).body(cause.getMessage());
+		HttpStatus status = exception.getDetails().isPresent() ? HttpStatus.CONFLICT : HttpStatus.INTERNAL_SERVER_ERROR;
+		return ResponseEntity.status(status).body(exception.getMessage());
 	}
 }
