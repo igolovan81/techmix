@@ -15,7 +15,7 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 
 public class DemoSimulation extends Simulation {
 
-	private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8085")
+	private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8086")
 			.acceptHeader("application/json").contentTypeHeader("application/json");
 
 	private final ScenarioBuilder orderLifecycleScenario = scenario("Order Lifecycle")

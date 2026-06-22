@@ -26,6 +26,17 @@ mvn test -Dtest=ClassName            # single test class
 mvn gatling:test                     # load test — requires the app to be running first
 ```
 
+### CQRS/Event Sourcing demos (Axon Framework — run from the module root)
+
+```bash
+cd cqrs-event-sourcing/axon/spring-demo
+
+mvn clean package                    # build
+mvn test                             # unit tests (Gatling excluded automatically)
+mvn test -Dtest=ClassName            # single test class
+mvn gatling:test                     # load test — requires the app and Axon Server running first
+```
+
 ### Backend REST API
 
 ```bash
@@ -61,6 +72,7 @@ docker compose -f message-brokers/rabbitmq/docker/docker-compose.yml up -d
 docker compose -f message-brokers/redis/docker/docker-compose.yml up -d
 docker compose -f message-brokers/sqs/docker/docker-compose.yml up -d
 docker compose -f message-brokers/pulsar/docker/docker-compose.yml up -d
+docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 ```
 
 ## Architecture
@@ -74,6 +86,7 @@ docker compose -f message-brokers/pulsar/docker/docker-compose.yml up -d
 | `frontend/angular/` | Angular 20 with SSR via Express |
 | `message-brokers/<broker>/spring-demo/` | Six independent Spring Boot 3.4.4 demo apps (Java 21, Lombok) |
 | `noSQL/<database>/spring-demo/` | NoSQL database demo apps, same conventions as `message-brokers/` (currently: MongoDB) |
+| `cqrs-event-sourcing/<framework>/spring-demo/` | CQRS/event-sourcing framework demo apps, same conventions as `message-brokers/` (currently: Axon Framework) |
 | `docker-compose.yml` | Shared infrastructure stack |
 
 ### Message broker demos

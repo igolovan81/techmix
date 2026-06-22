@@ -76,7 +76,7 @@ A single-node Axon Server instance (no clustering — matches the demo's scope; 
 │  HTTP :8024           (dashboard UI + REST admin API)
 └────────────────────┘
 
-Spring Boot app: 8085 (next free slot after MongoDB's 8084)
+Spring Boot app: 8086 (8085 is already used by Pulsar's admin HTTP host mapping; 8086 is the next free slot)
 ```
 
 - `axon.axonserver.servers: localhost:8124` in `application.yml` — the Axon Spring Boot starter auto-configures `CommandGateway`, `QueryGateway`, and `EventGateway` beans against this.
@@ -111,7 +111,7 @@ GET    /demo/orders                        query all order summaries
 POST   /demo/orders/replay                 reset the projection and replay all events from Axon Server
 ```
 
-Swagger UI: `http://localhost:8085/swagger-ui/index.html`.
+Swagger UI: `http://localhost:8086/swagger-ui/index.html`.
 
 ## Error handling
 
@@ -136,7 +136,7 @@ Two distinct, separately demonstrated failure modes:
 
 **`application.yml`** key settings:
 - `axon.axonserver.servers: localhost:8124`
-- `server.port: 8085`
+- `server.port: 8086`
 
 **`AxonConfig`** (new — defines the snapshot trigger referenced by `OrderAggregate`'s `@Aggregate(snapshotTriggerDefinition = "orderSnapshotTriggerDefinition")`):
 ```java

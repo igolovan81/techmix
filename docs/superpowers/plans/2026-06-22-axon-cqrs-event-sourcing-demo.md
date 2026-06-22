@@ -31,7 +31,7 @@
 - Test: `cqrs-event-sourcing/axon/spring-demo/src/test/java/com/testingai/axon/AxonDemoApplicationTest.java`
 
 **Interfaces:**
-- Produces: `com.testingai.axon.AxonDemoApplication` (Spring Boot main class), Maven coordinates `com.testingai:axon-demo` under parent `com.testingai:cqrs-event-sourcing:1.0.0`, server port `8085`, Axon Server target `localhost:8124`.
+- Produces: `com.testingai.axon.AxonDemoApplication` (Spring Boot main class), Maven coordinates `com.testingai:axon-demo` under parent `com.testingai:cqrs-event-sourcing:1.0.0`, server port `8086`, Axon Server target `localhost:8124`.
 
 - [ ] **Step 1: Create the parent POM**
 
@@ -289,7 +289,7 @@ axon:
         mode: tracking
 
 server:
-  port: 8085
+  port: 8086
 ```
 
 - [ ] **Step 6: Write the application smoke test**
@@ -1544,7 +1544,7 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 
 public class DemoSimulation extends Simulation {
 
-	private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8085")
+	private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8086")
 			.acceptHeader("application/json").contentTypeHeader("application/json");
 
 	private final ScenarioBuilder orderLifecycleScenario = scenario("Order Lifecycle")
@@ -1733,9 +1733,9 @@ cd spring-demo
 mvn spring-boot:run
 ```
 
-The app starts on port `8085` and connects to Axon Server at `localhost:8124`.
+The app starts on port `8086` and connects to Axon Server at `localhost:8124`.
 
-Swagger UI: [http://localhost:8085/swagger-ui/index.html](http://localhost:8085/swagger-ui/index.html)
+Swagger UI: [http://localhost:8086/swagger-ui/index.html](http://localhost:8086/swagger-ui/index.html)
 
 ## Architecture
 
@@ -1768,31 +1768,31 @@ DemoController
 
 ```bash
 # Create an order
-ORDER_ID=$(curl -s -X POST http://localhost:8085/demo/orders \
+ORDER_ID=$(curl -s -X POST http://localhost:8086/demo/orders \
   -H "Content-Type: application/json" -d '{"customerId":"customer-1"}')
 
 # Add a few order lines (5+ triggers a snapshot — watch the Axon Server dashboard)
 for i in 1 2 3 4 5 6; do
-  curl -X POST "http://localhost:8085/demo/orders/$ORDER_ID/lines" \
+  curl -X POST "http://localhost:8086/demo/orders/$ORDER_ID/lines" \
     -H "Content-Type: application/json" \
     -d "{\"productId\":\"product-$i\",\"quantity\":1,\"price\":9.99}"
 done
 
 # Confirm it
-curl -X POST "http://localhost:8085/demo/orders/$ORDER_ID/confirm"
+curl -X POST "http://localhost:8086/demo/orders/$ORDER_ID/confirm"
 
 # Query the read model
-curl "http://localhost:8085/demo/orders/$ORDER_ID"
-curl "http://localhost:8085/demo/orders"
+curl "http://localhost:8086/demo/orders/$ORDER_ID"
+curl "http://localhost:8086/demo/orders"
 
 # Rebuild the read model from the event store
-curl -X POST "http://localhost:8085/demo/orders/replay"
+curl -X POST "http://localhost:8086/demo/orders/replay"
 ```
 
 Cancelling a confirmed order is rejected:
 
 ```bash
-curl -i -X POST "http://localhost:8085/demo/orders/$ORDER_ID/cancel"
+curl -i -X POST "http://localhost:8086/demo/orders/$ORDER_ID/cancel"
 # HTTP/1.1 409 — "Cannot cancel order ... after it is confirmed"
 ```
 
