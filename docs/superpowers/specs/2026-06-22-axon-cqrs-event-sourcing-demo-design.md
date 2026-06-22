@@ -117,8 +117,8 @@ Swagger UI: `http://localhost:8086/swagger-ui/index.html`.
 
 Two distinct, separately demonstrated failure modes:
 
-1. **Business rule violation** — e.g. `CancelOrderCommand` on an already-confirmed order. `OrderAggregate` throws a domain exception before applying any event; `DemoController` maps it to a 409. No event is ever recorded.
-2. **Simulated infrastructure failure** — `FailureSimulator.maybeThrow("confirm-order")` inside the `ConfirmOrderCommand` handler (5% of calls), mapped to a 500. Same effect as above: the command is rejected and no event is applied, leaving the aggregate's event history (and therefore its state) untouched. This is the same `FailureSimulator` pattern mandated for `message-brokers/` modules (`FAILURE_RATE = 0.05`, `maybeThrow(String context)`, no boolean `shouldFail()`); reused here even though `cqrs-event-sourcing/` is a new category, because it's a genuinely good fit for showing that event sourcing never records partial/failed state changes.
+1. **Business rule violation** — e.g. `CancelOrderCommand` on an already-confirmed order. `OrderAggregate` throws `CommandExecutionException` (with a details payload) before applying any event; `DemoController` maps it to a 409 based on `getDetails().isPresent()`. No event is ever recorded. A plain `IllegalStateException` was tried first, but Axon's `CommandSerializer` only sends the *message text* of exceptions across the Axon Server boundary by default — the original type and cause are lost, so a `getCause() instanceof IllegalStateException` check on the receiving side never matches. `CommandExecutionException`'s `details` field exists specifically to carry application data across that boundary (per Axon's own log hint: *"recommended to wrap the exception in a CommandExecutionException with provided details"*).
+2. **Simulated infrastructure failure** — `FailureSimulator.maybeThrow("confirm-order")` inside the `ConfirmOrderCommand` handler (5% of calls), mapped to a 500 (no `details`, so it falls through the same handler's else-branch). Same effect as above: the command is rejected and no event is applied, leaving the aggregate's event history (and therefore its state) untouched. This is the same `FailureSimulator` pattern mandated for `message-brokers/` modules (`FAILURE_RATE = 0.05`, `maybeThrow(String context)`, no boolean `shouldFail()`); reused here even though `cqrs-event-sourcing/` is a new category, because it's a genuinely good fit for showing that event sourcing never records partial/failed state changes.
 
 ## Spring Boot configuration
 
@@ -136,7 +136,8 @@ Two distinct, separately demonstrated failure modes:
 
 **`application.yml`** key settings:
 - `axon.axonserver.servers: localhost:8124`
-- `server.port: 8086`
+- `axon.serializer.general/events/messages: jackson` — Axon's default is XStream, which cannot serialize Java records (`can't get field offset on a record class`). Jackson has supported records natively since 2.12, so all three serializer slots are switched to it. Discovered only once the app talked to a live Axon Server — `AggregateTestFixture`-based unit tests never serialize messages, so this gap is invisible at the unit level.
+- `server.port: 8086` (8085 is already used by `message-brokers/pulsar`'s admin HTTP host mapping)
 
 **`AxonConfig`** (new — defines the snapshot trigger referenced by `OrderAggregate`'s `@Aggregate(snapshotTriggerDefinition = "orderSnapshotTriggerDefinition")`):
 ```java
@@ -146,7 +147,11 @@ public SnapshotTriggerDefinition orderSnapshotTriggerDefinition(Snapshotter snap
 }
 ```
 
+**`OrderAggregate`** additionally needs `@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)` — once the serializer is Jackson, snapshotting the aggregate requires reading its private fields (`orderId`, `confirmed`), which Jackson can't do without either getters or explicit field visibility. Without this, the 5th event on any aggregate (the snapshot threshold) throws `IncompatibleAggregateException: Aggregate identifier must be non-null after applying a snapshot`.
+
 **Query-side storage:** `OrderProjection` backs its read model with a `ConcurrentHashMap`, not a database — keeps the module self-contained like most `message-brokers/` demos. NoSQL/SQL persistence patterns are already covered by `noSQL/mongodb` and `backend/rest-api`; this demo's job is CQRS/event-sourcing mechanics, not storage technology.
+
+**`FindAllOrdersQuery` response shape:** `OrderProjection.handle(FindAllOrdersQuery)` returns a single wrapper record `OrderSummaries(List<OrderSummary> orders)`, not `List<OrderSummary>` directly. A directly-returned `List<OrderSummary>` loses its element type over the wire (Java generics are erased on the method's runtime return value as routed through Axon Server's `MultipleInstancesResponseType`), so the client deserializes a list of raw `LinkedHashMap`s instead of `OrderSummary` instances and `MultipleInstancesResponseType.convert()` rejects it. Wrapping in a single-instance response sidesteps this — the `List`'s element type is preserved via the wrapper record's own reflected generic signature, which Jackson resolves correctly. `DemoController.getAllOrders()` unwraps `.orders()` before returning, so the REST API shape (`GET /demo/orders` → JSON array) is unaffected.
 
 **Command dispatch:** `DemoController` uses `CommandGateway.sendAndWait(...)` (synchronous) so REST semantics and tests stay simple, even though Axon's internal event distribution to the query side remains asynchronous.
 
