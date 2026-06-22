@@ -569,9 +569,12 @@ public record CreateOrderCommand(String orderId, String customerId) {
 ```java
 package com.testingai.axon.command;
 
+import org.axonframework.modelling.command.TargetAggregateIdentifier;
+
 import java.math.BigDecimal;
 
-public record AddOrderLineCommand(String orderId, String productId, int quantity, BigDecimal price) {
+public record AddOrderLineCommand(@TargetAggregateIdentifier String orderId, String productId, int quantity,
+		BigDecimal price) {
 }
 ```
 
@@ -580,7 +583,9 @@ public record AddOrderLineCommand(String orderId, String productId, int quantity
 ```java
 package com.testingai.axon.command;
 
-public record ConfirmOrderCommand(String orderId) {
+import org.axonframework.modelling.command.TargetAggregateIdentifier;
+
+public record ConfirmOrderCommand(@TargetAggregateIdentifier String orderId) {
 }
 ```
 
@@ -589,9 +594,13 @@ public record ConfirmOrderCommand(String orderId) {
 ```java
 package com.testingai.axon.command;
 
-public record CancelOrderCommand(String orderId) {
+import org.axonframework.modelling.command.TargetAggregateIdentifier;
+
+public record CancelOrderCommand(@TargetAggregateIdentifier String orderId) {
 }
 ```
+
+> Note: commands that target an *existing* aggregate instance (everything except `CreateOrderCommand`, which constructs a new one) must mark their identifier field with `@TargetAggregateIdentifier` so Axon's `AnnotationCommandTargetResolver` knows which aggregate to route to. Omitting it surfaces at test time as `IllegalArgumentException: Invalid command. It does not identify the target aggregate.`
 
 - [ ] **Step 2: Write the failing test**
 
