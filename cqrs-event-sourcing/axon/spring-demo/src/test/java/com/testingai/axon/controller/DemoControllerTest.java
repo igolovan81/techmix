@@ -106,7 +106,8 @@ class DemoControllerTest {
 
 	@Test
 	void getAllOrders_shouldReturn200() throws Exception {
-		when(queryGateway.query(eq(new FindAllOrdersQuery()), eq(ResponseTypes.multipleInstancesOf(OrderSummary.class))))
+		when(queryGateway.query(eq(new FindAllOrdersQuery()),
+				eq(ResponseTypes.multipleInstancesOf(OrderSummary.class))))
 				.thenReturn(CompletableFuture.completedFuture(List.of()));
 
 		mockMvc.perform(get("/demo/orders")).andExpect(status().isOk());

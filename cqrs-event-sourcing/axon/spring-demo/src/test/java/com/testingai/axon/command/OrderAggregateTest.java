@@ -82,7 +82,6 @@ class OrderAggregateTest {
 	@Test
 	void cancel_whenAlreadyConfirmed_shouldRejectAndEmitNoEvents() {
 		fixture.given(new OrderCreatedEvent(ORDER_ID, CUSTOMER_ID), new OrderConfirmedEvent(ORDER_ID))
-				.when(new CancelOrderCommand(ORDER_ID)).expectException(IllegalStateException.class)
-				.expectNoEvents();
+				.when(new CancelOrderCommand(ORDER_ID)).expectException(IllegalStateException.class).expectNoEvents();
 	}
 }
