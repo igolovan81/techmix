@@ -127,7 +127,7 @@ Two distinct, separately demonstrated failure modes:
 
 **Dependencies:**
 - `spring-boot-starter-web`
-- `axon-spring-boot-starter` (Axon 4.10.x — compatible with Spring Boot 3.4)
+- `axon-spring-boot-starter` (Axon 4.13.x — compatible with Spring Boot 3.4)
 - `springdoc-openapi-starter-webmvc-ui`
 - `lombok`
 - `spring-boot-starter-test` (test scope)

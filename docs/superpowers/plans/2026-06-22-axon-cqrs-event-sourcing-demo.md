@@ -6,7 +6,7 @@
 
 **Architecture:** A single `Order` aggregate (`command/`) emits domain events (`event/`) that are sourced back into aggregate state and asynchronously projected into an in-memory read model (`query/`). A `replay/` service resets the projection's tracking processor to rebuild it from Axon Server's event history. A `config/` bean wires event-count-based snapshotting onto the aggregate. `controller/DemoController` exposes everything over REST, following this repo's established `DemoController` convention.
 
-**Tech Stack:** Spring Boot 3.4.4, Java 21, Axon Framework 4.10.4 (`axon-spring-boot-starter`, `axon-test`), Axon Server (Docker), Lombok, springdoc-openapi, JUnit 5 + Mockito + AssertJ, Gatling.
+**Tech Stack:** Spring Boot 3.4.4, Java 21, Axon Framework 4.13.1 (`axon-spring-boot-starter`, `axon-test`), Axon Server (Docker), Lombok, springdoc-openapi, JUnit 5 + Mockito + AssertJ, Gatling.
 
 ## Global Constraints
 
@@ -66,7 +66,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.38</lombok.version>
         <springdoc.version>2.8.6</springdoc.version>
-        <axon.version>4.10.4</axon.version>
+        <axon.version>4.13.1</axon.version>
         <gatling.version>3.13.1</gatling.version>
         <gatling-maven-plugin.version>4.15.0</gatling-maven-plugin.version>
         <spotless.version>2.43.0</spotless.version>

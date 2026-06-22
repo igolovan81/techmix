@@ -1,0 +1,10 @@
+axon:
+  axonserver:
+    servers: localhost:8124
+  eventhandling:
+    processors:
+      order-projection:
+        mode: tracking
+
+server:
+  port: 8085
