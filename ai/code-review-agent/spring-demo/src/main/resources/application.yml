@@ -1,0 +1,14 @@
+server:
+  port: 8085
+
+reviewer:
+  max-iterations: 5
+  temp-dir: ${java.io.tmpdir}
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY}
+  model: claude-sonnet-4-6
+
+github:
+  token: ${GITHUB_TOKEN:}
+  webhook-secret: ${GITHUB_WEBHOOK_SECRET:}
