@@ -9,6 +9,8 @@ import net.sourceforge.pmd.lang.LanguageRegistry;
 import net.sourceforge.pmd.lang.rule.RuleSet;
 import net.sourceforge.pmd.lang.rule.RuleSetLoader;
 import net.sourceforge.pmd.reporting.Report;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
@@ -18,6 +20,8 @@ import java.util.Map;
 @Component
 public class PmdTool {
 
+    private static final Logger log = LoggerFactory.getLogger(PmdTool.class);
+
     public Tool definition() {
         return Tool.builder()
                 .name("run_pmd")
@@ -25,7 +29,7 @@ public class PmdTool {
                 .inputSchema(Tool.InputSchema.builder()
                         .type(JsonValue.from("object"))
                         .putAdditionalProperty("properties", JsonValue.from(Map.of(
-                                "diff", Map.of("type", "string"))))
+                                "diff", Map.of("type", "string", "description", "The unified diff of the pull request"))))
                         .putAdditionalProperty("required", JsonValue.from(List.of("diff")))
                         .build())
                 .build();
@@ -47,7 +51,7 @@ public class PmdTool {
                 Report report = pmd.performAnalysisAndCollectReport();
                 return report.getViolations().stream()
                         .map(v -> new RawFinding(
-                                v.getFileId().getFileName(),
+                                v.getFileId().getAbsolutePath(),
                                 "pmd",
                                 v.getRule().getName(),
                                 v.getDescription(),
@@ -55,6 +59,7 @@ public class PmdTool {
                         .toList();
             }
         } catch (Exception e) {
+            log.warn("PMD analysis failed", e);
             return List.of();
         }
     }
