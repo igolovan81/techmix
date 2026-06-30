@@ -6,7 +6,7 @@ An agent that accepts a natural-language goal via REST, autonomously searches th
 
 ## Key Capabilities
 
-- **Agentic loop** — Claude decides which tools to call, executes them, and feeds results back to itself repeatedly until the goal is satisfied or the iteration cap is reached; no human in the loop
+- **Agentic loop** — Claude decides which tools to call, executes them, and feeds results back to itself repeatedly; the loop exits when Claude stops requesting tools (its own judgement) or the configurable iteration cap is reached, whichever comes first
 - **Web search tool** — queries [Tavily Search API](https://docs.tavily.com) (built for AI agents) and returns structured `[{title, url, content}]` results Claude can reason over
 - **Page fetch tool** — fetches any URL with `HttpClient`, strips HTML with Jsoup, and trims to a configurable character limit so the content fits cleanly in context
 - **Transparent step trace** — every tool call and its output is recorded in `steps[]` on the response, making the agent's reasoning fully observable
