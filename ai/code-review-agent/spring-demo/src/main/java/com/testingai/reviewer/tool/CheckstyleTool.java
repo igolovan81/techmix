@@ -54,6 +54,9 @@ public class CheckstyleTool {
         }
 
         try (InputStream stream = getClass().getResourceAsStream("/checkstyle/checkstyle.xml")) {
+            if (stream == null) {
+                return List.of();
+            }
             Configuration config = ConfigurationLoader.loadConfiguration(
                     new InputSource(stream),
                     new PropertiesExpander(new Properties()),
@@ -71,8 +74,11 @@ public class CheckstyleTool {
                 @Override public void addError(AuditEvent e) { events.add(e); }
                 @Override public void addException(AuditEvent e, Throwable t) {}
             });
-            checker.process(javaFiles);
-            checker.destroy();
+            try {
+                checker.process(javaFiles);
+            } finally {
+                checker.destroy();
+            }
 
             return events.stream()
                     .map(e -> new RawFinding(e.getFileName(), "checkstyle",
