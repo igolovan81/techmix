@@ -21,6 +21,17 @@
         <lombok.version>1.18.38</lombok.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- Force ASM 9.9.1 to support Java 25 class files (PMD 7 ships with 9.7.1 which tops out at Java 24) -->
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm</artifactId>
+                <version>9.9.1</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>

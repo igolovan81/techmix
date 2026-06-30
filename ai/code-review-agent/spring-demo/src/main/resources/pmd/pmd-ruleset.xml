@@ -1,13 +1,14 @@
 <?xml version="1.0"?>
-<ruleset name="Code Review Rules"
+<ruleset name="Code Review Ruleset"
          xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0
-             https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
-    <description>AI code review ruleset</description>
+                             https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+    <description>PMD rules for AI code review agent</description>
+
     <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
     <rule ref="category/java/bestpractices.xml/UnusedPrivateField"/>
     <rule ref="category/java/errorprone.xml/EmptyCatchBlock"/>
-    <rule ref="category/java/errorprone.xml/EqualsNull"/>
-    <rule ref="category/java/bestpractices.xml/AvoidReassigningParameters"/>
+    <rule ref="category/java/errorprone.xml/AvoidBranchingStatementAsLastInLoop"/>
+    <rule ref="category/java/design.xml/NcssCount"/>
 </ruleset>
