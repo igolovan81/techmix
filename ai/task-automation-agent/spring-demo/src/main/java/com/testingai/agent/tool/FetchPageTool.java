@@ -2,6 +2,8 @@ package com.testingai.agent.tool;
 
 import com.anthropic.core.JsonValue;
 import com.anthropic.models.messages.Tool;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.testingai.agent.config.AgentProperties;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Component;
@@ -18,6 +20,7 @@ public class FetchPageTool {
 
     private final HttpClient httpClient;
     private final int maxChars;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public FetchPageTool(HttpClient httpClient, AgentProperties agentProperties) {
         this.httpClient = httpClient;
@@ -39,12 +42,20 @@ public class FetchPageTool {
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                return "{\"error\": \"HTTP " + response.statusCode() + " fetching " + url + "\"}";
+                return errorJson("HTTP " + response.statusCode() + " fetching " + url);
             }
             String text = Jsoup.parse(response.body()).text();
             return text.length() > maxChars ? text.substring(0, maxChars) : text;
         } catch (Exception e) {
-            return "{\"error\": \"" + e.getMessage().replace("\"", "'") + "\"}";
+            return errorJson(e.getMessage());
+        }
+    }
+
+    private String errorJson(String message) {
+        try {
+            return objectMapper.writeValueAsString(Map.of("error", message));
+        } catch (JsonProcessingException ex) {
+            return "{\"error\":\"serialization failed\"}";
         }
     }
 

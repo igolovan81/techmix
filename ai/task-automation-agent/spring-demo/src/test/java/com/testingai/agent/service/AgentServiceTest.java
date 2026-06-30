@@ -89,7 +89,7 @@ class AgentServiceTest {
 
         assertThat(result.answer()).isEqualTo("Quantum computing advances rapidly.");
         assertThat(result.steps()).hasSize(1);
-        assertThat(result.steps().get(0).tool()).isEqualTo("web_search");
+        assertThat(result.steps().getFirst().tool()).isEqualTo("web_search");
         assertThat(result.iterations()).isEqualTo(2);
         assertThat(result.truncated()).isFalse();
     }

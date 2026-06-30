@@ -38,7 +38,15 @@ public class WebSearchTool {
             List<TavilyResult> results = response != null ? response.results() : List.of();
             return objectMapper.writeValueAsString(results);
         } catch (RestClientException | JsonProcessingException e) {
-            return "{\"error\": \"" + e.getMessage().replace("\"", "'") + "\"}";
+            return errorJson(e.getMessage());
+        }
+    }
+
+    private String errorJson(String message) {
+        try {
+            return objectMapper.writeValueAsString(Map.of("error", message));
+        } catch (JsonProcessingException ex) {
+            return "{\"error\":\"serialization failed\"}";
         }
     }
 
