@@ -1,5 +1,19 @@
 # Task Automation Agent
 
+## Concept
+
+An agent that accepts a natural-language goal via REST, autonomously searches the web and reads pages using structured tools, and returns a researched answer together with a full trace of every step it took.
+
+## Key Capabilities
+
+- **Agentic loop** — Claude decides which tools to call, executes them, and feeds results back to itself repeatedly until the goal is satisfied or the iteration cap is reached; no human in the loop
+- **Web search tool** — queries [Tavily Search API](https://docs.tavily.com) (built for AI agents) and returns structured `[{title, url, content}]` results Claude can reason over
+- **Page fetch tool** — fetches any URL with `HttpClient`, strips HTML with Jsoup, and trims to a configurable character limit so the content fits cleanly in context
+- **Transparent step trace** — every tool call and its output is recorded in `steps[]` on the response, making the agent's reasoning fully observable
+- **Graceful error containment** — tool failures (network errors, bad URLs, missing parameters) return JSON error strings back to Claude so it can adapt, rather than crashing the run
+
+---
+
 A Spring Boot demo that shows what an **agentic AI product** looks like in practice. You give it a natural-language goal; it autonomously decides which tools to call, executes them, feeds the results back to Claude, and repeats until it has a final answer.
 
 ## How it works
