@@ -21,6 +21,7 @@ public class DiffParser {
         Map<String, Set<Integer>> changedLines = new HashMap<>();
         String currentFile = null;
         int currentLine = 0;
+        int currentFileLineCount = 0;
 
         for (String line : diff.split("\n", -1)) {
             if (line.startsWith("+++ b/")) {
@@ -33,6 +34,7 @@ public class DiffParser {
                 contents.put(currentFile, new StringBuilder());
                 changedLines.put(currentFile, new HashSet<>());
                 currentLine = 0;
+                currentFileLineCount = 0;
                 continue;
             }
             if (line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")) {
@@ -42,7 +44,13 @@ public class DiffParser {
 
             Matcher hunkMatcher = HUNK_HEADER.matcher(line);
             if (hunkMatcher.find()) {
-                currentLine = Integer.parseInt(hunkMatcher.group(1));
+                int hunkStart = Integer.parseInt(hunkMatcher.group(1));
+                StringBuilder buf = contents.get(currentFile);
+                for (int i = currentFileLineCount; i < hunkStart - 1; i++) {
+                    buf.append('\n');
+                    currentFileLineCount++;
+                }
+                currentLine = hunkStart;
                 continue;
             }
 
@@ -51,10 +59,12 @@ public class DiffParser {
                 contents.get(currentFile).append(content).append('\n');
                 changedLines.get(currentFile).add(currentLine);
                 currentLine++;
+                currentFileLineCount++;
             } else if (line.startsWith(" ")) {
                 String content = line.substring(1);
                 contents.get(currentFile).append(content).append('\n');
                 currentLine++;
+                currentFileLineCount++;
             }
             // lines starting with '-' are deleted — skip, don't advance currentLine
         }

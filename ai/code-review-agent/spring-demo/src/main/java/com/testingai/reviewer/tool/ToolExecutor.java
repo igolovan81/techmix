@@ -4,6 +4,7 @@ import com.anthropic.core.JsonValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.testingai.reviewer.config.ReviewerProperties;
 import com.testingai.reviewer.model.ParsedDiff;
 import com.testingai.reviewer.model.RawFinding;
 import com.testingai.reviewer.service.DiffParser;
@@ -27,13 +28,16 @@ public class ToolExecutor {
     private final PmdTool pmdTool;
     private final DiffParser diffParser;
     private final ObjectMapper objectMapper;
+    private final ReviewerProperties reviewerProps;
 
     public ToolExecutor(CheckstyleTool checkstyleTool, PmdTool pmdTool,
-                        DiffParser diffParser, ObjectMapper objectMapper) {
+                        DiffParser diffParser, ObjectMapper objectMapper,
+                        ReviewerProperties reviewerProps) {
         this.checkstyleTool = checkstyleTool;
         this.pmdTool = pmdTool;
         this.diffParser = diffParser;
         this.objectMapper = objectMapper;
+        this.reviewerProps = reviewerProps;
     }
 
     public String execute(String toolName, JsonValue input) {
@@ -51,7 +55,7 @@ public class ToolExecutor {
     }
 
     private String runAndFilter(ParsedDiff parsed, AnalyserFunction analyser) throws Exception {
-        Path tempDir = Files.createTempDirectory("review-");
+        Path tempDir = Files.createTempDirectory(Path.of(reviewerProps.tempDir()), "review-");
         try {
             writeTempFiles(tempDir, parsed.fileContents());
             List<RawFinding> raw = analyser.apply(tempDir);

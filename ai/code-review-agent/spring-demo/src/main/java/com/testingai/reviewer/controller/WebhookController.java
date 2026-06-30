@@ -42,8 +42,7 @@ public class WebhookController {
     @PostMapping("/webhook")
     public ResponseEntity<Void> webhook(
             HttpServletRequest request,
-            @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature,
-            @RequestHeader(value = "X-GitHub-Event", required = false) String event) {
+            @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature) {
         try {
             byte[] body = request.getInputStream().readAllBytes();
             if (!verifySignature(body, signature)) {
@@ -51,10 +50,10 @@ public class WebhookController {
             }
             WebhookPayload payload = objectMapper.readValue(body, WebhookPayload.class);
             if (payload.pullRequest() == null) {
-                return ResponseEntity.ok().build();
+                return ResponseEntity.noContent().build();
             }
             if (!"opened".equals(payload.action()) && !"synchronize".equals(payload.action())) {
-                return ResponseEntity.ok().build();
+                return ResponseEntity.noContent().build();
             }
 
             String owner = payload.pullRequest().base().repo().owner().login();

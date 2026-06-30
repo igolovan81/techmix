@@ -2,6 +2,7 @@ package com.testingai.reviewer;
 
 import com.anthropic.core.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.testingai.reviewer.config.ReviewerProperties;
 import com.testingai.reviewer.model.ParsedDiff;
 import com.testingai.reviewer.model.RawFinding;
 import com.testingai.reviewer.service.DiffParser;
@@ -34,7 +35,8 @@ class ToolExecutorTest {
 
     @BeforeEach
     void setUp() {
-        executor = new ToolExecutor(checkstyleTool, pmdTool, diffParser, new ObjectMapper());
+        ReviewerProperties reviewerProps = new ReviewerProperties(5, System.getProperty("java.io.tmpdir"));
+        executor = new ToolExecutor(checkstyleTool, pmdTool, diffParser, new ObjectMapper(), reviewerProps);
     }
 
     @Test

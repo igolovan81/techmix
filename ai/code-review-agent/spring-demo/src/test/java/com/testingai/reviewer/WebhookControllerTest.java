@@ -20,6 +20,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
 
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -75,6 +76,22 @@ class WebhookControllerTest {
                         .header("X-Hub-Signature-256", "sha256=wrongsig")
                         .content(PAYLOAD))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void returns204ForNonMatchingAction() throws Exception {
+        String body = """
+                {"action":"closed","pull_request":{"number":1,"base":{"repo":{"name":"r","owner":{"login":"o"}}}}}
+                """;
+        String sig = "sha256=" + computeHmac(SECRET, body);
+
+        mockMvc.perform(post("/api/review/webhook")
+                        .header("X-Hub-Signature-256", sig)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isNoContent());
+
+        verifyNoInteractions(gitHubClient, reviewService);
     }
 
     private static String computeHmac(String secret, String body) throws Exception {

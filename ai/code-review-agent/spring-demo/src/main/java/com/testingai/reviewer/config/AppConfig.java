@@ -40,8 +40,5 @@ public class AppConfig {
         if (anthropicProps.apiKey() == null || anthropicProps.apiKey().isBlank()) {
             throw new IllegalStateException("ANTHROPIC_API_KEY is not set");
         }
-        if (githubProps.token() == null || githubProps.token().isBlank()) {
-            throw new IllegalStateException("GITHUB_TOKEN is not set");
-        }
     }
 }
