@@ -3,6 +3,7 @@ package com.testingai.embedding.config;
 import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
@@ -25,6 +26,7 @@ public class AppConfig {
   @Bean
   public RestClient openAiRestClient() {
     return RestClient.builder()
+        .requestFactory(new SimpleClientHttpRequestFactory())
         .baseUrl(openAi.baseUrl())
         .defaultHeader("Authorization", "Bearer " + openAi.apiKey())
         .defaultHeader("Content-Type", "application/json")
