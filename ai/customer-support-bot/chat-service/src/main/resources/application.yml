@@ -1,0 +1,25 @@
+server:
+  port: 8086
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: claude-sonnet-4-6
+
+chat:
+  max-turns: 10
+  escalation-keywords:
+    - angry
+    - lawsuit
+    - unacceptable
+    - refund
+    - fraud
+  resolution-phrase: "is there anything else"
+  embedding-service-url: http://localhost:8087
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
