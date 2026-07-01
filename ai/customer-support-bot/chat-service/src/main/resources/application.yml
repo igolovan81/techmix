@@ -11,7 +11,6 @@ chat:
     - angry
     - lawsuit
     - unacceptable
-    - refund
     - fraud
   resolution-phrase: "is there anything else"
   embedding-service-url: http://localhost:8087

@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -80,19 +81,23 @@ public class ChatService {
     }
     String systemPrompt = buildSystemPrompt(chunks);
 
-    session.addMessage(
-        MessageParam.builder()
-            .role(MessageParam.Role.USER)
-            .content(userText)
-            .build());
+    MessageParam userMessage = MessageParam.builder()
+        .role(MessageParam.Role.USER)
+        .content(userText)
+        .build();
+
+    List<MessageParam> messages = new ArrayList<>(session.getHistory());
+    messages.add(userMessage);
 
     var response = anthropic.messages().create(
         MessageCreateParams.builder()
             .model(anthropicProps.model())
             .maxTokens(1024)
             .system(systemPrompt)
-            .messages(session.getHistory())
+            .messages(messages)
             .build());
+
+    session.addMessage(userMessage);
 
     String reply = response.content().stream()
         .filter(ContentBlock::isText)

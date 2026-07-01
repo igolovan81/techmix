@@ -8,7 +8,7 @@ import com.testingai.embedding.service.VectorStoreService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -24,8 +24,8 @@ class KnowledgeBaseControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
-  @MockBean private EmbeddingService embeddingService;
-  @MockBean private VectorStoreService vectorStoreService;
+  @MockitoBean private EmbeddingService embeddingService;
+  @MockitoBean private VectorStoreService vectorStoreService;
 
   @Test
   void ingest_returns201AndCallsServices() throws Exception {

@@ -9,7 +9,7 @@ import com.testingai.chat.service.ChatService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,7 +24,7 @@ class ChatControllerTest {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
-  @MockBean private ChatService chatService;
+  @MockitoBean private ChatService chatService;
 
   @Test
   void start_returnsSessionId() throws Exception {

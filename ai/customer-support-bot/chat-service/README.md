@@ -52,7 +52,7 @@ curl -s -X POST http://localhost:8086/api/chat/$SESSION/close
 | Property | Default | Description |
 |----------|---------|-------------|
 | `chat.max-turns` | `10` | Turns before escalation |
-| `chat.escalation-keywords` | `angry,lawsuit,unacceptable,refund,fraud` | Escalation trigger words |
+| `chat.escalation-keywords` | `angry,lawsuit,unacceptable,fraud` | Escalation trigger words |
 | `chat.resolution-phrase` | `is there anything else` | Phrase Claude says when issue is resolved |
 | `chat.embedding-service-url` | `http://localhost:8087` | URL of the Embedding Service |
 | `anthropic.model` | `claude-sonnet-4-6` | Claude model |
