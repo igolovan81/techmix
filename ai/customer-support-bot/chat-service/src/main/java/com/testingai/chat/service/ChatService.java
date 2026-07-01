@@ -75,7 +75,7 @@ public class ChatService {
     try {
       chunks = kbClient.search(userText, 3);
     } catch (Exception e) {
-      log.warn("KB search failed for session {}: {}", sessionId, e.getMessage());
+      log.warn("KB search failed for session {}", sessionId, e);
       chunks = List.of();
     }
     String systemPrompt = buildSystemPrompt(chunks);

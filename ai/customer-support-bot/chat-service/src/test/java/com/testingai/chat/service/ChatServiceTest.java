@@ -41,8 +41,7 @@ class ChatServiceTest {
 
   @Mock private KnowledgeBaseClient kbClient;
   @Mock private OutcomeRepository outcomeRepository;
-
-  private EscalationPolicy escalationPolicy;
+  @Mock private EscalationPolicy escalationPolicy;
   private ChatService chatService;
 
   @BeforeEach
@@ -52,7 +51,6 @@ class ChatServiceTest {
         List.of("angry", "lawsuit"),
         "is there anything else",
         "http://localhost:8087");
-    escalationPolicy = new EscalationPolicy(props);
     chatService = new ChatService(
         anthropic, kbClient, escalationPolicy, outcomeRepository,
         props,
@@ -73,6 +71,8 @@ class ChatServiceTest {
     when(kbClient.search(anyString(), anyInt())).thenReturn(List.of());
     when(anthropic.messages().create(any(MessageCreateParams.class)))
         .thenReturn(buildTextMessage("I can help with that."));
+    when(escalationPolicy.evaluate(any(), anyString()))
+        .thenReturn(ConversationOutcome.OPEN);
 
     String sessionId = chatService.startSession().sessionId();
     MessageResponse response = chatService.sendMessage(sessionId, "Where is my order?");
@@ -88,6 +88,8 @@ class ChatServiceTest {
     when(anthropic.messages().create(any(MessageCreateParams.class)))
         .thenReturn(buildTextMessage(
             "Your order ships tomorrow. Is there anything else I can help you with?"));
+    when(escalationPolicy.evaluate(any(), anyString()))
+        .thenReturn(ConversationOutcome.OPEN);
 
     String sessionId = chatService.startSession().sessionId();
     MessageResponse response = chatService.sendMessage(sessionId, "When does my order ship?");
@@ -101,6 +103,8 @@ class ChatServiceTest {
     when(kbClient.search(anyString(), anyInt())).thenReturn(List.of());
     when(anthropic.messages().create(any(MessageCreateParams.class)))
         .thenReturn(buildTextMessage("I understand your frustration."));
+    when(escalationPolicy.evaluate(any(), anyString()))
+        .thenReturn(ConversationOutcome.ESCALATED);
 
     String sessionId = chatService.startSession().sessionId();
     MessageResponse response = chatService.sendMessage(sessionId, "This is ANGRY customer complaint!");
@@ -116,6 +120,8 @@ class ChatServiceTest {
         .thenReturn(List.of(new SearchResult("Shipping", "Ships in 3 days", 0.9)));
     when(anthropic.messages().create(any(MessageCreateParams.class)))
         .thenReturn(buildTextMessage("Ships in 3 days."));
+    when(escalationPolicy.evaluate(any(), anyString()))
+        .thenReturn(ConversationOutcome.OPEN);
 
     String sessionId = chatService.startSession().sessionId();
     chatService.sendMessage(sessionId, "When does shipping happen?");
@@ -137,6 +143,8 @@ class ChatServiceTest {
     when(kbClient.search(anyString(), anyInt())).thenReturn(List.of());
     when(anthropic.messages().create(any(MessageCreateParams.class)))
         .thenReturn(buildTextMessage("Is there anything else I can help you with?"));
+    when(escalationPolicy.evaluate(any(), anyString()))
+        .thenReturn(ConversationOutcome.OPEN);
 
     String sessionId = chatService.startSession().sessionId();
     chatService.sendMessage(sessionId, "done");
@@ -152,6 +160,22 @@ class ChatServiceTest {
     chatService.closeSession(sessionId);
 
     verify(outcomeRepository).save(any(), any());
+  }
+
+  @Test
+  void sendMessage_kbUnavailable_continuesWithoutContext() {
+    when(kbClient.search(anyString(), anyInt()))
+        .thenThrow(new RuntimeException("KB down"));
+    when(anthropic.messages().create(any(MessageCreateParams.class)))
+        .thenReturn(buildTextMessage("I can help with that."));
+    when(escalationPolicy.evaluate(any(), anyString()))
+        .thenReturn(ConversationOutcome.OPEN);
+
+    String sessionId = chatService.startSession().sessionId();
+    MessageResponse response = chatService.sendMessage(sessionId, "Where is my order?");
+
+    assertThat(response.reply()).isEqualTo("I can help with that.");
+    assertThat(response.outcome()).isEqualTo(ConversationOutcome.OPEN);
   }
 
   // --- helpers ---
