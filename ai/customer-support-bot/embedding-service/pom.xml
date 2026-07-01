@@ -61,6 +61,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
@@ -90,6 +95,10 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <excludedGroups>integration</excludedGroups>
+                    <environmentVariables>
+                        <DOCKER_HOST>tcp://127.0.0.1:2375</DOCKER_HOST>
+                        <DOCKER_TLS_VERIFY>0</DOCKER_TLS_VERIFY>
+                    </environmentVariables>
                 </configuration>
             </plugin>
             <plugin>
