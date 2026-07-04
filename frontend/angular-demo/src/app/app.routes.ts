@@ -49,4 +49,8 @@ export const routes: Routes = [
     path: 'directives',
     loadComponent: () => import('./features/directives/directives-demo').then((m) => m.DirectivesDemo),
   },
+  {
+    path: 'animations',
+    loadComponent: () => import('./features/animations/animations-demo').then((m) => m.AnimationsDemo),
+  },
 ];
