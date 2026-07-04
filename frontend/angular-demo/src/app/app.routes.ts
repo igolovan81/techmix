@@ -6,4 +6,11 @@ export const routes: Routes = [
     path: 'signals',
     loadComponent: () => import('./features/signals/signals-demo').then((m) => m.SignalsDemo),
   },
+  {
+    path: 'component-communication',
+    loadComponent: () =>
+      import('./features/component-communication/component-communication-demo').then(
+        (m) => m.ComponentCommunicationDemo,
+      ),
+  },
 ];
