@@ -6,11 +6,11 @@
 
 **Architecture:** One Angular CLI application, standalone components only (no NgModules), Angular Material for UI, a `mat-sidenav` shell listing 9 topics, each topic lazy-loaded from `src/app/features/<topic>/`. No backend, no SSR — all data is in-memory or served from a static JSON asset via real `HttpClient` calls.
 
-**Tech Stack:** Angular ^22 (latest stable), Angular Material ^22, Angular CLI, Jasmine + Karma (`ng test`), Playwright (`@playwright/test`), TypeScript, SCSS.
+**Tech Stack:** Angular ^21.2 (latest stable that supports the active Node version), Angular Material ^21.2, Angular CLI, Jasmine + Karma (`ng test`), Playwright (`@playwright/test`), TypeScript, SCSS.
 
 ## Global Constraints
 
-- Angular, Angular CLI, and Angular Material versions are pinned to `^22.0.0` (latest stable as of this plan — verify with `npm view @angular/core version` if versions drift before starting).
+- Angular, Angular CLI, and Angular Material versions are pinned to `^21.2.0`. Angular 22.0.5 is technically newer but requires Node `^22.22.3 || ^24.15.0 || >=26.0.0`, which no locally installed Node version satisfies (active version is v24.4.0); 21.2.17 requires Node `^20.19.0 || ^22.12.0 || >=24.0.0`, which v24.4.0 satisfies. Re-check `npm view @angular/core versions` if the environment's Node version changes.
 - Dev server runs on port **4201** (`frontend/angular` already owns 4200).
 - No SSR, no NgModules — standalone components/directives/pipes only.
 - No backend, no Docker — the app must run with only `npm install` + `npm start`.
@@ -18,6 +18,9 @@
 - Elements exercised by Playwright e2e tests must carry a `data-testid` attribute — don't rely on CSS classes or text content for e2e selectors.
 - Unit tests use Jasmine/Karma via `ng test` (ChromeHeadless); e2e tests use Playwright via `npx playwright test`, config at the app root, `webServer` auto-starts `npm start`.
 - Every feature folder under `src/app/features/` is self-contained: its component(s) plus any service/pipe/directive/guard/resolver it owns, plus their `.spec.ts` files.
+- This Angular 21 scaffold is **zoneless by default** — no `zone.js` dependency, no `zone.js/testing`. Never use `fakeAsync`/`tick` in tests; for observables with real delays (e.g. `FakeApiService`'s `delay(400)`), use an `async` test function and `await new Promise((resolve) => setTimeout(resolve, <delay + margin>))` instead.
+- `@angular/animations` is deprecated in this Angular version and must not be installed; Angular Material does not require it. The animations feature (Task 16) uses the native `animate.enter` / `animate.leave` template bindings instead of the legacy `trigger`/`transition`/`style`/`animate` API.
+- Zoneless tests must not mix `fixture.detectChanges()` with `fixture.whenStable()`, and must not mutate a plain (non-signal) component field and expect a manual `detectChanges()` to reliably pick it up — this throws a spurious `NG0100: ExpressionChangedAfterItHasBeenCheckedError` in this Angular version's zoneless fixtures. Instead: drive test host state through a `signal()` and exclusively use `await fixture.whenStable()` (never a bare synchronous `fixture.detectChanges()`) both for the initial render and after every state change.
 
 ---
 
@@ -28,16 +31,18 @@
 - Modify: `frontend/angular-demo/package.json` — `start` script
 
 **Interfaces:**
-- Produces: a buildable, testable Angular 22 standalone app at `frontend/angular-demo/`, Angular Material installed and themed, dev server bound to port 4201. All later tasks build inside this project.
+- Produces: a buildable, testable Angular 21 standalone app at `frontend/angular-demo/`, Angular Material installed and themed, dev server bound to port 4201. All later tasks build inside this project.
 
 - [ ] **Step 1: Scaffold the app**
 
-Run from `frontend/`:
+Run from `frontend/`. Pin to `@angular/cli@21.2.17` explicitly — the `@latest` dist-tag can resolve to a pre-release with stricter Node engine requirements than the active Node version supports.
 
 ```bash
 cd frontend
-npx -y -p @angular/cli@latest ng new angular-demo --routing --style=scss --ssr=false --skip-git --package-manager=npm
+npx -y -p @angular/cli@21.2.17 ng new angular-demo --routing --style=scss --ssr=false --skip-git --package-manager=npm --test-runner=karma
 ```
+
+Angular 21's CLI defaults to Vitest; `--test-runner=karma` is required to get Jasmine/Karma as specified.
 
 If this fails with a Node engine error, run `node -v` and compare against the version the CLI printed, then switch with `nvm use <version>` before retrying.
 
@@ -54,10 +59,12 @@ Expected: both commands exit 0 (the default `App` unit test passes, the producti
 - [ ] **Step 3: Add Angular Material**
 
 ```bash
-npx ng add @angular/material --theme=azure-blue --typography --animations=enabled --skip-confirmation
+npx ng add @angular/material@21.2.14 --theme=azure-blue --typography --animations=enabled --skip-confirmation
 ```
 
-This wires `provideAnimationsAsync()` into `src/app/app.config.ts` and adds the Material theme import to `src/styles.scss` automatically.
+(Angular Material's latest published 21.x patch is 21.2.14, slightly behind `@angular/core`'s 21.2.17 — that's fine, they don't need matching patch versions.)
+
+This adds the Material theme import to `src/styles.scss` automatically. In this Angular 21 release, `ng add @angular/material` does **not** wire an animations provider — Material components no longer need `@angular/animations`/`provideAnimationsAsync()` (that package is now deprecated in favor of the native `animate.enter`/`animate.leave` template bindings used later in Task 16). Do not install `@angular/animations`.
 
 - [ ] **Step 4: Pin the dev server to port 4201**
 
@@ -94,7 +101,7 @@ git commit -m "feat(frontend): scaffold angular-demo app with Angular Material"
 - Modify: `frontend/angular-demo/src/app/app.routes.ts`
 - Modify: `frontend/angular-demo/src/app/app.ts`
 - Modify: `frontend/angular-demo/src/app/app.html`
-- Modify: `frontend/angular-demo/src/app/app.css`
+- Modify: `frontend/angular-demo/src/app/app.scss`
 - Modify: `frontend/angular-demo/src/app/app.spec.ts`
 
 **Interfaces:**
@@ -190,7 +197,7 @@ import { NAV_ITEMS } from './nav-items';
   standalone: true,
   imports: [RouterLink, RouterOutlet, MatToolbarModule, MatSidenavModule, MatListModule],
   templateUrl: './app.html',
-  styleUrl: './app.css',
+  styleUrl: './app.scss',
 })
 export class App {
   protected readonly title = 'angular-demo';
@@ -219,7 +226,7 @@ export class App {
 </mat-sidenav-container>
 ```
 
-`frontend/angular-demo/src/app/app.css`:
+`frontend/angular-demo/src/app/app.scss`:
 
 ```css
 .shell {
@@ -786,7 +793,7 @@ describe('FakeApiService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('fetches items from data/items.json via HttpClient', () => {
+  it('fetches items from data/items.json via HttpClient', async () => {
     const expected: DemoItem[] = [{ id: 1, name: 'Signals' }];
     let received: DemoItem[] | undefined;
 
@@ -796,10 +803,14 @@ describe('FakeApiService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(expected);
 
+    await new Promise((resolve) => setTimeout(resolve, 450));
+
     expect(received).toEqual(expected);
   });
 });
 ```
+
+Note: `getItems()` pipes through `delay(400)`, so the emission is asynchronous. This project is zoneless (no `zone.js`), so `fakeAsync`/`tick` are unavailable — use a real `async` test with `setTimeout` instead.
 
 - [ ] **Step 3: Run test to verify it fails**
 
@@ -837,7 +848,7 @@ export class FakeApiService {
 
 - [ ] **Step 5: Add the HttpClient provider**
 
-In `frontend/angular-demo/src/app/app.config.ts`, add to the `providers` array (keep existing entries such as `provideAnimationsAsync()` and `provideRouter(routes)`):
+In `frontend/angular-demo/src/app/app.config.ts`, add to the `providers` array (keep the existing `provideRouter(routes)` entry):
 
 ```ts
 import { provideHttpClient, withFetch } from '@angular/common/http';
@@ -1003,13 +1014,14 @@ describe('DataFetchingDemo', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('shows items once the HTTP call resolves', () => {
+  it('shows items once the HTTP call resolves', async () => {
     const fixture = TestBed.createComponent(DataFetchingDemo);
     fixture.detectChanges();
 
     expect(fixture.componentInstance.items()).toBeUndefined();
 
     httpMock.expectOne('data/items.json').flush([{ id: 1, name: 'Signals' }]);
+    await new Promise((resolve) => setTimeout(resolve, 450));
     fixture.detectChanges();
 
     expect(fixture.componentInstance.items()).toEqual([{ id: 1, name: 'Signals' }]);
@@ -1114,12 +1126,16 @@ git commit -m "feat(frontend): add data fetching capability demo"
 `frontend/angular-demo/src/app/features/deferred-loading/deferred-loading-demo.spec.ts`:
 
 ```ts
-import { DeferBlockState, TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, DeferBlockState, TestBed } from '@angular/core/testing';
 import { DeferredLoadingDemo } from './deferred-loading-demo';
 
 describe('DeferredLoadingDemo', () => {
   it('renders the placeholder, then the widget once the defer block completes', async () => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      imports: [DeferredLoadingDemo],
+      deferBlockBehavior: DeferBlockBehavior.Manual,
+    });
+    await TestBed.compileComponents();
     const fixture = TestBed.createComponent(DeferredLoadingDemo);
     fixture.detectChanges();
 
@@ -1903,31 +1919,32 @@ git commit -m "feat(frontend): add custom attribute directive for directives dem
 `frontend/angular-demo/src/app/features/directives/repeat.directive.spec.ts`:
 
 ```ts
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { RepeatDirective } from './repeat.directive';
 
 @Component({
-  standalone: true,
   imports: [RepeatDirective],
-  template: `<li *appRepeat="count">Item</li>`,
+  template: `<li *appRepeat="count()">Item</li>`,
 })
 class HostComponent {
-  count = 3;
+  readonly count = signal(3);
 }
 
 describe('RepeatDirective', () => {
-  it('renders the template once per repeat count and re-renders on change', () => {
+  it('renders the template once per repeat count and re-renders on change', async () => {
     const fixture = TestBed.createComponent(HostComponent);
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(fixture.nativeElement.querySelectorAll('li').length).toBe(3);
 
-    fixture.componentInstance.count = 5;
-    fixture.detectChanges();
+    fixture.componentInstance.count.set(5);
+    await fixture.whenStable();
     expect(fixture.nativeElement.querySelectorAll('li').length).toBe(5);
   });
 });
 ```
+
+Note: drive the host's repeat count through a `signal()` and use `await fixture.whenStable()` exclusively (never mix in a bare `fixture.detectChanges()`) — see the zoneless-testing constraint above.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1943,28 +1960,25 @@ Expected: FAIL with "Cannot find module './repeat.directive'".
 `frontend/angular-demo/src/app/features/directives/repeat.directive.ts`:
 
 ```ts
-import { Directive, Input, TemplateRef, ViewContainerRef, inject } from '@angular/core';
+import { Directive, Input, OnChanges, TemplateRef, ViewContainerRef, inject } from '@angular/core';
 
-@Directive({ selector: '[appRepeat]', standalone: true })
-export class RepeatDirective {
+@Directive({ selector: '[appRepeat]' })
+export class RepeatDirective implements OnChanges {
   private readonly templateRef = inject(TemplateRef<{ $implicit: number }>);
   private readonly viewContainerRef = inject(ViewContainerRef);
-  private times = 0;
 
-  @Input({ required: true })
-  set appRepeat(value: number) {
-    this.times = value;
-    this.render();
-  }
+  @Input({ required: true }) appRepeat = 0;
 
-  private render(): void {
+  ngOnChanges(): void {
     this.viewContainerRef.clear();
-    for (let i = 0; i < this.times; i++) {
+    for (let i = 0; i < this.appRepeat; i++) {
       this.viewContainerRef.createEmbeddedView(this.templateRef, { $implicit: i });
     }
   }
 }
 ```
+
+Note: create the embedded views from `ngOnChanges`, not from the `@Input` setter directly — setting view-container state inside an input setter trips a spurious `ExpressionChangedAfterItHasBeenCheckedError` in this Angular version.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -2077,30 +2091,26 @@ git commit -m "feat(frontend): add directives capability demo"
 
 ```ts
 import { TestBed } from '@angular/core/testing';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { AnimationsDemo } from './animations-demo';
 
 describe('AnimationsDemo', () => {
-  beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideNoopAnimations()] });
-  });
-
-  it('adds and removes items from the animated list', () => {
+  it('adds and removes items from the animated list', async () => {
     const fixture = TestBed.createComponent(AnimationsDemo);
-    fixture.detectChanges();
+    await fixture.whenStable();
 
     fixture.componentInstance.add();
     fixture.componentInstance.add();
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(fixture.componentInstance.items().length).toBe(2);
-    expect(fixture.nativeElement.querySelectorAll('[data-testid="animated-list"] mat-list-item').length).toBe(2);
 
     fixture.componentInstance.removeLast();
-    fixture.detectChanges();
+    await fixture.whenStable();
     expect(fixture.componentInstance.items().length).toBe(1);
   });
 });
 ```
+
+Note: asserts against the `items()` signal rather than DOM node count — `animate.leave` intentionally delays DOM removal until its exit animation finishes, so counting `<mat-list-item>` elements immediately after `removeLast()` would be flaky.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -2117,29 +2127,40 @@ Expected: FAIL with "Cannot find module './animations-demo'".
 
 ```ts
 import { Component, signal } from '@angular/core';
-import { animate, state, style, transition, trigger } from '@angular/animations';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
 
 @Component({
   selector: 'app-animations-demo',
-  standalone: true,
   imports: [MatButtonModule, MatListModule],
-  animations: [
-    trigger('fadeSlide', [
-      state('void', style({ opacity: 0, transform: 'translateX(-16px)' })),
-      transition(':enter', [animate('200ms ease-out')]),
-      transition(':leave', [animate('150ms ease-in', style({ opacity: 0, transform: 'translateX(16px)' }))]),
-    ]),
-  ],
   template: `
     <button mat-raised-button color="primary" (click)="add()" data-testid="add-button">Add item</button>
     <button mat-stroked-button (click)="removeLast()" data-testid="remove-button">Remove last</button>
     <mat-nav-list data-testid="animated-list">
       @for (item of items(); track item) {
-        <mat-list-item [@fadeSlide]>{{ item }}</mat-list-item>
+        <mat-list-item animate.enter="fade-in" animate.leave="fade-out">{{ item }}</mat-list-item>
       }
     </mat-nav-list>
+  `,
+  styles: `
+    .fade-in {
+      animation: fade-slide-in 200ms ease-out;
+    }
+    .fade-out {
+      animation: fade-slide-out 150ms ease-in;
+    }
+    @keyframes fade-slide-in {
+      from {
+        opacity: 0;
+        transform: translateX(-16px);
+      }
+    }
+    @keyframes fade-slide-out {
+      to {
+        opacity: 0;
+        transform: translateX(16px);
+      }
+    }
   `,
 })
 export class AnimationsDemo {
@@ -2156,6 +2177,8 @@ export class AnimationsDemo {
   }
 }
 ```
+
+Uses the native `animate.enter` / `animate.leave` template bindings (CSS-animation-driven, no `@angular/animations` package or providers needed) instead of the deprecated `trigger`/`transition`/`style`/`animate` API.
 
 - [ ] **Step 4: Wire the route**
 
@@ -2201,9 +2224,11 @@ git commit -m "feat(frontend): add animations capability demo"
 
 ```bash
 cd frontend/angular-demo
-npm install -D @playwright/test
+npm install -D @playwright/test@1.61.1
 npx playwright install --with-deps chromium
 ```
+
+Pin to the latest stable (`1.61.1` at the time of this plan) — the `@latest` dist-tag can resolve to an alpha/next build; check `npm view @playwright/test dist-tags` if versions drift.
 
 - [ ] **Step 2: Create the Playwright config**
 
@@ -2216,6 +2241,10 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   retries: 0,
+  timeout: 60_000,
+  expect: {
+    timeout: 15_000,
+  },
   webServer: {
     command: 'npm start',
     url: 'http://localhost:4201',
@@ -2229,6 +2258,8 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });
 ```
+
+The generous `expect.timeout` (15s) accommodates `ng serve`'s on-demand compilation of each lazy-loaded route chunk on first visit — clicking through all 9 routes in one test can be slow on a cold dev-server start; the default 5s expect timeout is not enough.
 
 - [ ] **Step 3: Write the navigation smoke test**
 
@@ -2446,7 +2477,7 @@ git commit -m "test(frontend): add e2e coverage for the deferred loading demo"
 ```markdown
 # Angular Capabilities Demo
 
-A self-contained Angular 22 application that tours the framework's main modern
+A self-contained Angular 21 application that tours the framework's main modern
 capabilities. No backend, no Docker — everything runs from `npm install` +
 `npm start`.
 
@@ -2499,7 +2530,7 @@ npm run build                        # production build
 And add a row to the "Repository layout" table:
 
 ```markdown
-| `frontend/angular-demo/` | Self-contained Angular 22 app touring the framework's capabilities (signals, forms, routing guards/resolvers, `@defer`, etc.) — no backend |
+| `frontend/angular-demo/` | Self-contained Angular 21 app touring the framework's capabilities (signals, forms, routing guards/resolvers, `@defer`, etc.) — no backend |
 ```
 
 - [ ] **Step 3: Run the full verification suite**
