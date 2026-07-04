@@ -2435,11 +2435,14 @@ test('defer block loads the heavy widget once scrolled into view', async ({ page
 
   await expect(page.getByTestId('defer-placeholder')).toBeVisible();
 
-  await page.mouse.wheel(0, 1400);
+  await page.getByTestId('defer-placeholder').scrollIntoViewIfNeeded();
+  await page.locator('mat-sidenav-content').evaluate((el) => el.scrollTo(0, el.scrollHeight));
 
   await expect(page.getByTestId('heavy-widget')).toBeVisible();
 });
 ```
+
+Note: the app shell's scrollable region is `mat-sidenav-content` (Material's own internal overflow container), not the window — `page.mouse.wheel(...)` scrolls the window and never triggers the `@defer (on viewport)` intersection. Scroll the actual container directly instead.
 
 - [ ] **Step 2: Run the test to verify it passes**
 
