@@ -13,4 +13,8 @@ export const routes: Routes = [
         (m) => m.ComponentCommunicationDemo,
       ),
   },
+  {
+    path: 'forms',
+    loadComponent: () => import('./features/forms/forms-demo').then((m) => m.FormsDemo),
+  },
 ];
