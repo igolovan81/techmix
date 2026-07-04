@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { hasSelectionGuard } from './features/routing/has-selection.guard';
+import { itemDetailResolver } from './features/routing/item-detail.resolver';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'signals' },
@@ -26,5 +28,17 @@ export const routes: Routes = [
     path: 'deferred-loading',
     loadComponent: () =>
       import('./features/deferred-loading/deferred-loading-demo').then((m) => m.DeferredLoadingDemo),
+  },
+  {
+    path: 'routing',
+    loadComponent: () => import('./features/routing/routing-demo').then((m) => m.RoutingDemo),
+    children: [
+      {
+        path: 'item/:id',
+        canActivate: [hasSelectionGuard],
+        resolve: { item: itemDetailResolver },
+        loadComponent: () => import('./features/routing/item-detail').then((m) => m.ItemDetail),
+      },
+    ],
   },
 ];
