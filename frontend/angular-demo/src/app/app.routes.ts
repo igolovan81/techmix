@@ -41,4 +41,8 @@ export const routes: Routes = [
       },
     ],
   },
+  {
+    path: 'pipes',
+    loadComponent: () => import('./features/pipes/pipes-demo').then((m) => m.PipesDemo),
+  },
 ];
