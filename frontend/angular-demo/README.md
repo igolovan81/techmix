@@ -1,59 +1,32 @@
-# AngularDemo
+# Angular Capabilities Demo
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.17.
+A self-contained Angular 21 application that tours the framework's main modern
+capabilities. No backend, no Docker — everything runs from `npm install` +
+`npm start`.
 
-## Development server
-
-To start a local development server, run:
-
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Commands
 
 ```bash
-ng generate component component-name
+npm install
+npm start              # dev server on http://localhost:4201
+npm test                # Jasmine/Karma unit tests
+npx playwright test     # Playwright e2e tests (auto-starts the dev server)
+npm run build           # production build
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Feature tour
 
-```bash
-ng generate --help
-```
+| Route | Capability |
+|---|---|
+| `/signals` | `signal`, `computed`, `effect` |
+| `/component-communication` | signal `input()` / `output()` / `model()`, content projection |
+| `/forms` | Reactive Forms, validators, Material form fields |
+| `/data-fetching` | `HttpClient` (fetch-based), functional interceptor, RxJS, `toSignal` |
+| `/deferred-loading` | `@defer` — placeholder/loading/error, `on viewport` |
+| `/routing` | route params, functional guard, functional resolver |
+| `/pipes` | custom pure pipe + built-in pipes |
+| `/directives` | custom attribute directive + custom structural directive |
+| `/animations` | native `animate.enter` / `animate.leave` CSS-driven transitions |
 
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Each feature lives in its own folder under `src/app/features/<topic>/`,
+self-contained with its own tests.

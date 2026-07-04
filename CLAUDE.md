@@ -59,6 +59,18 @@ npm test                             # Karma/Jasmine
 npm run build                        # production build
 ```
 
+### Frontend Angular capabilities demo (self-contained, no backend)
+
+```bash
+cd frontend/angular-demo
+
+npm install
+npm start                            # dev server on :4201
+npm test                             # Jasmine/Karma unit tests
+npx playwright test                  # e2e tests (auto-starts the dev server)
+npm run build                        # production build
+```
+
 ### Infrastructure
 
 ```bash
@@ -84,6 +96,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `backend/rest-api/` | Spring Boot REST API (JPA, Liquibase, Spring Security, H2 in tests) |
 | `backend/hackerrank/` | Isolated Maven project for algorithm problems |
 | `frontend/angular/` | Angular 20 with SSR via Express |
+| `frontend/angular-demo/` | Self-contained Angular 21 app touring the framework's capabilities (signals, forms, routing guards/resolvers, `@defer`, etc.) — no backend |
 | `message-brokers/<broker>/spring-demo/` | Six independent Spring Boot 3.4.4 demo apps (Java 21, Lombok) |
 | `noSQL/<database>/spring-demo/` | NoSQL database demo apps, same conventions as `message-brokers/` (currently: MongoDB) |
 | `cqrs-event-sourcing/<framework>/spring-demo/` | CQRS/event-sourcing framework demo apps, same conventions as `message-brokers/` (currently: Axon Framework) |
