@@ -17,4 +17,9 @@ export const routes: Routes = [
     path: 'forms',
     loadComponent: () => import('./features/forms/forms-demo').then((m) => m.FormsDemo),
   },
+  {
+    path: 'data-fetching',
+    loadComponent: () =>
+      import('./features/data-fetching/data-fetching-demo').then((m) => m.DataFetchingDemo),
+  },
 ];
