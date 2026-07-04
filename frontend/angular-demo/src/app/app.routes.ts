@@ -22,4 +22,9 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/data-fetching/data-fetching-demo').then((m) => m.DataFetchingDemo),
   },
+  {
+    path: 'deferred-loading',
+    loadComponent: () =>
+      import('./features/deferred-loading/deferred-loading-demo').then((m) => m.DeferredLoadingDemo),
+  },
 ];
