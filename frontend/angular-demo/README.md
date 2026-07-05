@@ -27,6 +27,7 @@ npm run build           # production build
 | `/pipes` | custom pure pipe + built-in pipes |
 | `/directives` | custom attribute directive + custom structural directive |
 | `/animations` | native `animate.enter` / `animate.leave` CSS-driven transitions |
+| `/custom-elements` | `@angular/elements` — native Web Component via `createCustomElement`, driven declaratively and imperatively |
 
 Each feature lives in its own folder under `src/app/features/<topic>/`,
 self-contained with its own tests.

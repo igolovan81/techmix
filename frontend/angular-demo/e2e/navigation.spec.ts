@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { path: 'pipes', label: 'Pipes' },
   { path: 'directives', label: 'Directives' },
   { path: 'animations', label: 'Animations' },
+  { path: 'custom-elements', label: 'Custom Elements' },
 ];
 
 test('sidenav links navigate to every feature route', async ({ page }) => {
