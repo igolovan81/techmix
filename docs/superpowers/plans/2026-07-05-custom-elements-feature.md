@@ -142,21 +142,35 @@ describe('registerStarRatingElement', () => {
     TestBed.configureTestingModule({});
   });
 
-  it('registers app-star-rating on the CustomElementRegistry', () => {
+  // Spy on the global CustomElementRegistry instead of calling it for real:
+  // customElements.define() can only run once per tag for the entire browser
+  // page's lifetime, and the constructor it registers closes over whatever
+  // Injector was live at that moment. custom-elements-demo.spec.ts performs
+  // the one real registration for this app; this file only verifies
+  // registerStarRatingElement's own guard logic. (Discovered the hard way:
+  // an earlier version of this test called the real customElements.define()
+  // with a short-lived TestBed Injector — whichever of these two spec files
+  // happened to run first "won" the one-time registration, and the loser's
+  // later attempt to render <app-star-rating> crashed with `NG0205: Injector
+  // has already been destroyed` once that Injector's own test had finished.)
+  it('defines app-star-rating when not already registered', () => {
+    spyOn(customElements, 'get').and.returnValue(undefined);
+    const defineSpy = spyOn(customElements, 'define');
     const injector = TestBed.inject(Injector);
 
     registerStarRatingElement(injector);
 
-    expect(customElements.get('app-star-rating')).toBeDefined();
+    expect(defineSpy).toHaveBeenCalledWith('app-star-rating', jasmine.any(Function));
   });
 
-  it('is idempotent when called more than once', () => {
+  it('does not redefine app-star-rating when already registered', () => {
+    spyOn(customElements, 'get').and.returnValue(class extends HTMLElement {} as CustomElementConstructor);
+    const defineSpy = spyOn(customElements, 'define');
     const injector = TestBed.inject(Injector);
 
-    expect(() => {
-      registerStarRatingElement(injector);
-      registerStarRatingElement(injector);
-    }).not.toThrow();
+    registerStarRatingElement(injector);
+
+    expect(defineSpy).not.toHaveBeenCalled();
   });
 });
 ```
@@ -227,6 +241,14 @@ import { TestBed } from '@angular/core/testing';
 import { CustomElementsDemo } from './custom-elements-demo';
 
 describe('CustomElementsDemo', () => {
+  beforeEach(() => {
+    // Angular Elements' generated class captures the EnvironmentInjector at
+    // registration time. TestBed destroys that injector after each test by
+    // default, which breaks any later test in this file that instantiates
+    // <app-star-rating> (NG0205: Injector has already been destroyed).
+    TestBed.configureTestingModule({ teardown: { destroyAfterEach: false } });
+  });
+
   it('renders the declaratively-bound rating and updates via increment/reset', async () => {
     const fixture = TestBed.createComponent(CustomElementsDemo);
     await fixture.whenStable();
@@ -277,7 +299,7 @@ import {
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
   ElementRef,
-  Injector,
+  EnvironmentInjector,
   inject,
   signal,
   viewChild,
@@ -319,13 +341,13 @@ import { registerStarRatingElement } from './register-star-rating-element';
   `,
 })
 export class CustomElementsDemo {
-  private readonly injector = inject(Injector);
+  private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly imperativeHost = viewChild.required<ElementRef<HTMLDivElement>>('imperativeHost');
 
   readonly ratingValue = signal(2);
 
   constructor() {
-    registerStarRatingElement(this.injector);
+    registerStarRatingElement(this.environmentInjector);
   }
 
   increment(): void {

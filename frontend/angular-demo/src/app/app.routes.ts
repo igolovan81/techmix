@@ -53,4 +53,9 @@ export const routes: Routes = [
     path: 'animations',
     loadComponent: () => import('./features/animations/animations-demo').then((m) => m.AnimationsDemo),
   },
+  {
+    path: 'custom-elements',
+    loadComponent: () =>
+      import('./features/custom-elements/custom-elements-demo').then((m) => m.CustomElementsDemo),
+  },
 ];

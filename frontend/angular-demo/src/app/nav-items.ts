@@ -13,4 +13,5 @@ export const NAV_ITEMS: NavItem[] = [
   { path: 'pipes', label: 'Pipes' },
   { path: 'directives', label: 'Directives' },
   { path: 'animations', label: 'Animations' },
+  { path: 'custom-elements', label: 'Custom Elements' },
 ];
