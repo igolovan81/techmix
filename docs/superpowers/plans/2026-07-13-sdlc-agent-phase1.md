@@ -2360,18 +2360,25 @@ A Spring Boot app implementing Phase 1 of the [SDLC agent concept](../README.md)
 
 ```bash
 docker compose -f ../docker/docker-compose.yml up -d
-# wait ~30s for first-boot initialization
+# wait ~30-60s for first-boot initialization, then verify:
+curl -sk -u admin:changeme123 "https://localhost:8093/services/server/info?output_mode=json"
+```
+
+Seed the `checkout-service` sample log data (~50 events, including the `NullPointerException` scenario):
+
+```bash
 ../docker/seed-logs.sh
 ```
 
-Generate a Splunk auth token for `SplunkLogSource` (one-time, via the REST API):
+Generate a Splunk auth token for `SplunkLogSource`'s Bearer auth (one-time, via the REST API — `name` must be an existing Splunk username, e.g. `admin`):
 
 ```bash
-curl -sk -u admin:changeme123 -X POST https://localhost:8093/services/authorization/tokens \
-  -d name=admin -d audience=sdlc-agent | grep -o '<s:key[^<]*</s:key>'
+curl -sk -u admin:changeme123 -X POST "https://localhost:8093/services/authorization/tokens" \
+  -d name=admin -d audience=sdlc-agent -d output_mode=json \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['entry'][0]['content']['token'])"
 ```
 
-Use the token value as `SPLUNK_API_TOKEN` below.
+Use the printed value as `SPLUNK_API_TOKEN` below.
 
 ## Running
 
