@@ -1,0 +1,29 @@
+server:
+  port: 8089
+
+sdlc:
+  ticket-source: jira
+
+agent:
+  max-iterations: 10
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: claude-sonnet-4-6
+
+jira:
+  base-url: ${JIRA_BASE_URL:}
+  email: ${JIRA_EMAIL:}
+  api-token: ${JIRA_API_TOKEN:}
+  service-field: customfield_10050
+
+zendesk:
+  subdomain: ${ZENDESK_SUBDOMAIN:}
+  email: ${ZENDESK_EMAIL:}
+  api-token: ${ZENDESK_API_TOKEN:}
+  service-tag-prefix: ""
+
+splunk:
+  base-url: https://localhost:8093
+  api-token: ${SPLUNK_API_TOKEN:}
+  search-timeout-seconds: 10
