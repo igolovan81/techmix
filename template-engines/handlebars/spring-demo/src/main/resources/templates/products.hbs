@@ -1,0 +1,10 @@
+{{#partial "title"}}Products{{/partial}}
+{{#partial "body"}}
+<table>
+  <tr><th>Name</th><th>Price</th><th>Stock</th></tr>
+  {{#each products}}
+  <tr><td>{{name}}</td><td>{{formatCurrency price}}</td><td>{{stock}}</td></tr>
+  {{/each}}
+</table>
+{{/partial}}
+{{> layout}}

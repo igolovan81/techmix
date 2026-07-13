@@ -6,7 +6,7 @@
 
 **Architecture:** Both modules render the same in-memory `Product`/`Order` domain (own copies per module, no shared library). Each module has a `PageController` using the engine's real Spring MVC `ViewResolver` (real `.hbs`/`.ftlh` templates, browsable pages) and a `DemoController` with REST endpoints, one per capability, rendering ad hoc templates and returning the fragment in the response body — the "trigger endpoint per pattern" convention already used throughout this repo.
 
-**Tech Stack:** Spring Boot 3.4.4, Java 21, `com.github.jknack:handlebars`/`handlebars-springmvc` 4.3.1, `spring-boot-starter-freemarker` (FreeMarker 2.3.3x), Lombok, springdoc-openapi, JUnit 5 + AssertJ + Mockito, Gatling.
+**Tech Stack:** Spring Boot 3.4.4, Java 21, `com.github.jknack:handlebars`/`handlebars-springmvc` 4.5.2 (4.3.1 was tried first but its `HandlebarsView` still referenced `javax.servlet`, incompatible with Spring Boot 3's Jakarta EE — 4.5.2, released Aug 2025, fixed this), `spring-boot-starter-freemarker` (FreeMarker 2.3.3x), Lombok, springdoc-openapi, JUnit 5 + AssertJ + Mockito, Gatling.
 
 ## Global Constraints
 
@@ -66,7 +66,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.38</lombok.version>
         <springdoc.version>2.8.6</springdoc.version>
-        <handlebars.version>4.3.1</handlebars.version>
+        <handlebars.version>4.5.2</handlebars.version>
         <gatling.version>3.13.1</gatling.version>
         <gatling-maven-plugin.version>4.15.0</gatling-maven-plugin.version>
         <spotless.version>2.43.0</spotless.version>

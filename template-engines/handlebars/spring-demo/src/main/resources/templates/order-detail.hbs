@@ -1,0 +1,18 @@
+{{#partial "title"}}Order {{order.id}}{{/partial}}
+{{#partial "body"}}
+{{#with order}}
+<h2>Order {{id}} for {{customer}}</h2>
+{{#if items}}
+<ul>
+  {{#each items}}
+  <li>{{> partials/order-item}}</li>
+  {{/each}}
+</ul>
+{{else}}
+<p>No items.</p>
+{{/if}}
+{{#unless status}}<p>Status: pending</p>{{/unless}}
+<p>Total: {{formatCurrency total}}</p>
+{{/with}}
+{{/partial}}
+{{> layout}}
