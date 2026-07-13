@@ -76,6 +76,10 @@
             <version>2.40.1</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
@@ -174,6 +178,7 @@ splunk:
   base-url: https://localhost:8093
   api-token: ${SPLUNK_API_TOKEN:}
   search-timeout-seconds: 10
+  trust-self-signed: true
 ```
 
 - [ ] **Step 4: Write the application smoke test**
@@ -298,9 +303,11 @@ package com.testingai.sdlc.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "splunk")
-public record SplunkProperties(String baseUrl, String apiToken, int searchTimeoutSeconds) {
+public record SplunkProperties(String baseUrl, String apiToken, int searchTimeoutSeconds, boolean trustSelfSigned) {
 }
 ```
+
+> **Correction found during Task 11's real-Splunk verification:** `trustSelfSigned` was missing from this record as originally drafted here. Splunk's official Docker image serves a self-signed certificate on its REST API port, and `httpclient5` (pulled in transitively at runtime by `anthropic-java`, confirmed via `mvn dependency:tree`) is what Spring's `RestClient.builder()` auto-detects and uses — so without an explicit trust-all `ClientHttpRequestFactory`, every real request to Splunk fails with `PKIX path building failed`. See the corrected `AppConfig.splunkRestClient()` below and the explicit `httpclient5` compile dependency added to `pom.xml` in Task 1.
 
 - [ ] **Step 2: Create `AppConfig`**
 
@@ -312,10 +319,22 @@ package com.testingai.sdlc.config;
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import jakarta.annotation.PostConstruct;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
+import org.apache.hc.client5.http.ssl.TrustAllStrategy;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+
+import javax.net.ssl.SSLContext;
 
 @Configuration
 public class AppConfig {
@@ -372,8 +391,29 @@ public class AppConfig {
 
     @Bean
     public RestClient splunkRestClient() {
-        return RestClient.builder().baseUrl(splunk.baseUrl())
-                .defaultHeaders(headers -> headers.setBearerAuth(splunk.apiToken())).build();
+        RestClient.Builder builder = RestClient.builder().baseUrl(splunk.baseUrl())
+                .defaultHeaders(headers -> headers.setBearerAuth(splunk.apiToken()));
+        if (splunk.trustSelfSigned()) {
+            builder.requestFactory(trustAllRequestFactory());
+        }
+        return builder.build();
+    }
+
+    // Splunk's official Docker image serves a self-signed certificate on its REST API port;
+    // this bypasses certificate verification for that local-dev container only, gated behind
+    // splunk.trust-self-signed (off by default).
+    private ClientHttpRequestFactory trustAllRequestFactory() {
+        try {
+            SSLContext sslContext = SSLContextBuilder.create().loadTrustMaterial(TrustAllStrategy.INSTANCE).build();
+            SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(sslContext,
+                    NoopHostnameVerifier.INSTANCE);
+            PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                    .setSSLSocketFactory(socketFactory).build();
+            CloseableHttpClient httpClient = HttpClients.custom().setConnectionManager(connectionManager).build();
+            return new HttpComponentsClientHttpRequestFactory(httpClient);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to configure trust-all SSL context for Splunk", e);
+        }
     }
 }
 ```
@@ -1120,7 +1160,7 @@ class SplunkLogSourceTest {
         wireMock = new WireMockServer(wireMockConfig().dynamicPort());
         wireMock.start();
         configureFor(wireMock.port());
-        SplunkProperties props = new SplunkProperties("http://localhost:" + wireMock.port(), "token", 5);
+        SplunkProperties props = new SplunkProperties("http://localhost:" + wireMock.port(), "token", 5, false);
         RestClient restClient = RestClient.builder().baseUrl(props.baseUrl())
                 .defaultHeaders(headers -> headers.setBearerAuth(props.apiToken())).build();
         source = new SplunkLogSource(restClient, props);
@@ -1145,9 +1185,7 @@ class SplunkLogSourceTest {
                           "results": [
                             {
                               "_time": "2026-07-10T14:22:01Z",
-                              "_raw": "java.lang.NullPointerException: Cannot invoke \\"String.length()\\" because \\"discountCode\\" is null",
-                              "level": "ERROR",
-                              "correlationId": "corr-abc"
+                              "_raw": "{\\"service\\": \\"checkout-service\\", \\"level\\": \\"ERROR\\", \\"message\\": \\"NullPointerException: discountCode is null\\", \\"correlationId\\": \\"corr-abc\\"}"
                             }
                           ]
                         }
@@ -1172,7 +1210,8 @@ class SplunkLogSourceTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody("{\"entry\": [{\"content\": {\"dispatchState\": \"RUNNING\"}}]}")));
 
-        SplunkProperties fastTimeoutProps = new SplunkProperties("http://localhost:" + wireMock.port(), "token", 1);
+        SplunkProperties fastTimeoutProps = new SplunkProperties("http://localhost:" + wireMock.port(), "token", 1,
+                false);
         RestClient restClient = RestClient.builder().baseUrl(fastTimeoutProps.baseUrl())
                 .defaultHeaders(headers -> headers.setBearerAuth(fastTimeoutProps.apiToken())).build();
         SplunkLogSource fastTimeoutSource = new SplunkLogSource(restClient, fastTimeoutProps);
@@ -1198,6 +1237,8 @@ Expected: COMPILATION FAILURE — `SplunkLogSource` does not exist yet.
 package com.testingai.sdlc.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.testingai.sdlc.config.SplunkProperties;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -1207,6 +1248,7 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class SplunkLogSource implements LogSource {
@@ -1215,6 +1257,7 @@ public class SplunkLogSource implements LogSource {
 
     private final RestClient restClient;
     private final SplunkProperties splunkProperties;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SplunkLogSource(RestClient splunkRestClient, SplunkProperties splunkProperties) {
         this.restClient = splunkRestClient;
@@ -1230,13 +1273,19 @@ public class SplunkLogSource implements LogSource {
         return fetchResults(sid, service);
     }
 
+    // Note: correlationId is searched as free text (not a field-equality match) because the
+    // seeded HEC events don't get "correlationId" promoted to a top-level indexed/extracted
+    // Splunk field automatically — the only reliably queryable representation is the raw JSON
+    // event body itself, which a plain quoted-string search matches against via full-text search.
+    // Confirmed against a real Splunk instance during Task 11 — a field-equality match
+    // (correlationId="...") silently returned zero results.
     private String buildSearchString(String service, String keyword, String correlationId) {
         StringBuilder search = new StringBuilder("search index=main service=\"").append(service).append('"');
         if (keyword != null && !keyword.isBlank()) {
             search.append(" \"").append(keyword).append('"');
         }
         if (correlationId != null && !correlationId.isBlank()) {
-            search.append(" correlationId=\"").append(correlationId).append('"');
+            search.append(" \"").append(correlationId).append('"');
         }
         return search.toString();
     }
@@ -1281,9 +1330,29 @@ public class SplunkLogSource implements LogSource {
         if (response == null || response.results() == null) {
             return List.of();
         }
-        return response.results().stream()
-                .map(r -> new LogEntry(Instant.parse(r.time()), service, r.level(), r.raw(), r.correlationId()))
-                .toList();
+        return response.results().stream().map(r -> toLogEntry(r, service)).toList();
+    }
+
+    // Parses the seeded JSON payload back out of Splunk's _raw field, since Splunk does not
+    // automatically promote arbitrary top-level JSON keys (level, correlationId) to searchable
+    // result fields without explicit index-time field extraction configuration. Confirmed
+    // against a real Splunk instance during Task 11 — the original design (top-level "level"
+    // and "correlationId" fields on SplunkResult) always deserialized to null in practice.
+    private LogEntry toLogEntry(SplunkResult result, String service) {
+        Map<String, Object> raw = parseRawEvent(result.raw());
+        String level = raw.get("level") != null ? raw.get("level").toString() : "";
+        String message = raw.get("message") != null ? raw.get("message").toString() : result.raw();
+        String correlationId = raw.get("correlationId") != null ? raw.get("correlationId").toString() : null;
+        return new LogEntry(Instant.parse(result.time()), service, level, message, correlationId);
+    }
+
+    private Map<String, Object> parseRawEvent(String raw) {
+        try {
+            return objectMapper.readValue(raw, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            return Map.of();
+        }
     }
 
     record CreateJobResponse(String sid) {
@@ -1301,8 +1370,7 @@ public class SplunkLogSource implements LogSource {
     record ResultsResponse(List<SplunkResult> results) {
     }
 
-    record SplunkResult(@JsonProperty("_time") String time, @JsonProperty("_raw") String raw, String level,
-            String correlationId) {
+    record SplunkResult(@JsonProperty("_time") String time, @JsonProperty("_raw") String raw) {
     }
 }
 ```
@@ -2184,6 +2252,7 @@ services:
     hostname: splunk
     environment:
       - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com
       - SPLUNK_PASSWORD=changeme123
       - SPLUNK_HEC_TOKEN=00000000-0000-0000-0000-000000000000
     ports:
@@ -2372,6 +2441,7 @@ All defaults are in `src/main/resources/application.yml`:
 | `zendesk.service-tag-prefix` | `""` | Only tags with this prefix are considered the service tag (empty = first tag) |
 | `splunk.base-url` | `https://localhost:8093` | Splunk REST API base URL |
 | `splunk.search-timeout-seconds` | `10` | How long to poll a search job before giving up (returns empty results) |
+| `splunk.trust-self-signed` | `true` | Bypasses TLS verification for Splunk's self-signed dev certificate — local-dev only |
 
 ## Module layout
 

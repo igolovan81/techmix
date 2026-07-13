@@ -29,7 +29,7 @@ class SplunkLogSourceTest {
         wireMock = new WireMockServer(wireMockConfig().dynamicPort());
         wireMock.start();
         configureFor(wireMock.port());
-        SplunkProperties props = new SplunkProperties("http://localhost:" + wireMock.port(), "token", 5);
+        SplunkProperties props = new SplunkProperties("http://localhost:" + wireMock.port(), "token", 5, false);
         RestClient restClient = RestClient.builder().baseUrl(props.baseUrl())
                 .defaultHeaders(headers -> headers.setBearerAuth(props.apiToken())).build();
         source = new SplunkLogSource(restClient, props);
@@ -54,9 +54,7 @@ class SplunkLogSourceTest {
                           "results": [
                             {
                               "_time": "2026-07-10T14:22:01Z",
-                              "_raw": "java.lang.NullPointerException: Cannot invoke \\"String.length()\\" because \\"discountCode\\" is null",
-                              "level": "ERROR",
-                              "correlationId": "corr-abc"
+                              "_raw": "{\\"service\\": \\"checkout-service\\", \\"level\\": \\"ERROR\\", \\"message\\": \\"NullPointerException: discountCode is null\\", \\"correlationId\\": \\"corr-abc\\"}"
                             }
                           ]
                         }
@@ -81,7 +79,8 @@ class SplunkLogSourceTest {
                 .withHeader("Content-Type", "application/json")
                 .withBody("{\"entry\": [{\"content\": {\"dispatchState\": \"RUNNING\"}}]}")));
 
-        SplunkProperties fastTimeoutProps = new SplunkProperties("http://localhost:" + wireMock.port(), "token", 1);
+        SplunkProperties fastTimeoutProps = new SplunkProperties("http://localhost:" + wireMock.port(), "token", 1,
+                false);
         RestClient restClient = RestClient.builder().baseUrl(fastTimeoutProps.baseUrl())
                 .defaultHeaders(headers -> headers.setBearerAuth(fastTimeoutProps.apiToken())).build();
         SplunkLogSource fastTimeoutSource = new SplunkLogSource(restClient, fastTimeoutProps);

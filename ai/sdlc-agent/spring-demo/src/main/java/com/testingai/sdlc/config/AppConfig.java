@@ -3,10 +3,22 @@ package com.testingai.sdlc.config;
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import jakarta.annotation.PostConstruct;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
+import org.apache.hc.client5.http.ssl.TrustAllStrategy;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+
+import javax.net.ssl.SSLContext;
 
 @Configuration
 public class AppConfig {
@@ -63,7 +75,28 @@ public class AppConfig {
 
     @Bean
     public RestClient splunkRestClient() {
-        return RestClient.builder().baseUrl(splunk.baseUrl())
-                .defaultHeaders(headers -> headers.setBearerAuth(splunk.apiToken())).build();
+        RestClient.Builder builder = RestClient.builder().baseUrl(splunk.baseUrl())
+                .defaultHeaders(headers -> headers.setBearerAuth(splunk.apiToken()));
+        if (splunk.trustSelfSigned()) {
+            builder.requestFactory(trustAllRequestFactory());
+        }
+        return builder.build();
+    }
+
+    // Splunk's official Docker image serves a self-signed certificate on its REST API port;
+    // this bypasses certificate verification for that local-dev container only, gated behind
+    // splunk.trust-self-signed (off by default).
+    private ClientHttpRequestFactory trustAllRequestFactory() {
+        try {
+            SSLContext sslContext = SSLContextBuilder.create().loadTrustMaterial(TrustAllStrategy.INSTANCE).build();
+            SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(sslContext,
+                    NoopHostnameVerifier.INSTANCE);
+            PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                    .setSSLSocketFactory(socketFactory).build();
+            CloseableHttpClient httpClient = HttpClients.custom().setConnectionManager(connectionManager).build();
+            return new HttpComponentsClientHttpRequestFactory(httpClient);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to configure trust-all SSL context for Splunk", e);
+        }
     }
 }

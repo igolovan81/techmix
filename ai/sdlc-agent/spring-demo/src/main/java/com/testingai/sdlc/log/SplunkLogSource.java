@@ -1,6 +1,8 @@
 package com.testingai.sdlc.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.testingai.sdlc.config.SplunkProperties;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -10,6 +12,7 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class SplunkLogSource implements LogSource {
@@ -18,6 +21,7 @@ public class SplunkLogSource implements LogSource {
 
     private final RestClient restClient;
     private final SplunkProperties splunkProperties;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SplunkLogSource(RestClient splunkRestClient, SplunkProperties splunkProperties) {
         this.restClient = splunkRestClient;
@@ -33,13 +37,17 @@ public class SplunkLogSource implements LogSource {
         return fetchResults(sid, service);
     }
 
+    // Note: correlationId is searched as free text (not a field-equality match) because the
+    // seeded HEC events don't get "correlationId" promoted to a top-level indexed/extracted
+    // Splunk field automatically — the only reliably queryable representation is the raw JSON
+    // event body itself, which a plain quoted-string search matches against via full-text search.
     private String buildSearchString(String service, String keyword, String correlationId) {
         StringBuilder search = new StringBuilder("search index=main service=\"").append(service).append('"');
         if (keyword != null && !keyword.isBlank()) {
             search.append(" \"").append(keyword).append('"');
         }
         if (correlationId != null && !correlationId.isBlank()) {
-            search.append(" correlationId=\"").append(correlationId).append('"');
+            search.append(" \"").append(correlationId).append('"');
         }
         return search.toString();
     }
@@ -84,9 +92,27 @@ public class SplunkLogSource implements LogSource {
         if (response == null || response.results() == null) {
             return List.of();
         }
-        return response.results().stream()
-                .map(r -> new LogEntry(Instant.parse(r.time()), service, r.level(), r.raw(), r.correlationId()))
-                .toList();
+        return response.results().stream().map(r -> toLogEntry(r, service)).toList();
+    }
+
+    // Parses the seeded JSON payload back out of Splunk's _raw field, since Splunk does not
+    // automatically promote arbitrary top-level JSON keys (level, correlationId) to searchable
+    // result fields without explicit index-time field extraction configuration.
+    private LogEntry toLogEntry(SplunkResult result, String service) {
+        Map<String, Object> raw = parseRawEvent(result.raw());
+        String level = raw.get("level") != null ? raw.get("level").toString() : "";
+        String message = raw.get("message") != null ? raw.get("message").toString() : result.raw();
+        String correlationId = raw.get("correlationId") != null ? raw.get("correlationId").toString() : null;
+        return new LogEntry(Instant.parse(result.time()), service, level, message, correlationId);
+    }
+
+    private Map<String, Object> parseRawEvent(String raw) {
+        try {
+            return objectMapper.readValue(raw, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            return Map.of();
+        }
     }
 
     record CreateJobResponse(String sid) {
@@ -104,7 +130,6 @@ public class SplunkLogSource implements LogSource {
     record ResultsResponse(List<SplunkResult> results) {
     }
 
-    record SplunkResult(@JsonProperty("_time") String time, @JsonProperty("_raw") String raw, String level,
-            String correlationId) {
+    record SplunkResult(@JsonProperty("_time") String time, @JsonProperty("_raw") String raw) {
     }
 }

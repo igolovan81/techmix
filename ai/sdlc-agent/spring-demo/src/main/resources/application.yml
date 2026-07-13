@@ -27,3 +27,4 @@ splunk:
   base-url: https://localhost:8093
   api-token: ${SPLUNK_API_TOKEN:}
   search-timeout-seconds: 10
+  trust-self-signed: true
