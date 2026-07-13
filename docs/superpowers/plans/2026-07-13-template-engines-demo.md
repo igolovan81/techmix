@@ -19,6 +19,7 @@
 - No docker-compose / external infrastructure in either module — both engines are pure in-process rendering libraries.
 - FreeMarker template files use the `.ftlh` extension (Spring Boot 3's default, enables HTML auto-escaping) — not `.ftl`.
 - Handlebars template files use the `.hbs` extension.
+- App ports are `8087` (handlebars-demo) and `8088` (freemarker-demo), not `8085`/`8086` as originally drafted — `8085` is bound by `message-brokers/pulsar`'s admin HTTP docker mapping and `8086` is already used by `cqrs-event-sourcing/axon`'s Spring Boot app; discovered during execution and corrected throughout this plan and the implementation.
 
 ---
 
@@ -224,7 +225,7 @@ git commit -m "feat(template-engines): scaffold template-engines Maven reactor"
 - Test: `template-engines/handlebars/spring-demo/src/test/java/com/testingai/handlebars/HandlebarsDemoApplicationTest.java`
 
 **Interfaces:**
-- Produces: `com.testingai.handlebars.HandlebarsDemoApplication` (Spring Boot main class), Maven coordinates `com.testingai:handlebars-demo`, server port `8085`.
+- Produces: `com.testingai.handlebars.HandlebarsDemoApplication` (Spring Boot main class), Maven coordinates `com.testingai:handlebars-demo`, server port `8087`.
 
 - [ ] **Step 1: Create the module POM**
 
@@ -313,7 +314,7 @@ public class HandlebarsDemoApplication {
 
 ```yaml
 server:
-  port: 8085
+  port: 8087
 ```
 
 - [ ] **Step 4: Write the application smoke test**
@@ -1176,7 +1177,7 @@ git commit -m "feat(handlebars): add DemoController covering all seven capabilit
 - Create: `template-engines/handlebars/spring-demo/src/test/java/com/testingai/handlebars/performance/DemoSimulation.java`
 
 **Interfaces:**
-- Consumes: the running `handlebars-demo` app on `localhost:8085` (Tasks 5 and 6's routes).
+- Consumes: the running `handlebars-demo` app on `localhost:8087` (Tasks 5 and 6's routes).
 
 - [ ] **Step 1: Write the simulation**
 
@@ -1198,7 +1199,7 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 
 public class DemoSimulation extends Simulation {
 
-	private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8085");
+	private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8087");
 
 	private final ScenarioBuilder pagesScenario = scenario("Pages")
 			.exec(http("Products Page").get("/pages/products").check(status().is(200)))
@@ -1263,38 +1264,38 @@ mvn spring-boot:run
 
 ## Pages (real Spring MVC view resolution — open in a browser)
 
-- http://localhost:8085/pages/products
-- http://localhost:8085/pages/orders/o1
-- http://localhost:8085/pages/orders/o2 (demonstrates `{{#unless status}}`, since `o2` has no status)
+- http://localhost:8087/pages/products
+- http://localhost:8087/pages/orders/o1
+- http://localhost:8087/pages/orders/o2 (demonstrates `{{#unless status}}`, since `o2` has no status)
 
 ## Capability endpoints
 
 ```bash
 # Variable substitution + HTML auto-escaping vs. {{{raw}}}
-curl http://localhost:8085/demo/variables
+curl http://localhost:8087/demo/variables
 
 # Built-in block helpers: #if / #unless / #each / #with
-curl http://localhost:8085/demo/helpers/builtin
+curl http://localhost:8087/demo/helpers/builtin
 
 # Custom helper: formatCurrency
-curl http://localhost:8085/demo/helpers/custom
+curl http://localhost:8087/demo/helpers/custom
 
 # Partials: renders partials/order-item.hbs standalone
-curl http://localhost:8085/demo/partials
+curl http://localhost:8087/demo/partials
 
 # Partial-block layout composition
-curl http://localhost:8085/demo/layout
+curl http://localhost:8087/demo/layout
 
 # Subexpressions: {{formatCurrency (multiply price quantity)}}
-curl http://localhost:8085/demo/subexpressions
+curl http://localhost:8087/demo/subexpressions
 
 # Precompiled template reuse vs. re-parsing per call (elapsed-time comparison)
-curl http://localhost:8085/demo/precompiled
+curl http://localhost:8087/demo/precompiled
 ```
 
 ## Swagger UI
 
-http://localhost:8085/swagger-ui/index.html
+http://localhost:8087/swagger-ui/index.html
 
 ## Run performance tests
 
@@ -1323,7 +1324,7 @@ git commit -m "docs(handlebars): add module README"
 - Test: `template-engines/freemarker/spring-demo/src/test/java/com/testingai/freemarker/FreemarkerDemoApplicationTest.java`
 
 **Interfaces:**
-- Produces: `com.testingai.freemarker.FreemarkerDemoApplication`, Maven coordinates `com.testingai:freemarker-demo`, server port `8086`.
+- Produces: `com.testingai.freemarker.FreemarkerDemoApplication`, Maven coordinates `com.testingai:freemarker-demo`, server port `8088`.
 
 - [ ] **Step 1: Create the module POM**
 
@@ -1406,7 +1407,7 @@ public class FreemarkerDemoApplication {
 
 ```yaml
 server:
-  port: 8086
+  port: 8088
 
 spring:
   freemarker:
@@ -2263,7 +2264,7 @@ git commit -m "feat(freemarker): add DemoController covering all eight capabilit
 - Create: `template-engines/freemarker/spring-demo/src/test/java/com/testingai/freemarker/performance/DemoSimulation.java`
 
 **Interfaces:**
-- Consumes: the running `freemarker-demo` app on `localhost:8086` (Tasks 12 and 13's routes).
+- Consumes: the running `freemarker-demo` app on `localhost:8088` (Tasks 12 and 13's routes).
 
 - [ ] **Step 1: Write the simulation**
 
@@ -2285,7 +2286,7 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 
 public class DemoSimulation extends Simulation {
 
-	private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8086");
+	private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8088");
 
 	private final ScenarioBuilder pagesScenario = scenario("Pages")
 			.exec(http("Products Page").get("/pages/products").check(status().is(200)))
@@ -2351,41 +2352,41 @@ mvn spring-boot:run
 
 ## Pages (real Spring MVC view resolution — open in a browser)
 
-- http://localhost:8086/pages/products
-- http://localhost:8086/pages/orders/o1
-- http://localhost:8086/pages/orders/o2 (demonstrates the `!"pending"` default-value operator, since `o2` has no status)
+- http://localhost:8088/pages/products
+- http://localhost:8088/pages/orders/o1
+- http://localhost:8088/pages/orders/o2 (demonstrates the `!"pending"` default-value operator, since `o2` has no status)
 
 ## Capability endpoints
 
 ```bash
 # Data-model binding: same rendering logic against a record vs. a Map
-curl http://localhost:8086/demo/data-model
+curl http://localhost:8088/demo/data-model
 
 # #if / #list directives
-curl http://localhost:8086/demo/directives/if-list
+curl http://localhost:8088/demo/directives/if-list
 
 # #switch / #case / #default
-curl http://localhost:8086/demo/directives/switch
+curl http://localhost:8088/demo/directives/switch
 
 # User-defined macro
-curl http://localhost:8086/demo/macros
+curl http://localhost:8088/demo/macros
 
 # User-defined function
-curl http://localhost:8086/demo/functions
+curl http://localhost:8088/demo/functions
 
 # Built-ins: ?upper_case, ?string number/date formatting
-curl http://localhost:8086/demo/builtins
+curl http://localhost:8088/demo/builtins
 
 # #import composition, reusing the same layout.ftlh macro the MVC pages use
-curl http://localhost:8086/demo/composition
+curl http://localhost:8088/demo/composition
 
 # Null-safety operators: ! (default) and ?? (exists)
-curl http://localhost:8086/demo/null-safety
+curl http://localhost:8088/demo/null-safety
 ```
 
 ## Swagger UI
 
-http://localhost:8086/swagger-ui/index.html
+http://localhost:8088/swagger-ui/index.html
 
 ## Run performance tests
 
@@ -2476,8 +2477,8 @@ Run: `cd template-engines/handlebars/spring-demo && mvn spring-boot:run` (separa
 
 Then:
 ```bash
-curl -s http://localhost:8085/pages/products | grep -o 'Widget'
-curl -s http://localhost:8085/demo/subexpressions
+curl -s http://localhost:8087/pages/products | grep -o 'Widget'
+curl -s http://localhost:8087/demo/subexpressions
 ```
 Expected: `Widget` printed once; the subexpressions call returns `<p>Line total: $29.97</p>`.
 
@@ -2489,8 +2490,8 @@ Run: `cd template-engines/freemarker/spring-demo && mvn spring-boot:run` (separa
 
 Then:
 ```bash
-curl -s http://localhost:8086/pages/products | grep -o 'Widget'
-curl -s http://localhost:8086/demo/null-safety
+curl -s http://localhost:8088/pages/products | grep -o 'Widget'
+curl -s http://localhost:8088/demo/null-safety
 ```
 Expected: `Widget` printed once; the null-safety call shows `pending` and `no`.
 

@@ -17,38 +17,38 @@ mvn spring-boot:run
 
 ## Pages (real Spring MVC view resolution — open in a browser)
 
-- http://localhost:8085/pages/products
-- http://localhost:8085/pages/orders/o1
-- http://localhost:8085/pages/orders/o2 (demonstrates `{{#unless status}}`, since `o2` has no status)
+- http://localhost:8087/pages/products
+- http://localhost:8087/pages/orders/o1
+- http://localhost:8087/pages/orders/o2 (demonstrates `{{#unless status}}`, since `o2` has no status)
 
 ## Capability endpoints
 
 ```bash
 # Variable substitution + HTML auto-escaping vs. {{{raw}}}
-curl http://localhost:8085/demo/variables
+curl http://localhost:8087/demo/variables
 
 # Built-in block helpers: #if / #unless / #each / #with
-curl http://localhost:8085/demo/helpers/builtin
+curl http://localhost:8087/demo/helpers/builtin
 
 # Custom helper: formatCurrency
-curl http://localhost:8085/demo/helpers/custom
+curl http://localhost:8087/demo/helpers/custom
 
 # Partials: renders partials/order-item.hbs standalone
-curl http://localhost:8085/demo/partials
+curl http://localhost:8087/demo/partials
 
 # Partial-block layout composition
-curl http://localhost:8085/demo/layout
+curl http://localhost:8087/demo/layout
 
 # Subexpressions: {{formatCurrency (multiply price quantity)}}
-curl http://localhost:8085/demo/subexpressions
+curl http://localhost:8087/demo/subexpressions
 
 # Precompiled template reuse vs. re-parsing per call (elapsed-time comparison)
-curl http://localhost:8085/demo/precompiled
+curl http://localhost:8087/demo/precompiled
 ```
 
 ## Swagger UI
 
-http://localhost:8085/swagger-ui/index.html
+http://localhost:8087/swagger-ui/index.html
 
 ## Run performance tests
 

@@ -17,41 +17,41 @@ mvn spring-boot:run
 
 ## Pages (real Spring MVC view resolution — open in a browser)
 
-- http://localhost:8086/pages/products
-- http://localhost:8086/pages/orders/o1
-- http://localhost:8086/pages/orders/o2 (demonstrates the `!"pending"` default-value operator, since `o2` has no status)
+- http://localhost:8088/pages/products
+- http://localhost:8088/pages/orders/o1
+- http://localhost:8088/pages/orders/o2 (demonstrates the `!"pending"` default-value operator, since `o2` has no status)
 
 ## Capability endpoints
 
 ```bash
 # Data-model binding: same rendering logic against a record vs. a Map
-curl http://localhost:8086/demo/data-model
+curl http://localhost:8088/demo/data-model
 
 # #if / #list directives
-curl http://localhost:8086/demo/directives/if-list
+curl http://localhost:8088/demo/directives/if-list
 
 # #switch / #case / #default
-curl http://localhost:8086/demo/directives/switch
+curl http://localhost:8088/demo/directives/switch
 
 # User-defined macro
-curl http://localhost:8086/demo/macros
+curl http://localhost:8088/demo/macros
 
 # User-defined function
-curl http://localhost:8086/demo/functions
+curl http://localhost:8088/demo/functions
 
 # Built-ins: ?upper_case, ?string number/date formatting
-curl http://localhost:8086/demo/builtins
+curl http://localhost:8088/demo/builtins
 
 # #import composition, reusing the same layout.ftlh macro the MVC pages use
-curl http://localhost:8086/demo/composition
+curl http://localhost:8088/demo/composition
 
 # Null-safety operators: ! (default) and ?? (exists)
-curl http://localhost:8086/demo/null-safety
+curl http://localhost:8088/demo/null-safety
 ```
 
 ## Swagger UI
 
-http://localhost:8086/swagger-ui/index.html
+http://localhost:8088/swagger-ui/index.html
 
 ## Run performance tests
 

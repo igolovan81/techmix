@@ -13,7 +13,7 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 
 public class DemoSimulation extends Simulation {
 
-	private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8085");
+	private final HttpProtocolBuilder httpProtocol = http.baseUrl("http://localhost:8087");
 
 	private final ScenarioBuilder pagesScenario = scenario("Pages")
 			.exec(http("Products Page").get("/pages/products").check(status().is(200)))
