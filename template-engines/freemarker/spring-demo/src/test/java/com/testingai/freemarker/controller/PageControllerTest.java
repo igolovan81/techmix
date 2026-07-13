@@ -43,9 +43,8 @@ class PageControllerTest {
 
 	@Test
 	void orderDetail_shouldRenderOrderItemsWithinLayout() throws Exception {
-		Order order = new Order("o1", "Alice",
-				List.of(new OrderItem("p1", "Widget", 2, new BigDecimal("19.98"))), new BigDecimal("19.98"),
-				"CONFIRMED", Instant.parse("2026-07-01T10:15:30Z"));
+		Order order = new Order("o1", "Alice", List.of(new OrderItem("p1", "Widget", 2, new BigDecimal("19.98"))),
+				new BigDecimal("19.98"), "CONFIRMED", Instant.parse("2026-07-01T10:15:30Z"));
 		when(sampleDataService.findOrder("o1")).thenReturn(Optional.of(order));
 
 		mockMvc.perform(get("/pages/orders/o1")).andExpect(status().isOk())
@@ -55,9 +54,8 @@ class PageControllerTest {
 
 	@Test
 	void orderDetail_shouldRenderDefaultStatusWhenNull() throws Exception {
-		Order order = new Order("o2", "Bob",
-				List.of(new OrderItem("p4", "Doohickey", 3, new BigDecimal("14.97"))), new BigDecimal("14.97"), null,
-				Instant.parse("2026-07-05T08:00:00Z"));
+		Order order = new Order("o2", "Bob", List.of(new OrderItem("p4", "Doohickey", 3, new BigDecimal("14.97"))),
+				new BigDecimal("14.97"), null, Instant.parse("2026-07-05T08:00:00Z"));
 		when(sampleDataService.findOrder("o2")).thenReturn(Optional.of(order));
 
 		mockMvc.perform(get("/pages/orders/o2")).andExpect(status().isOk())

@@ -42,9 +42,9 @@ class DemoControllerTest {
 
 	@Test
 	void builtinHelpers_shouldMarkOutOfStockAndRenderCurrentOrder() throws Exception {
-		when(sampleDataService.findAllProducts()).thenReturn(List.of(
-				new Product("p1", "Widget", new BigDecimal("9.99"), 100),
-				new Product("p3", "Gizmo", new BigDecimal("29.99"), 0)));
+		when(sampleDataService.findAllProducts())
+				.thenReturn(List.of(new Product("p1", "Widget", new BigDecimal("9.99"), 100),
+						new Product("p3", "Gizmo", new BigDecimal("29.99"), 0)));
 		Order order = new Order("o1", "Alice", List.of(), new BigDecimal("0"), "CONFIRMED",
 				Instant.parse("2026-07-01T10:15:30Z"));
 		when(sampleDataService.findOrder("o1")).thenReturn(Optional.of(order));
@@ -66,9 +66,8 @@ class DemoControllerTest {
 
 	@Test
 	void partials_shouldRenderOrderItemFragmentStandalone() throws Exception {
-		Order order = new Order("o1", "Alice",
-				List.of(new OrderItem("p1", "Widget", 2, new BigDecimal("19.98"))), new BigDecimal("19.98"),
-				"CONFIRMED", Instant.parse("2026-07-01T10:15:30Z"));
+		Order order = new Order("o1", "Alice", List.of(new OrderItem("p1", "Widget", 2, new BigDecimal("19.98"))),
+				new BigDecimal("19.98"), "CONFIRMED", Instant.parse("2026-07-01T10:15:30Z"));
 		when(sampleDataService.findOrder("o1")).thenReturn(Optional.of(order));
 
 		mockMvc.perform(get("/demo/partials")).andExpect(status().isOk())

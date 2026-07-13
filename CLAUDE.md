@@ -37,6 +37,17 @@ mvn test -Dtest=ClassName            # single test class
 mvn gatling:test                     # load test — requires the app and Axon Server running first
 ```
 
+### Template engine demos (both modules — run from the module root, no docker infrastructure required)
+
+```bash
+cd template-engines/<engine>/spring-demo
+
+mvn clean package                    # build
+mvn test                             # unit tests (Gatling excluded automatically)
+mvn test -Dtest=ClassName            # single test class
+mvn gatling:test                     # load test — requires the app to be running first
+```
+
 ### Backend REST API
 
 ```bash
@@ -100,6 +111,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `message-brokers/<broker>/spring-demo/` | Six independent Spring Boot 3.4.4 demo apps (Java 21, Lombok) |
 | `noSQL/<database>/spring-demo/` | NoSQL database demo apps, same conventions as `message-brokers/` (currently: MongoDB) |
 | `cqrs-event-sourcing/<framework>/spring-demo/` | CQRS/event-sourcing framework demo apps, same conventions as `message-brokers/` (currently: Axon Framework) |
+| `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
 | `docker-compose.yml` | Shared infrastructure stack |
 
 ### Message broker demos

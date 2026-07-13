@@ -43,9 +43,9 @@ class DemoControllerTest {
 
 	@Test
 	void ifList_shouldMarkOutOfStockProducts() throws Exception {
-		when(sampleDataService.findAllProducts()).thenReturn(List.of(
-				new Product("p1", "Widget", new BigDecimal("9.99"), 100),
-				new Product("p3", "Gizmo", new BigDecimal("29.99"), 0)));
+		when(sampleDataService.findAllProducts())
+				.thenReturn(List.of(new Product("p1", "Widget", new BigDecimal("9.99"), 100),
+						new Product("p3", "Gizmo", new BigDecimal("29.99"), 0)));
 
 		mockMvc.perform(get("/demo/directives/if-list")).andExpect(status().isOk())
 				.andExpect(content().string(containsString("Widget - in stock")))
