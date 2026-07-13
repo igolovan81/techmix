@@ -44,9 +44,9 @@ class ZendeskTicketSource implements TicketSource { /* Zendesk Support API */ }
 record Ticket(String id, String title, String description, String severity, String service, Instant reportedAt) {}
 
 interface LogSource {
-    List<LogEntry> query(String service, Instant from, Instant to, String correlationId);
+    List<LogEntry> query(String service, Instant from, Instant to, String keyword, String correlationId);
 }
-class ElasticsearchLogSource implements LogSource { /* primary example */ }
+class SplunkLogSource implements LogSource { /* implemented in Phase 1 — Splunk REST search-job API */ }
 
 record LogEntry(Instant timestamp, String service, String level, String message, String correlationId) {}
 ```
@@ -71,7 +71,7 @@ tools: read_file, list_files, write_patch, git_commit_branch
 
 | Phase | Stages | Status |
 |---|---|---|
-| **Phase 1 — buildable now** | Intake + Investigate | Read-only, no side effects (fetch ticket, query logs, produce `RootCauseHypothesis` JSON). Closest in risk profile to `ai/task-automation-agent` — the natural next concrete module to actually implement. |
+| **Phase 1 — implemented** | Intake + Investigate | Read-only, no side effects. See [`spring-demo/`](spring-demo/) for the working implementation (Jira/Zendesk ticket intake, Splunk as the log source). |
 | **Phase 2** | Fix (propose + commit to a branch, never push/merge) | Requires the write-tool sandboxing above; a human reviews the branch before it goes anywhere. |
 | **Phase 3 — future/exploratory** | Deploy + Verify + Release | Unbuilt. These stages touch running infrastructure and a real release process, so they need their own design pass — and explicit human approval gates — before any code is written. |
 
