@@ -1,2 +1,15 @@
 server:
   port: 8090
+
+app:
+  logging:
+    request:
+      include-body: true
+      excluded-paths:
+        - /actuator/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
