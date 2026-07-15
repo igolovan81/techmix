@@ -48,6 +48,17 @@ mvn test -Dtest=ClassName            # single test class
 mvn gatling:test                     # load test — requires the app to be running first
 ```
 
+### Saga pattern demo (run from the module root, no docker infrastructure required)
+
+```bash
+cd distributed-transactions/saga/spring-demo
+
+mvn clean package                    # build
+mvn test                             # unit tests (Gatling excluded automatically)
+mvn test -Dtest=ClassName            # single test class
+mvn gatling:test                     # load test — requires the app to be running first
+```
+
 ### Backend REST API
 
 ```bash
@@ -112,6 +123,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `noSQL/<database>/spring-demo/` | NoSQL database demo apps, same conventions as `message-brokers/` (currently: MongoDB) |
 | `cqrs-event-sourcing/<framework>/spring-demo/` | CQRS/event-sourcing framework demo apps, same conventions as `message-brokers/` (currently: Axon Framework) |
 | `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
+| `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
 | `docker-compose.yml` | Shared infrastructure stack |
 
 ### Message broker demos

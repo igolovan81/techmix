@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT=$(git rev-parse --show-toplevel)
 
 # Collect staged Java files and the Maven reactor root each one belongs to
-STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(message-brokers|noSQL|cqrs-event-sourcing|template-engines)/.*\.java$' || true)
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(message-brokers|noSQL|cqrs-event-sourcing|template-engines|distributed-transactions)/.*\.java$' || true)
 
 if [ -z "$STAGED_JAVA" ]; then
     exit 0
@@ -28,6 +28,11 @@ fi
 if echo "$STAGED_JAVA" | grep -q '^template-engines/'; then
     echo "[pre-commit] Applying Spotless formatting to staged template-engines Java files..."
     (cd "$ROOT/template-engines" && mvn spotless:apply --quiet)
+fi
+
+if echo "$STAGED_JAVA" | grep -q '^distributed-transactions/'; then
+    echo "[pre-commit] Applying Spotless formatting to staged distributed-transactions Java files..."
+    (cd "$ROOT/distributed-transactions" && mvn spotless:apply --quiet)
 fi
 
 # Re-stage the originally staged files (now formatted)
