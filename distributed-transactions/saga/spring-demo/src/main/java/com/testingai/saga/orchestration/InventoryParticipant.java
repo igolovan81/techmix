@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Component
+@Component("orchestrationInventoryParticipant")
 public class InventoryParticipant {
 
 	private final Set<String> reservedOrderIds = ConcurrentHashMap.newKeySet();
