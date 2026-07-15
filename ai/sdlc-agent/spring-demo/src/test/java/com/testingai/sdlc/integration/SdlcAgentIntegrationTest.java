@@ -1,5 +1,6 @@
 package com.testingai.sdlc.integration;
 
+import com.testingai.sdlc.model.FixResponse;
 import com.testingai.sdlc.model.InvestigateResponse;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -33,5 +34,18 @@ class SdlcAgentIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().rootCause().summary()).isNotBlank();
+    }
+
+    @Test
+    void fix_withRealApis_createsHotfixBranchWithPatch() {
+        var request = Map.of("ticketId", "DEMO-101");
+
+        ResponseEntity<FixResponse> response = http.postForEntity("http://localhost:" + port + "/api/sdlc/fix",
+                request, FixResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().branchName()).isNotBlank();
+        assertThat(response.getBody().patch()).isNotBlank();
     }
 }
