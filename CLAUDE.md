@@ -59,6 +59,17 @@ mvn test -Dtest=ClassName            # single test class
 mvn gatling:test                     # load test — requires the app to be running first
 ```
 
+### Spring Boot starter demo (run from the reactor root, no docker infrastructure required)
+
+```bash
+cd spring-boot-starters
+
+mvn clean package                                            # build the starter and the demo together (reactor build)
+mvn test                                                     # unit tests for both modules
+mvn test -pl request-logging/spring-demo -Dtest=ClassName    # single test class in the demo
+mvn spring-boot:run -pl request-logging/spring-demo -am      # run the demo app (-am builds the starter first)
+```
+
 ### Backend REST API
 
 ```bash
@@ -124,6 +135,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `cqrs-event-sourcing/<framework>/spring-demo/` | CQRS/event-sourcing framework demo apps, same conventions as `message-brokers/` (currently: Axon Framework) |
 | `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
+| `spring-boot-starters/<starter>/<starter>-spring-boot-starter/` + `.../spring-demo/` | Custom Spring Boot starter demos — each starter is an auto-configuration jar plus a consuming demo app in the same Maven reactor (currently: request-logging) — no external infrastructure required |
 | `docker-compose.yml` | Shared infrastructure stack |
 
 ### Message broker demos
