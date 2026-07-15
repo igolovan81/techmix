@@ -17,8 +17,8 @@ Ticket (Jira/Zendesk)
                   Claude correlates ticket symptoms with log evidence → RootCauseHypothesis
    │
    ▼
-3. FIX          — Claude, with read_file/list_files/write_patch/git_commit_branch tools,
-                  proposes and commits a patch to a hotfix/<TICKET-ID> branch
+3. FIX          — Claude, with read_file/list_files/write_file/git_commit_branch tools,
+                  proposes and commits a fix to a hotfix/<TICKET-ID> branch in a disposable sandbox repo
    │
    ▼
 4. DEPLOY       — mvn spring-boot:build-image → docker compose -f test-env/docker-compose.yml up -d
@@ -60,19 +60,21 @@ Both would be selected as Spring beans via config, e.g. `sdlc.ticket-source=jira
 Extends this repo's existing tool-wrapped-static-analysis pattern (see `ai/code-review-agent`) with write capability:
 
 ```java
-tools: read_file, list_files, write_patch, git_commit_branch
+tools: read_file, list_files, write_file, git_commit_branch
 ```
 
-- `read_file(path)` / `list_files(dir)` — scoped to a configurable `target-repo.path`, never outside it (path traversal guarded, same spirit as `code-review-agent`'s temp-dir isolation).
-- `write_patch(path, diff)` — applies a unified diff; rejected if it touches files outside the scoped repo root.
+- `read_file(path)` / `list_files(dir)` — scoped to a disposable sandbox repo root, never outside it (path traversal guarded, same spirit as `code-review-agent`'s temp-dir isolation).
+- `write_file(path, content)` — overwrites/creates the file with the given content. Replaces this doc's original `write_patch(path, diff)` sketch: full-file replacement is far more reliable for an LLM to produce correctly than a unified diff with accurate line offsets. A real unified diff is still produced afterward via JGit for the API response.
 - `git_commit_branch(branchName, message)` — creates `hotfix/<TICKET-ID>` off the current HEAD and commits; never pushes or merges on its own.
+
+The sandbox itself is a fresh, disposable git repo created per request (seeded with Phase 1's `checkout-service` bug scenario), not a configurable arbitrary `target-repo.path` — see [`spring-demo/`](spring-demo/) for why.
 
 ## Phased build plan
 
 | Phase | Stages | Status |
 |---|---|---|
 | **Phase 1 — implemented** | Intake + Investigate | Read-only, no side effects. See [`spring-demo/`](spring-demo/) for the working implementation (Jira/Zendesk ticket intake, Splunk as the log source). |
-| **Phase 2** | Fix (propose + commit to a branch, never push/merge) | Requires the write-tool sandboxing above; a human reviews the branch before it goes anywhere. |
+| **Phase 2 — implemented** | Fix (propose + commit to a branch, never push/merge) | See [`spring-demo/`](spring-demo/) — `write_file` replaces the original `write_patch(diff)` sketch; operates on a disposable sandbox repo seeded with Phase 1's bug scenario, not a configurable arbitrary `target-repo.path`. A human still reviews the branch before it goes anywhere real. |
 | **Phase 3 — future/exploratory** | Deploy + Verify + Release | Unbuilt. These stages touch running infrastructure and a real release process, so they need their own design pass — and explicit human approval gates — before any code is written. |
 
 ## Suggested Stack

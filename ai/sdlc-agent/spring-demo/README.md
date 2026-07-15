@@ -1,6 +1,6 @@
-# SDLC Agent — Phase 1 (Intake + Investigate)
+# SDLC Agent — Phase 1 (Intake + Investigate) & Phase 2 (Fix)
 
-A Spring Boot app implementing Phase 1 of the [SDLC agent concept](../README.md): fetches a support ticket from Jira or Zendesk, agentically queries a real Splunk instance for correlated log evidence via a `query_logs` tool, and returns a structured root-cause hypothesis. Read-only — no file writes, git operations, deploy, or release.
+A Spring Boot app implementing Phases 1–2 of the [SDLC agent concept](../README.md): fetches a support ticket from Jira or Zendesk, agentically queries a real Splunk instance for correlated log evidence via a `query_logs` tool, and returns a structured root-cause hypothesis (Phase 1). `POST /api/sdlc/fix` re-runs that investigation and lets Claude read/write files and commit a fix in a disposable sandbox git repo (Phase 2) — never touching any real codebase, never pushing or merging.
 
 ## Prerequisites
 
@@ -75,6 +75,35 @@ Example response:
 }
 ```
 
+## Try the Fix endpoint
+
+```bash
+curl -s -X POST http://localhost:8089/api/sdlc/fix \
+  -H "Content-Type: application/json" \
+  -d '{"ticketId": "DEMO-101"}' | jq .
+```
+
+This re-runs the investigation above internally, then lets Claude read/write files and commit a fix in a disposable sandbox git repo (seeded with the exact `checkout-service` bug the investigation points to) — never touching any real codebase, never pushing or merging.
+
+Example response:
+
+```json
+{
+  "rootCause": { "summary": "...", "evidence": [...], "confidence": "high", "suspectedFiles": ["DiscountService.java"] },
+  "summary": "Added a null check before calling discountCode.length() in DiscountService.apply.",
+  "patch": "diff --git a/src/main/java/com/example/checkout/DiscountService.java b/...",
+  "branchName": "hotfix/DEMO-101",
+  "commitSha": "a1b2c3d...",
+  "iterations": 4,
+  "steps": [
+    {"tool": "read_file", "input": "{path=...}", "output": "..."},
+    {"tool": "write_file", "input": "{path=..., content=...}", "output": "{\"status\":\"written\"}"},
+    {"tool": "git_commit_branch", "input": "{branchName=hotfix/DEMO-101, message=...}", "output": "{\"branch\":\"hotfix/DEMO-101\",\"commitSha\":\"a1b2c3d\"}"}
+  ],
+  "truncated": false
+}
+```
+
 Swagger UI: not included in this module (matches `ai/task-automation-agent`).
 
 ## Build & test
@@ -104,28 +133,33 @@ All defaults are in `src/main/resources/application.yml`:
 | `splunk.base-url` | `https://localhost:8093` | Splunk REST API base URL |
 | `splunk.search-timeout-seconds` | `10` | How long to poll a search job before giving up (returns empty results) |
 | `splunk.trust-self-signed` | `true` | Bypasses TLS verification for Splunk's self-signed dev certificate — local-dev only |
+| `sandbox.cleanup` | `true` | Whether the disposable sandbox repo is deleted after each `/fix` request (set `false` to inspect it) |
 
 ## Module layout
 
 ```
 spring-demo/src/main/java/com/testingai/sdlc/
 ├── SdlcAgentApplication.java
-├── config/          AppConfig, SdlcProperties, AgentProperties, AnthropicProperties, JiraProperties, ZendeskProperties, SplunkProperties
-├── controller/      InvestigateController — POST /api/sdlc/investigate
-├── service/         InvestigateService — agentic loop
+├── config/          AppConfig, SdlcProperties, AgentProperties, AnthropicProperties, JiraProperties, ZendeskProperties, SplunkProperties, SandboxProperties
+├── controller/      InvestigateController — POST /api/sdlc/investigate; FixController — POST /api/sdlc/fix
+├── service/         InvestigationLoop (shared ticket -> RootCauseHypothesis loop), InvestigateService, FixService
 ├── ticket/          TicketSource, Ticket, JiraTicketSource, ZendeskTicketSource, AdfTextExtractor
 ├── log/             LogSource, LogEntry, SplunkLogSource
-├── tool/            ToolExecutor, QueryLogsTool
-└── model/           InvestigateRequest, InvestigateResponse, RootCauseHypothesis, StepRecord
+├── sandbox/         SandboxRepo (JGit-backed disposable repo), SandboxPathGuard
+├── tool/            ToolExecutor, QueryLogsTool, FixToolDefinitions, FixToolExecutor, ReadFileTool, ListFilesTool, WriteFileTool, GitCommitBranchTool
+└── model/           InvestigateRequest, InvestigateResponse, FixRequest, FixResponse, RootCauseHypothesis, StepRecord
 ```
+
+`src/main/resources/sandbox-repo-template/` bundles the seeded `checkout-service` bug (`DiscountService.java`, `CheckoutController.java`) that `SandboxRepo.create()` copies into a fresh temp directory per `/fix` request.
 
 ## Tech stack
 
 - Java 21, Spring Boot 3.4.4
 - [Anthropic Java SDK](https://github.com/anthropics/anthropic-sdk-java) 2.40.1
 - Jira REST API v3, Zendesk Support API, Splunk REST API — real external integrations, no mocks in production code
-- [WireMock](https://wiremock.org) — HTTP mocking in unit tests
+- [JGit](https://www.eclipse.org/jgit/) — pure-Java git for the disposable sandbox repo (Phase 2), no shelling out
+- [WireMock](https://wiremock.org) — HTTP mocking in unit tests (Phase 1 only — Phase 2's tools operate on real temp directories, no mocking needed)
 
 ## Scope
 
-Phase 1 only: intake + investigate, read-only. Fix (propose + commit a patch), Deploy, Verify, and Release remain future phases — see [`../README.md`](../README.md).
+Phases 1–2: intake, investigate, and fix (propose + commit to a disposable sandbox branch, never push/merge). Deploy, Verify, and Release remain future phases — see [`../README.md`](../README.md).
