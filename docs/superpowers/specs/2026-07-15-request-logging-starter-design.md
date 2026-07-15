@@ -17,8 +17,6 @@ spring-boot-starters/
 ├── eclipse-formatter.xml                            (copy — same style repo-wide)
 ├── README.md                                        (category overview: what a starter is, why it's two modules)
 └── request-logging/
-    ├── pom.xml                                      (mini-aggregator, packaging=pom; parent: spring-boot-starters;
-    │                                                   modules: request-logging-spring-boot-starter, spring-demo)
     ├── request-logging-spring-boot-starter/
     │   ├── pom.xml                                  (packaging: jar, no spring-boot-maven-plugin, no main class)
     │   └── src/
@@ -47,7 +45,7 @@ spring-boot-starters/
                 └── RequestLoggingIntegrationTest.java          (MockMvc; asserts logged output via a Logback ListAppender)
 ```
 
-`spring-demo` depends on `request-logging-spring-boot-starter` as a regular Maven dependency, not just a shared parent — unlike every other category in this repo, where sibling demo modules are fully independent of each other. That dependency only resolves without a prior `mvn install` if both modules build inside the same reactor, so `request-logging/pom.xml` exists purely as that reactor boundary: `cd spring-boot-starters/request-logging && mvn clean package` builds the starter first, then the demo, in one pass. Building `spring-demo` alone from its own directory is **not** supported (the starter jar wouldn't be resolvable), so the run-from-here root for this feature is `request-logging/`, one level up from every other category's per-demo convention.
+`spring-demo` depends on `request-logging-spring-boot-starter` as a regular Maven dependency, not just a shared parent — unlike every other category in this repo, where sibling demo modules are fully independent of each other. That dependency only resolves without a prior `mvn install` if both modules build inside the same reactor. `spring-boot-starters/pom.xml` lists both leaf modules directly (`request-logging/request-logging-spring-boot-starter` and `request-logging/spring-demo`), exactly as `distributed-transactions/pom.xml` lists `saga/spring-demo` — `request-logging/` is just a grouping directory, not a Maven module itself. Building `spring-demo` alone from its own directory is **not** supported (the starter jar wouldn't be resolvable), so the run-from-here root for this feature is the category root, `spring-boot-starters/`, one level up from every other category's per-demo convention (which only has one module in the reactor, so no sibling resolution problem exists there).
 
 ### Cross-cutting fixes needed in existing files
 
@@ -116,7 +114,7 @@ Swagger UI at `/swagger-ui/index.html`, matching repo convention.
 
 `spring-boot-starters/README.md` is a short category index explaining what a custom Spring Boot starter is, why the module is split into two Maven artifacts, and a table of starters (just `request-logging` for now, room to grow).
 
-`spring-boot-starters/request-logging/spring-demo/README.md` follows the existing per-module format: prerequisites (Java 21, Maven — no Docker needed), run instructions (`mvn spring-boot:run -pl spring-demo -am`, run from `spring-boot-starters/request-logging/` so the reactor can resolve the sibling starter jar without a prior `mvn install`), a short explanation of the three properties and their defaults, and `curl` walkthroughs showing: the default happy path, a body-logging example via `/demo/echo`, and disabling the filter entirely via `app.logging.request.enabled=false` to show the log lines disappear. Swagger UI link included.
+`spring-boot-starters/request-logging/spring-demo/README.md` follows the existing per-module format: prerequisites (Java 21, Maven — no Docker needed), run instructions (`mvn spring-boot:run -pl request-logging/spring-demo -am`, run from `spring-boot-starters/` so the reactor can resolve the sibling starter jar without a prior `mvn install`), a short explanation of the three properties and their defaults, and `curl` walkthroughs showing: the default happy path, a body-logging example via `/demo/echo`, and disabling the filter entirely via `app.logging.request.enabled=false` to show the log lines disappear. Swagger UI link included.
 
 ## Scope limits
 
