@@ -15,15 +15,22 @@ No external infrastructure required (no Docker) — both apps run locally via `m
 
 ```
 reactive-programming/
+├── pom.xml                                          (parent POM, mirrors template-engines/pom.xml and
+│                                                       communication-protocols/pom.xml; packaging=pom,
+│                                                       artifactId=reactive-programming; modules point directly
+│                                                       into project-reactor/spring-demo and
+│                                                       project-reactor/upstream-demo — no intermediate
+│                                                       project-reactor/pom.xml, matching how
+│                                                       communication-protocols/pom.xml's modules point into
+│                                                       grpc/server-demo without a grpc/pom.xml)
+├── eclipse-formatter.xml                            (copy — same style repo-wide)
 ├── README.md                                        (category overview)
 └── project-reactor/
-    ├── pom.xml                                      (parent POM, mirrors communication-protocols/pom.xml;
-    │                                                  packaging=pom, artifactId=project-reactor)
-    ├── eclipse-formatter.xml                        (copy — same style repo-wide)
     ├── README.md                                    (module overview: Reactor concepts covered, run-both-apps
     │                                                  instructions, endpoint table)
     ├── spring-demo/
-    │   ├── pom.xml                                  (artifactId: reactor-demo; adds spock-core/groovy/
+    │   ├── pom.xml                                  (artifactId: reactor-demo; parent: reactive-programming,
+    │   │                                              relativePath ../../pom.xml; adds spock-core/groovy/
     │   │                                              gmavenplus like message-brokers/kafka/spring-demo)
     │   ├── README.md
     │   └── src/
@@ -68,7 +75,9 @@ reactive-programming/
     │           └── java/com/testingai/reactor/performance/
     │               └── DemoSimulation.java                     (Gatling; hits all spring-demo REST/SSE endpoints)
     └── upstream-demo/
-        ├── pom.xml                                      (artifactId: reactor-upstream-demo; same Spock/Groovy setup)
+        ├── pom.xml                                      (artifactId: reactor-upstream-demo; parent:
+        │                                                  reactive-programming, relativePath ../../pom.xml;
+        │                                                  same Spock/Groovy setup)
         ├── README.md
         └── src/
             ├── main/
@@ -94,7 +103,7 @@ reactive-programming/
 ### Cross-cutting fixes needed in existing files
 
 - **`.githooks/pre-commit`** — extend the staged-file grep from `^(message-brokers|noSQL|cqrs-event-sourcing|template-engines|distributed-transactions|spring-boot-starters|communication-protocols)/.*\.java$` to also match `^reactive-programming/.*\.java$`, and add a matching `mvn spotless:apply` block run from `reactive-programming/project-reactor/`.
-- **`CLAUDE.md`** — add a "Project Reactor demo" command section (mirroring the gRPC section: build/test from the module root, run `upstream-demo` before `spring-demo`), a `reactive-programming/` row in the repository layout table, and a note in the coding-standards section that `spring-demo`/`upstream-demo` use Spock/Groovy for unit tests like `message-brokers/kafka`.
+- **`CLAUDE.md`** — add a "Project Reactor demo" command section mirroring the gRPC section, built from `cd reactive-programming` (the reactor root) with `mvn -pl project-reactor/spring-demo ...` / `mvn -pl project-reactor/upstream-demo ...` for per-module commands, and a note that `upstream-demo` must be started before `spring-demo` for the `streaming/upstream/*` endpoints; a `reactive-programming/` row in the repository layout table; and a note in the coding-standards section that `spring-demo`/`upstream-demo` use Spock/Groovy for unit tests like `message-brokers/kafka`.
 
 ## Domain
 
@@ -175,7 +184,7 @@ Next free slots after the existing `808x`/`809x` block (`8081`–`8090` broker/d
 - **Pattern-class specs** (`BasicsServiceTest`, `ResilienceServiceTest`, `ConcurrencyServiceTest`, `StreamingServiceTest`) — plain Spock `Specification`s calling the service classes directly and asserting the emitted sequence with **`StepVerifier`** (`StepVerifier.create(flux).expectNext(...).verifyComplete()` / `.expectError(...)`), no Spring context. `StreamingServiceTest` wires the `WebClient` to a `MockWebServer` (OkHttp) stub instead of a real `upstream-demo` instance.
 - **Controller specs** (`DemoControllerTest`, `UpstreamControllerTest`) — standalone `WebTestClient.bindToController(new DemoController(mockBasics, mockResilience, ...)).build()`, collaborators as Spock `Mock()`s. **Not** `@WebFluxTest` + `spock-spring`: `spock-spring:2.3-groovy-4.0` can't detect Spring Boot 3.x test-slice annotations under Spring Framework 6 (the same issue hit converting `message-brokers/kafka`'s `@WebMvcTest` controller test — `@Autowired`/`@MockitoBean` fields stay silently `null`, no Spring startup log lines). Standalone `WebTestClient` sidesteps it entirely and is faster (no Spring context) — only `spock-core` is needed, not `spock-spring`.
 - **`resilience/FailureSimulatorTest.groovy`** — statistical assertion over many invocations (same style as the Kafka module's `FailureSimulatorTest`).
-- **`spring-demo/src/test/java/.../performance/DemoSimulation.java`** — Gatling (Java, per repo convention — no other module writes Gatling sims in Groovy), hitting every endpoint in the table above including the two SSE endpoints; excluded from `mvn test` via the inherited surefire `**/performance/**` exclude, run via `mvn gatling:test` with `upstream-demo` started first.
+- **`spring-demo/src/test/java/.../performance/DemoSimulation.java`** — Gatling (Java, per repo convention — no other module writes Gatling sims in Groovy), hitting every endpoint in the table above **except** the two SSE endpoints (`/demo/streaming/ticks`, `/demo/streaming/upstream/ticks`) — those are `Flux.interval`-backed streams that never complete, and no module in this repo currently uses Gatling's dedicated SSE DSL (`io.gatling.javaapi.http`'s `sse(...)`), so exercising them would either hang a plain `http()` request or require introducing an unverified, precedent-free pattern; the module README covers them with a `curl -N` walkthrough instead. Excluded from `mvn test` via the inherited surefire `**/performance/**` exclude, run via `mvn gatling:test` with `upstream-demo` started first.
 - No Gatling/perf test in `upstream-demo` — matches the repo-wide convention that `DemoSimulation` lives only with the REST-facing "front" app (see the gRPC module's `server-demo` having none either).
 
 ## Spring Boot configuration
