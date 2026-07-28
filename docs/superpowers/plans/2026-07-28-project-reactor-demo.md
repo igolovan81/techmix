@@ -1298,12 +1298,15 @@ class ConcurrencyServiceTest extends Specification {
     def concurrencyService = new ConcurrencyService(sampleDataService)
 
     def "subscribeOnVsPublishOn records one trace per stage, both off the calling thread"() {
+        given:
+        def callingThreadName = Thread.currentThread().getName()
+
         expect:
         StepVerifier.create(concurrencyService.subscribeOnVsPublishOn())
                 .assertNext({ traces ->
                     assert traces.size() == 2
                     assert traces*.stage().toSet() == ["subscribeOn", "publishOn"].toSet()
-                    assert traces*.threadName().every { it != Thread.currentThread().getName() }
+                    assert traces*.threadName().every { it != callingThreadName }
                 })
                 .verifyComplete()
     }
