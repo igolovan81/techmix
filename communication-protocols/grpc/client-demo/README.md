@@ -89,7 +89,11 @@ Every REST call gets a short id (e.g. `a1b2c3d4`) that `DemoController` generate
 mvn clean package                    # build
 mvn test                             # unit tests (Gatling excluded automatically)
 mvn test -Dtest=ClassName            # single test class
-mvn gatling:test                     # load test — requires both apps running first (see below)
+mvn gatling:test                     # Gatling load test — requires both apps running first (see below)
+mvn verify -Pjmeter-load-test        # JMeter load test — requires both apps running first (see below)
 ```
 
-`mvn gatling:test` ramps 2 users a few seconds apart, each pausing 500ms between its unary/server-streaming/client-streaming/bidi-streaming calls, with bigger batches (12 orders, 8 status updates) than the walkthrough above — designed to be watched in both apps' logs rather than to measure throughput.
+Both load tests drive the same four endpoints with the same shape of traffic — 2 users ramped a few seconds apart, each pausing 500ms between its unary/server-streaming/client-streaming/bidi-streaming calls, with bigger batches (12 orders, 8 status updates) than the walkthrough above — designed to be watched in both apps' logs rather than to measure throughput. Pick whichever tool you're more comfortable with; they're interchangeable for this demo.
+
+- **Gatling**: `com.testingai.grpc.client.performance.DemoSimulation` (`src/test/java/.../performance/`). Excluded from `mvn test` automatically; run with `mvn gatling:test`. HTML report under `target/gatling/`.
+- **JMeter**: `src/test/jmeter/DemoSimulation.jmx` — open it in the JMeter GUI to inspect or edit it visually, either with a local JMeter install (`jmeter -t src/test/jmeter/DemoSimulation.jmx`) or via the plugin (`mvn jmeter:configure jmeter:gui`), no separate install needed. `jmeter-maven-plugin` is only wired up behind the `jmeter-load-test` Maven profile (its `configure`/`jmeter` goals aren't ad-hoc invokable like Gatling's, and binding them to the default build would mean any `mvn verify` tries to hit a live HTTP server) — so `mvn clean package`/`mvn verify` without `-Pjmeter-load-test` never touches JMeter. Raw per-sample results (CSV) land in `target/jmeter/results/`; a summary is also printed to the console as the run progresses.

@@ -88,4 +88,40 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+            jmeter-maven-plugin ties its configure/jmeter/results goals together via matching
+            <execution> ids (a shared per-execution working directory), unlike gatling-maven-plugin,
+            which can be invoked ad hoc via bare CLI goals. Kept behind an opt-in profile, the same
+            way Gatling is only ever run explicitly (never bound to the default build), so a plain
+            `mvn clean package`/`mvn verify` never tries to hit a live HTTP server.
+        -->
+        <profile>
+            <id>jmeter-load-test</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.lazerycode.jmeter</groupId>
+                        <artifactId>jmeter-maven-plugin</artifactId>
+                        <version>${jmeter-maven-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>configuration</id>
+                                <goals>
+                                    <goal>configure</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>jmeter-tests</id>
+                                <goals>
+                                    <goal>jmeter</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

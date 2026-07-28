@@ -69,7 +69,8 @@ mvn test                                                      # unit tests for b
 mvn test -pl grpc/client-demo -Dtest=ClassName                 # single test class
 mvn -pl grpc/server-demo spring-boot:run                       # run the server first (gRPC :9090)
 mvn -pl grpc/client-demo spring-boot:run                       # then the client (REST :8091)
-mvn gatling:test -pl grpc/client-demo                           # load test — requires both apps running first
+mvn gatling:test -pl grpc/client-demo                           # Gatling load test — requires both apps running first
+mvn verify -Pjmeter-load-test -pl grpc/client-demo              # JMeter load test — requires both apps running first
 ```
 
 ### Project Reactor demo (run from the reactor root, no docker infrastructure required)
