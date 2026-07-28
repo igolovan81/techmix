@@ -54,7 +54,7 @@ ai/
             └── main/resources/application.yml
 ```
 
-**Ports:** `mcp-server` → `8091`, `mcp-client-agent` → `8092` (next free ports; `8090` is taken by `spring-boot-starters/request-logging`).
+**Ports:** `mcp-server` → `8092`, `mcp-client-agent` → `8093` (next free ports; `8090` is taken by `spring-boot-starters/request-logging`, `8091` by `communication-protocols/grpc/client-demo`).
 
 **External dependencies:**
 - `ANTHROPIC_API_KEY` — Claude API (`mcp-client-agent` only)
@@ -198,14 +198,14 @@ Maven surefire excludes `@Tag("integration")` tests by default, consistent with 
 `mcp-server/src/main/resources/application.yml`:
 ```yaml
 server:
-  port: 8091
+  port: 8092
 ```
 (`repo.root` is resolved at startup, not configured.)
 
 `mcp-client-agent/src/main/resources/application.yml`:
 ```yaml
 server:
-  port: 8092
+  port: 8093
 
 agent:
   max-iterations: 10
@@ -215,7 +215,7 @@ anthropic:
   model: claude-sonnet-4-6
 
 mcp:
-  server-url: http://localhost:8091
+  server-url: http://localhost:8092
 ```
 
 ---
