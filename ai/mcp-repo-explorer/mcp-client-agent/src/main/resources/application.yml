@@ -1,0 +1,12 @@
+server:
+  port: 8093
+
+agent:
+  max-iterations: 10
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY}
+  model: claude-sonnet-4-6
+
+mcp:
+  server-url: http://localhost:8092
