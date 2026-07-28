@@ -16,14 +16,14 @@ public class FakeProductCatalogService extends ProductCatalogServiceGrpc.Product
 	public void getProduct(ProductRequest request, StreamObserver<ProductResponse> responseObserver) {
 		switch (request.getProductId()) {
 			case "p1" -> {
-				responseObserver
-						.onNext(ProductResponse.newBuilder().setProductId("p1").setName("Widget").setPriceCents(999).build());
+				responseObserver.onNext(
+						ProductResponse.newBuilder().setProductId("p1").setName("Widget").setPriceCents(999).build());
 				responseObserver.onCompleted();
 			}
 			case "fail-trigger" ->
 				responseObserver.onError(Status.INTERNAL.withDescription("Simulated failure").asRuntimeException());
-			default -> responseObserver.onError(
-					Status.NOT_FOUND.withDescription("Unknown product: " + request.getProductId()).asRuntimeException());
+			default -> responseObserver.onError(Status.NOT_FOUND
+					.withDescription("Unknown product: " + request.getProductId()).asRuntimeException());
 		}
 	}
 
@@ -54,8 +54,8 @@ public class FakeProductCatalogService extends ProductCatalogServiceGrpc.Product
 
 			@Override
 			public void onCompleted() {
-				responseObserver
-						.onNext(OrderSummary.newBuilder().setOrderCount(count).setTotalPriceCents(count * 999L).build());
+				responseObserver.onNext(
+						OrderSummary.newBuilder().setOrderCount(count).setTotalPriceCents(count * 999L).build());
 				responseObserver.onCompleted();
 			}
 		};
