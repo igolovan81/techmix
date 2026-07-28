@@ -36,11 +36,13 @@ class ProductCatalogServiceImplTest {
 	@Mock
 	private StreamObserver<OrderStatusUpdate> orderStatusObserver;
 
+	private final SampleDataService sampleDataService = new SampleDataService();
+
 	private ProductCatalogServiceImpl service;
 
 	@BeforeEach
 	void setUp() {
-		service = new ProductCatalogServiceImpl(new SampleDataService());
+		service = new ProductCatalogServiceImpl(sampleDataService, 0L);
 	}
 
 	@Test
@@ -53,7 +55,7 @@ class ProductCatalogServiceImplTest {
 			ArgumentCaptor<ProductResponse> captor = ArgumentCaptor.forClass(ProductResponse.class);
 			verify(productObserver).onNext(captor.capture());
 			verify(productObserver).onCompleted();
-			assertThat(captor.getValue().getName()).isEqualTo("Widget");
+			assertThat(captor.getValue().getName()).isEqualTo("Mini Widget");
 		}
 	}
 
@@ -90,7 +92,7 @@ class ProductCatalogServiceImplTest {
 
 			service.listProducts(ListProductsRequest.getDefaultInstance(), productObserver);
 
-			verify(productObserver, times(4)).onNext(any());
+			verify(productObserver, times(40)).onNext(any());
 			verify(productObserver).onCompleted();
 		}
 	}
@@ -122,8 +124,10 @@ class ProductCatalogServiceImplTest {
 			ArgumentCaptor<OrderSummary> captor = ArgumentCaptor.forClass(OrderSummary.class);
 			verify(orderSummaryObserver).onNext(captor.capture());
 			verify(orderSummaryObserver).onCompleted();
+			long p1PriceCents = sampleDataService.findProduct("p1").orElseThrow().getPriceCents();
+			long p2PriceCents = sampleDataService.findProduct("p2").orElseThrow().getPriceCents();
 			assertThat(captor.getValue().getOrderCount()).isEqualTo(2);
-			assertThat(captor.getValue().getTotalPriceCents()).isEqualTo(999L * 2 + 1999L);
+			assertThat(captor.getValue().getTotalPriceCents()).isEqualTo(p1PriceCents * 2 + p2PriceCents);
 		}
 	}
 

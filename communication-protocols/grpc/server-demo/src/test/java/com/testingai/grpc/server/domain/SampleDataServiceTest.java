@@ -10,7 +10,7 @@ class SampleDataServiceTest {
 
 	@Test
 	void findProduct_returnsProduct_whenIdKnown() {
-		assertThat(service.findProduct("p1")).isPresent().get().extracting("name").isEqualTo("Widget");
+		assertThat(service.findProduct("p1")).isPresent().get().extracting("name").isEqualTo("Mini Widget");
 	}
 
 	@Test
@@ -19,7 +19,7 @@ class SampleDataServiceTest {
 	}
 
 	@Test
-	void listProducts_returnsAllFourSampleProducts() {
-		assertThat(service.listProducts()).hasSize(4);
+	void listProducts_returnsAllFortySampleProducts() {
+		assertThat(service.listProducts()).hasSize(40);
 	}
 }

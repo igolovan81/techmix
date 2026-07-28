@@ -13,6 +13,7 @@ import com.testingai.grpc.proto.ProductRequest;
 import com.testingai.grpc.proto.ProductResponse;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,30 +29,41 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+@Slf4j
 @RestController
 @RequestMapping("/demo/grpc")
 @RequiredArgsConstructor
 public class DemoController {
+
+	private static final long RESPONSE_TIMEOUT_SECONDS = 30;
 
 	private final ProductCatalogServiceGrpc.ProductCatalogServiceBlockingStub blockingStub;
 	private final ProductCatalogServiceGrpc.ProductCatalogServiceStub asyncStub;
 
 	@GetMapping("/unary/products/{productId}")
 	public ResponseEntity<ProductDto> getProduct(@PathVariable String productId) {
+		log.info("[GetProduct] requesting productId={}", productId);
 		ProductResponse response = blockingStub.getProduct(ProductRequest.newBuilder().setProductId(productId).build());
+		log.info("[GetProduct] received product: {} ({})", response.getName(), response.getProductId());
 		return ResponseEntity.ok(toDto(response));
 	}
 
 	@GetMapping("/server-streaming/products")
 	public ResponseEntity<List<ProductDto>> listProducts() {
+		log.info("[ListProducts] requesting product catalog");
 		List<ProductDto> products = new ArrayList<>();
-		blockingStub.listProducts(ListProductsRequest.getDefaultInstance())
-				.forEachRemaining(product -> products.add(toDto(product)));
+		blockingStub.listProducts(ListProductsRequest.getDefaultInstance()).forEachRemaining(product -> {
+			products.add(toDto(product));
+			log.info("[ListProducts] received product #{}: {} ({})", products.size(), product.getName(),
+					product.getProductId());
+		});
+		log.info("[ListProducts] received {} products total", products.size());
 		return ResponseEntity.ok(products);
 	}
 
 	@PostMapping("/client-streaming/orders")
 	public ResponseEntity<OrderSummaryDto> uploadOrders(@RequestBody List<OrderRequestDto> orders) {
+		log.info("[UploadOrders] uploading {} orders", orders.size());
 		CountDownLatch latch = new CountDownLatch(1);
 		AtomicReference<OrderSummary> result = new AtomicReference<>();
 		AtomicReference<Throwable> error = new AtomicReference<>();
@@ -60,6 +72,8 @@ public class DemoController {
 
 			@Override
 			public void onNext(OrderSummary value) {
+				log.info("[UploadOrders] received summary: {} orders, {} cents total", value.getOrderCount(),
+						value.getTotalPriceCents());
 				result.set(value);
 			}
 
@@ -75,8 +89,11 @@ public class DemoController {
 			}
 		});
 
-		orders.forEach(order -> requestObserver
-				.onNext(OrderRequest.newBuilder().setProductId(order.productId()).setQuantity(order.quantity()).build()));
+		orders.forEach(order -> {
+			log.info("[UploadOrders] sending order: productId={} quantity={}", order.productId(), order.quantity());
+			requestObserver.onNext(
+					OrderRequest.newBuilder().setProductId(order.productId()).setQuantity(order.quantity()).build());
+		});
 		requestObserver.onCompleted();
 
 		awaitLatch(latch);
@@ -87,7 +104,9 @@ public class DemoController {
 	}
 
 	@PostMapping("/bidi-streaming/order-status")
-	public ResponseEntity<List<OrderStatusUpdateDto>> streamOrderStatus(@RequestBody List<OrderStatusUpdateDto> updates) {
+	public ResponseEntity<List<OrderStatusUpdateDto>> streamOrderStatus(
+			@RequestBody List<OrderStatusUpdateDto> updates) {
+		log.info("[StreamOrderStatus] sending {} status updates", updates.size());
 		CountDownLatch latch = new CountDownLatch(1);
 		List<OrderStatusUpdate> responses = Collections.synchronizedList(new ArrayList<>());
 		AtomicReference<Throwable> error = new AtomicReference<>();
@@ -96,6 +115,8 @@ public class DemoController {
 
 			@Override
 			public void onNext(OrderStatusUpdate value) {
+				log.info("[StreamOrderStatus] received ack: orderId={} status={}", value.getOrderId(),
+						value.getStatus());
 				responses.add(value);
 			}
 
@@ -111,20 +132,24 @@ public class DemoController {
 			}
 		});
 
-		updates.forEach(update -> requestObserver.onNext(
-				OrderStatusUpdate.newBuilder().setOrderId(update.orderId()).setStatus(update.status()).build()));
+		updates.forEach(update -> {
+			log.info("[StreamOrderStatus] sending update: orderId={} status={}", update.orderId(), update.status());
+			requestObserver.onNext(
+					OrderStatusUpdate.newBuilder().setOrderId(update.orderId()).setStatus(update.status()).build());
+		});
 		requestObserver.onCompleted();
 
 		awaitLatch(latch);
 		if (error.get() != null) {
 			throw (RuntimeException) error.get();
 		}
+		log.info("[StreamOrderStatus] completed: {} acks received", responses.size());
 		return ResponseEntity.ok(responses.stream().map(this::toDto).toList());
 	}
 
 	private void awaitLatch(CountDownLatch latch) {
 		try {
-			latch.await(5, TimeUnit.SECONDS);
+			latch.await(RESPONSE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 			throw new IllegalStateException("Interrupted while waiting for gRPC response", e);

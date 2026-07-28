@@ -10,3 +10,8 @@ management:
     web:
       exposure:
         include: health
+
+demo:
+  # Artificial per-item pause in the streaming RPCs (ListProducts, UploadOrders,
+  # StreamOrderStatus) so the streaming behavior is visible in the logs. Set to 0 to disable.
+  stream-delay-millis: 300
