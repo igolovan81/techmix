@@ -143,6 +143,7 @@ Files not modified until the final task: `.githooks/pre-commit`, `CLAUDE.md`.
         <protobuf.version>3.25.1</protobuf.version>
         <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
         <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
+        <javax-annotation-api.version>1.3.2</javax-annotation-api.version>
         <gatling.version>3.13.1</gatling.version>
         <gatling-maven-plugin.version>4.15.0</gatling-maven-plugin.version>
         <spotless.version>2.43.0</spotless.version>
@@ -159,6 +160,11 @@ Files not modified until the final task: `.githooks/pre-commit`, `CLAUDE.md`.
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>${javax-annotation-api.version}</version>
         </dependency>
     </dependencies>
 
@@ -586,6 +592,8 @@ find grpc/client-demo/target/generated-sources -name "ProductCatalogServiceGrpc.
 ```
 
 Expected: one match under each module's own `target/generated-sources/protobuf/grpc-java/com/testingai/grpc/proto/`.
+
+**Known issue:** the first build fails with `cannot find symbol: class Generated` in the generated `ProductCatalogServiceGrpc.java` — grpc-java 1.63.0's codegen emits `@Generated("by gRPC proto compiler")`, and `javax.annotation.Generated` is not on the JDK 21 classpath by default (removed from `java.base` in Java 9+). The `javax.annotation-api:1.3.2` dependency (already included in the reactor parent POM above, with a `javax-annotation-api.version` property) fixes this — it's a project-wide dependency because both `server-demo` and `client-demo` compile grpc-java-generated code.
 
 - [ ] **Step 11: Commit**
 

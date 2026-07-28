@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package catalog;
+
+option java_package = "com.testingai.grpc.proto";
+option java_multiple_files = true;
+
+service ProductCatalogService {
+  rpc GetProduct(ProductRequest) returns (ProductResponse);
+  rpc ListProducts(ListProductsRequest) returns (stream ProductResponse);
+  rpc UploadOrders(stream OrderRequest) returns (OrderSummary);
+  rpc StreamOrderStatus(stream OrderStatusUpdate) returns (stream OrderStatusUpdate);
+}
+
+message ProductRequest {
+  string product_id = 1;
+}
+
+message ProductResponse {
+  string product_id = 1;
+  string name = 2;
+  int64 price_cents = 3;
+}
+
+message ListProductsRequest {}
+
+message OrderRequest {
+  string product_id = 1;
+  int32 quantity = 2;
+}
+
+message OrderSummary {
+  int32 order_count = 1;
+  int64 total_price_cents = 2;
+}
+
+message OrderStatusUpdate {
+  string order_id = 1;
+  string status = 2;
+}
