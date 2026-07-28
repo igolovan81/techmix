@@ -1,0 +1,5 @@
+server:
+  port: 8094
+
+upstream:
+  base-url: http://localhost:8095

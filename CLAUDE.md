@@ -72,6 +72,19 @@ mvn -pl grpc/client-demo spring-boot:run                       # then the client
 mvn gatling:test -pl grpc/client-demo                           # load test — requires both apps running first
 ```
 
+### Project Reactor demo (run from the reactor root, no docker infrastructure required)
+
+```bash
+cd reactive-programming
+
+mvn clean package                                                  # build both apps (reactor build)
+mvn test                                                            # unit tests for both modules (Gatling excluded automatically)
+mvn test -pl project-reactor/spring-demo -Dtest=ClassName            # single test class
+mvn -pl project-reactor/upstream-demo spring-boot:run                 # run the upstream service first (:8095)
+mvn -pl project-reactor/spring-demo spring-boot:run                   # then the main demo app (:8094)
+mvn gatling:test -pl project-reactor/spring-demo                       # load test — requires both apps running first
+```
+
 ### Spring Boot starter demo (run from the reactor root, no docker infrastructure required)
 
 ```bash
@@ -149,6 +162,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
 | `communication-protocols/grpc/{server-demo,client-demo}/` | gRPC demo — two independent Spring Boot apps covering all four RPC patterns (unary, server/client/bidi streaming); `server-demo` must be started before `client-demo` — no external infrastructure required |
+| `reactive-programming/project-reactor/{spring-demo,upstream-demo}/` | Project Reactor demo — two independent Spring Boot WebFlux apps covering Mono/Flux basics, backpressure/error handling, schedulers/concurrency, and SSE/WebClient streaming; `upstream-demo` must be started before `spring-demo`'s `streaming/upstream/*` endpoints work — no external infrastructure required |
 | `spring-boot-starters/<starter>/<starter>-spring-boot-starter/` + `.../spring-demo/` | Custom Spring Boot starter demos — each starter is an auto-configuration jar plus a consuming demo app in the same Maven reactor (currently: request-logging) — no external infrastructure required |
 | `docker-compose.yml` | Shared infrastructure stack |
 

@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT=$(git rev-parse --show-toplevel)
 
 # Collect staged Java files and the Maven reactor root each one belongs to
-STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(message-brokers|noSQL|cqrs-event-sourcing|template-engines|distributed-transactions|spring-boot-starters|communication-protocols)/.*\.java$' || true)
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(message-brokers|noSQL|cqrs-event-sourcing|template-engines|distributed-transactions|spring-boot-starters|communication-protocols|reactive-programming)/.*\.java$' || true)
 
 if [ -z "$STAGED_JAVA" ]; then
     exit 0
@@ -43,6 +43,11 @@ fi
 if echo "$STAGED_JAVA" | grep -q '^communication-protocols/'; then
     echo "[pre-commit] Applying Spotless formatting to staged communication-protocols Java files..."
     (cd "$ROOT/communication-protocols" && mvn spotless:apply --quiet)
+fi
+
+if echo "$STAGED_JAVA" | grep -q '^reactive-programming/'; then
+    echo "[pre-commit] Applying Spotless formatting to staged reactive-programming Java files..."
+    (cd "$ROOT/reactive-programming" && mvn spotless:apply --quiet)
 fi
 
 # Re-stage the originally staged files (now formatted)
