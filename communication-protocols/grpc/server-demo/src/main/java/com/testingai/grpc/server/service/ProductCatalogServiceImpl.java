@@ -18,6 +18,23 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 
+/**
+ * Implements {@link ProductCatalogServiceGrpc}, demonstrating all four gRPC RPC patterns against the in-memory
+ * {@link SampleDataService} catalog:
+ * <ul>
+ * <li>{@code GetProduct} — unary</li>
+ * <li>{@code ListProducts} — server streaming</li>
+ * <li>{@code UploadOrders} — client streaming</li>
+ * <li>{@code StreamOrderStatus} — bidirectional streaming</li>
+ * </ul>
+ * Every RPC calls {@link FailureSimulator#maybeThrow(String)} first; a simulated failure is mapped to a
+ * {@code Status.INTERNAL} gRPC error. The three streaming RPCs also pause {@link #streamDelayMillis} between items so
+ * their progress is visible when watching the logs live.
+ * <p>
+ * Every log line is tagged with the request id read from {@link RequestIdServerInterceptor#REQUEST_ID_CONTEXT_KEY} (see
+ * {@link #currentRequestId()}), which gRPC's {@link io.grpc.Context} propagates correctly even into the streaming
+ * callbacks below, which run on a different thread than the initiating call.
+ */
 @Slf4j
 @GrpcService
 public class ProductCatalogServiceImpl extends ProductCatalogServiceGrpc.ProductCatalogServiceImplBase {
@@ -31,6 +48,14 @@ public class ProductCatalogServiceImpl extends ProductCatalogServiceGrpc.Product
 		this.streamDelayMillis = streamDelayMillis;
 	}
 
+	/**
+	 * Unary RPC — looks up a single product by id.
+	 *
+	 * @param request
+	 *            the id to look up
+	 * @param responseObserver
+	 *            receives the product on success, or a {@code NOT_FOUND}/{@code INTERNAL} error
+	 */
 	@Override
 	public void getProduct(ProductRequest request, StreamObserver<ProductResponse> responseObserver) {
 		String requestId = currentRequestId();
@@ -53,6 +78,15 @@ public class ProductCatalogServiceImpl extends ProductCatalogServiceGrpc.Product
 		});
 	}
 
+	/**
+	 * Server-streaming RPC — sends every product in the catalog as a separate message, pausing
+	 * {@link #streamDelayMillis} between each one, then completes the stream.
+	 *
+	 * @param request
+	 *            empty; {@code ListProducts} takes no parameters
+	 * @param responseObserver
+	 *            receives one {@link ProductResponse} per catalog item, or an {@code INTERNAL} error
+	 */
 	@Override
 	public void listProducts(ListProductsRequest request, StreamObserver<ProductResponse> responseObserver) {
 		String requestId = currentRequestId();
@@ -78,6 +112,14 @@ public class ProductCatalogServiceImpl extends ProductCatalogServiceGrpc.Product
 		responseObserver.onCompleted();
 	}
 
+	/**
+	 * Client-streaming RPC — accepts a stream of orders, accumulating count and total price as each one arrives, and
+	 * replies with one {@link OrderSummary} once the client closes its stream.
+	 *
+	 * @param responseObserver
+	 *            receives the single {@link OrderSummary} on completion, or an {@code INTERNAL} error
+	 * @return an observer the client streams {@link OrderRequest orders} into
+	 */
 	@Override
 	public StreamObserver<OrderRequest> uploadOrders(StreamObserver<OrderSummary> responseObserver) {
 		String requestId = currentRequestId();
@@ -130,6 +172,14 @@ public class ProductCatalogServiceImpl extends ProductCatalogServiceGrpc.Product
 		};
 	}
 
+	/**
+	 * Bidirectional-streaming RPC — for each incoming status update, immediately echoes back an
+	 * {@code "ACKNOWLEDGED:" + status} update, independently of any other updates on the same stream.
+	 *
+	 * @param responseObserver
+	 *            receives one acknowledgement per incoming update, or an {@code INTERNAL} error
+	 * @return an observer the client streams {@link OrderStatusUpdate updates} into
+	 */
 	@Override
 	public StreamObserver<OrderStatusUpdate> streamOrderStatus(StreamObserver<OrderStatusUpdate> responseObserver) {
 		String requestId = currentRequestId();
