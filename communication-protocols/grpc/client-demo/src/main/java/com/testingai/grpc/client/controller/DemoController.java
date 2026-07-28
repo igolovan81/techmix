@@ -33,6 +33,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
+/**
+ * REST facade over {@link ProductCatalogServiceGrpc}, translating each of the four gRPC RPC patterns (unary, server
+ * streaming, client streaming, bidirectional streaming) into a plain HTTP endpoint so the demo can be driven with
+ * {@code curl}. Every endpoint generates a short correlation id and attaches it to the outgoing gRPC call (see
+ * {@link #withRequestId(String, Supplier)}), so a single request's log lines can be followed across both this app and
+ * {@code server-demo}.
+ * <p>
+ * gRPC errors ({@link io.grpc.StatusRuntimeException}) are not caught here — they propagate to
+ * {@link DemoExceptionHandler}, which maps them to the appropriate HTTP status.
+ */
 @Slf4j
 @RestController
 @RequestMapping("/demo/grpc")
@@ -44,6 +54,13 @@ public class DemoController {
 	private final ProductCatalogServiceGrpc.ProductCatalogServiceBlockingStub blockingStub;
 	private final ProductCatalogServiceGrpc.ProductCatalogServiceStub asyncStub;
 
+	/**
+	 * Unary RPC — looks up a single product by id via {@code GetProduct}.
+	 *
+	 * @param productId
+	 *            the id to look up, e.g. {@code "p1"}
+	 * @return {@code 200} with the product if found; {@code 404} if unknown (mapped from {@code NOT_FOUND})
+	 */
 	@GetMapping("/unary/products/{productId}")
 	public ResponseEntity<ProductDto> getProduct(@PathVariable String productId) {
 		String requestId = newRequestId();
@@ -54,6 +71,12 @@ public class DemoController {
 		return ResponseEntity.ok(toDto(response));
 	}
 
+	/**
+	 * Server-streaming RPC — pulls the whole product catalog via {@code ListProducts}, collecting every streamed item
+	 * into one JSON array before responding.
+	 *
+	 * @return {@code 200} with all products currently in the catalog
+	 */
 	@GetMapping("/server-streaming/products")
 	public ResponseEntity<List<ProductDto>> listProducts() {
 		String requestId = newRequestId();
@@ -69,6 +92,15 @@ public class DemoController {
 		return ResponseEntity.ok(products);
 	}
 
+	/**
+	 * Client-streaming RPC — pushes a batch of orders one by one via {@code UploadOrders} and blocks (up to
+	 * {@link #RESPONSE_TIMEOUT_SECONDS}) for the single {@link OrderSummary} the server sends back once the stream
+	 * completes.
+	 *
+	 * @param orders
+	 *            the orders to upload, in the order they should be streamed
+	 * @return {@code 200} with the aggregated order count and total price
+	 */
 	@PostMapping("/client-streaming/orders")
 	public ResponseEntity<OrderSummaryDto> uploadOrders(@RequestBody List<OrderRequestDto> orders) {
 		String requestId = newRequestId();
@@ -114,6 +146,15 @@ public class DemoController {
 		return ResponseEntity.ok(toDto(result.get()));
 	}
 
+	/**
+	 * Bidirectional-streaming RPC — pushes status updates one by one via {@code StreamOrderStatus} while concurrently
+	 * collecting the acknowledgement the server echoes back for each one, then blocks (up to
+	 * {@link #RESPONSE_TIMEOUT_SECONDS}) until the server closes the stream.
+	 *
+	 * @param updates
+	 *            the status updates to send, in the order they should be streamed
+	 * @return {@code 200} with one acknowledgement per update sent, in the order they were received
+	 */
 	@PostMapping("/bidi-streaming/order-status")
 	public ResponseEntity<List<OrderStatusUpdateDto>> streamOrderStatus(
 			@RequestBody List<OrderStatusUpdateDto> updates) {
