@@ -59,6 +59,19 @@ mvn test -Dtest=ClassName            # single test class
 mvn gatling:test                     # load test — requires the app to be running first
 ```
 
+### gRPC communication protocol demo (run from the reactor root, no docker infrastructure required)
+
+```bash
+cd communication-protocols
+
+mvn clean package                                            # build both apps (reactor build)
+mvn test                                                      # unit tests for both modules (Gatling excluded automatically)
+mvn test -pl grpc/client-demo -Dtest=ClassName                 # single test class
+mvn -pl grpc/server-demo spring-boot:run                       # run the server first (gRPC :9090)
+mvn -pl grpc/client-demo spring-boot:run                       # then the client (REST :8091)
+mvn gatling:test -pl grpc/client-demo                           # load test — requires both apps running first
+```
+
 ### Spring Boot starter demo (run from the reactor root, no docker infrastructure required)
 
 ```bash
@@ -135,6 +148,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `cqrs-event-sourcing/<framework>/spring-demo/` | CQRS/event-sourcing framework demo apps, same conventions as `message-brokers/` (currently: Axon Framework) |
 | `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
+| `communication-protocols/grpc/{server-demo,client-demo}/` | gRPC demo — two independent Spring Boot apps covering all four RPC patterns (unary, server/client/bidi streaming); `server-demo` must be started before `client-demo` — no external infrastructure required |
 | `spring-boot-starters/<starter>/<starter>-spring-boot-starter/` + `.../spring-demo/` | Custom Spring Boot starter demos — each starter is an auto-configuration jar plus a consuming demo app in the same Maven reactor (currently: request-logging) — no external infrastructure required |
 | `docker-compose.yml` | Shared infrastructure stack |
 
