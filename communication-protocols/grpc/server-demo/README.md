@@ -32,6 +32,12 @@ Every RPC calls `FailureSimulator.maybeThrow(...)` first (5% chance), which is c
 
 Every RPC logs at `INFO` with a `[RpcName]` tag — request received, each item sent/received, and a completion summary — so you can watch `ListProducts`, `UploadOrders`, and `StreamOrderStatus` progress live in the console. Those three streaming RPCs also pause `demo.stream-delay-millis` (default `300`ms, configurable in `application.yml`) between items, so a full `ListProducts` call over the 40-product catalog takes around 12 seconds — deliberately slow enough to watch. Set `demo.stream-delay-millis=0` to disable the pacing (e.g. for scripted/CI runs).
 
+## Request correlation
+
+Every log line is also tagged with a short request id, e.g. `[ListProducts][a1b2c3d4] sending product 3/40: ...`. `RequestIdServerInterceptor` (a `@GrpcGlobalServerInterceptor`, so it applies to every RPC automatically) reads the id from the `x-request-id` gRPC metadata header that `client-demo` attaches to each call — see [client-demo/README.md](../client-demo/README.md#request-correlation) — and generates a fallback id if a caller doesn't send one. The id is stored in a `Context.Key`, which gRPC propagates automatically to the streaming callbacks (`onNext`/`onCompleted`) even though those run on a different thread than the initial call.
+
+Because both apps log the same id, you can grep one request's full journey across both consoles, e.g. `grep a1b2c3d4` in each terminal.
+
 ## Build & test
 
 ```bash

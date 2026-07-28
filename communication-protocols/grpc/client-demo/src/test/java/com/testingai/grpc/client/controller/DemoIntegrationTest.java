@@ -1,7 +1,12 @@
 package com.testingai.grpc.client.controller;
 
 import com.testingai.grpc.client.support.FakeProductCatalogService;
+import io.grpc.Metadata;
 import io.grpc.Server;
+import io.grpc.ServerCall;
+import io.grpc.ServerCallHandler;
+import io.grpc.ServerInterceptor;
+import io.grpc.ServerInterceptors;
 import io.grpc.inprocess.InProcessServerBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -12,7 +17,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,6 +29,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class DemoIntegrationTest {
 
+	private static final Metadata.Key<String> REQUEST_ID_METADATA_KEY = Metadata.Key.of("x-request-id",
+			Metadata.ASCII_STRING_MARSHALLER);
+
+	private static final AtomicReference<String> capturedRequestId = new AtomicReference<>();
+
 	private static Server inProcessServer;
 
 	@Autowired
@@ -29,8 +41,19 @@ class DemoIntegrationTest {
 
 	@BeforeAll
 	static void startFakeServer() throws IOException {
+		ServerInterceptor requestIdCapturingInterceptor = new ServerInterceptor() {
+
+			@Override
+			public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(ServerCall<ReqT, RespT> call, Metadata headers,
+					ServerCallHandler<ReqT, RespT> next) {
+				capturedRequestId.set(headers.get(REQUEST_ID_METADATA_KEY));
+				return next.startCall(call, headers);
+			}
+		};
 		inProcessServer = InProcessServerBuilder.forName("demo-integration-test").directExecutor()
-				.addService(new FakeProductCatalogService()).build().start();
+				.addService(
+						ServerInterceptors.intercept(new FakeProductCatalogService(), requestIdCapturingInterceptor))
+				.build().start();
 	}
 
 	@AfterAll
@@ -42,6 +65,13 @@ class DemoIntegrationTest {
 	void unary_returnsProduct_endToEnd() throws Exception {
 		mockMvc.perform(get("/demo/grpc/unary/products/p1")).andExpect(status().isOk())
 				.andExpect(jsonPath("$.name").value("Widget"));
+	}
+
+	@Test
+	void unary_propagatesRequestIdHeader_toServer() throws Exception {
+		mockMvc.perform(get("/demo/grpc/unary/products/p1")).andExpect(status().isOk());
+
+		assertThat(capturedRequestId.get()).isNotNull().hasSize(8);
 	}
 
 	@Test

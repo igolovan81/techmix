@@ -65,6 +65,24 @@ Both apps log at `INFO` with a `[RpcName]` tag on every request, per-item send/r
 - `UploadOrders` (client streaming) — `client-demo` logs `[UploadOrders] sending order: ...` per item pushed, then one `[UploadOrders] received summary: ...` at the end; `server-demo` logs `[UploadOrders] received order N: ...` per item.
 - `StreamOrderStatus` (bidirectional streaming) — both sides log every message independently and in real time: `[StreamOrderStatus] sending update: ...` / `received update: ...` and `[StreamOrderStatus] received ack: ...` / `acknowledging: ...`.
 
+## Request correlation
+
+Every REST call gets a short id (e.g. `a1b2c3d4`) that `DemoController` generates and logs, and `RequestIdClientInterceptor` (a `@GrpcGlobalClientInterceptor`, applied to every outgoing call automatically) attaches as an `x-request-id` gRPC metadata header. `server-demo` reads that same header and logs it too — see [server-demo/README.md](../server-demo/README.md#request-correlation) — so a single call's log lines look like this across both consoles:
+
+```
+# client-demo
+[ListProducts][a1b2c3d4] requesting product catalog
+[ListProducts][a1b2c3d4] received product #1: Mini Widget (p1)
+...
+
+# server-demo
+[ListProducts][a1b2c3d4] streaming 40 products
+[ListProducts][a1b2c3d4] sending product 1/40: Mini Widget (p1)
+...
+```
+
+`grep a1b2c3d4` in either terminal picks out just that request's lines.
+
 ## Build & test
 
 ```bash
