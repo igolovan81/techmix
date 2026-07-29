@@ -541,7 +541,12 @@ public class ReviewService {
 	private static final List<String> SEED_AUTHORS = List.of("Alex", "Priya", "Sam");
 
 	private final Map<String, List<Review>> reviewsByProductId = new ConcurrentHashMap<>();
-	private final Sinks.Many<Review> reviewAddedSink = Sinks.many().multicast().onBackpressureBuffer();
+	// directBestEffort(): delivered only to subscribers already connected at emission time, nothing queued for
+	// subscribers that haven't connected yet — the right semantics for "subscribe to reviews from now on" (an
+	// onBackpressureBuffer() sink would instead buffer emissions indefinitely until the first-ever subscriber
+	// connects, then replay them, which is both a memory leak risk and observably wrong for a live subscription —
+	// e.g. a later-added subscriber picking up a stale review from an earlier test/request instead of a fresh one).
+	private final Sinks.Many<Review> reviewAddedSink = Sinks.many().multicast().directBestEffort();
 	private final AtomicInteger batchCallCount = new AtomicInteger();
 
 	public ReviewService(ProductCatalogService productCatalogService) {
@@ -918,11 +923,23 @@ class DemoIntegrationTest {
 
 	@Test
 	void query_returnsOneProduct_byId() {
-		graphQlTester.document("""
-				query {
-				  product(id: "p1") { id name }
-				}
-				""").execute().path("product.name").entity(String.class).isEqualTo("Mini Widget");
+		// product(id) has a real 5% simulated failure (FailureSimulator), so a single call can spuriously fail;
+		// retry past that (same statistical approach used for the other FailureSimulator-affected tests below).
+		for (int attempt = 0; attempt < 20; attempt++) {
+			List<ResponseError> errors = new ArrayList<>();
+			GraphQlTester.Traversable afterErrors = graphQlTester.document("""
+					query {
+					  product(id: "p1") { id name }
+					}
+					""").execute().errors().satisfy(errors::addAll);
+
+			if (errors.isEmpty()) {
+				afterErrors.path("product.name").entity(String.class).isEqualTo("Mini Widget");
+				return;
+			}
+		}
+
+		fail("product query kept simulating failure across 20 attempts (5% failure rate)");
 	}
 
 	@Test
@@ -1317,12 +1334,6 @@ Add this test and its supporting fields/lifecycle methods to `DemoIntegrationTes
 ```java
 	private WebSocketGraphQlTester webSocketGraphQlTester;
 
-	@BeforeEach
-	void setUpWebSocketTester() {
-		webSocketGraphQlTester = WebSocketGraphQlTester
-				.builder("ws://localhost:" + port + "/graphql", new TomcatWebSocketClient()).build();
-	}
-
 	@AfterEach
 	void stopWebSocketTester() {
 		webSocketGraphQlTester.stop().block();
@@ -1342,7 +1353,11 @@ Add this test and its supporting fields/lifecycle methods to `DemoIntegrationTes
 				}
 				""").executeSubscription().toFlux("reviewAdded", Review.class);
 
-		StepVerifier.create(subscription)
+		// thenAwait: the WebSocket "subscribe" message needs a round trip to the server before DemoController's
+		// reviewAdded() resolver is actually registered on the sink; without this gap the mutation below can fire
+		// (and directBestEffort() will drop it) before the subscription is live server-side. 2s/10s were the
+		// margins that proved reliable across repeated local runs — tighten only with evidence they still hold.
+		StepVerifier.create(subscription).thenAwait(Duration.ofSeconds(2))
 				.then(() -> graphQlTester.document("""
 						mutation {
 						  addReview(input: { productId: "p1", author: "Riley", rating: 4, comment: "Solid" }) {
@@ -1352,9 +1367,24 @@ Add this test and its supporting fields/lifecycle methods to `DemoIntegrationTes
 						""").execute())
 				.assertNext(review -> assertThat(review.author()).isEqualTo("Riley"))
 				.thenCancel()
-				.verify(Duration.ofSeconds(5));
+				.verify(Duration.ofSeconds(10));
 	}
 ```
+
+Also fold `webSocketGraphQlTester` construction into the existing `@BeforeEach` (rename it `setUpTesters`, building both `graphQlTester` and `webSocketGraphQlTester` there) rather than adding a second `@BeforeEach` — one setup method is simpler and every test in this class already pays for `graphQlTester` construction, so building the WebSocket tester alongside it is a negligible marginal cost:
+
+```java
+	@BeforeEach
+	void setUpTesters() {
+		WebTestClient webTestClient = WebTestClient.bindToServer().baseUrl("http://localhost:" + port + "/graphql")
+				.build();
+		graphQlTester = HttpGraphQlTester.create(webTestClient);
+		webSocketGraphQlTester = WebSocketGraphQlTester
+				.builder("ws://localhost:" + port + "/graphql", new TomcatWebSocketClient()).build();
+	}
+```
+
+(This replaces the `setUpTester` method from Task 5 — same body, plus the `webSocketGraphQlTester` line, renamed since it now sets up both testers.)
 
 Add imports:
 

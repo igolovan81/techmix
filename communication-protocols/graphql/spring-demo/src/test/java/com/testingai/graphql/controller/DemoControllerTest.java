@@ -8,6 +8,7 @@ import com.testingai.graphql.domain.ReviewService;
 import com.testingai.graphql.util.FailureSimulator;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import reactor.test.StepVerifier;
 
 import java.util.List;
 import java.util.Map;
@@ -80,5 +81,13 @@ class DemoControllerTest {
 	void addReview_throws_whenProductUnknown() {
 		assertThatThrownBy(() -> controller.addReview(new AddReviewInput("unknown", "Jordan", 5, "comment")))
 				.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("unknown");
+	}
+
+	@Test
+	void reviewAdded_filtersByProductId() {
+		StepVerifier.create(controller.reviewAdded("p1").take(1))
+				.then(() -> controller.addReview(new AddReviewInput("p2", "Jordan", 5, "not p1")))
+				.then(() -> controller.addReview(new AddReviewInput("p1", "Sam", 4, "for p1")))
+				.assertNext(review -> assertThat(review.productId()).isEqualTo("p1")).verifyComplete();
 	}
 }

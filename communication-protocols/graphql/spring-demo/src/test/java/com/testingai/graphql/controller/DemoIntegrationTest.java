@@ -1,6 +1,8 @@
 package com.testingai.graphql.controller;
 
+import com.testingai.graphql.domain.Review;
 import com.testingai.graphql.domain.ReviewService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,8 +12,13 @@ import org.springframework.graphql.ResponseError;
 import org.springframework.graphql.execution.ErrorType;
 import org.springframework.graphql.test.tester.GraphQlTester;
 import org.springframework.graphql.test.tester.HttpGraphQlTester;
+import org.springframework.graphql.test.tester.WebSocketGraphQlTester;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.reactive.socket.client.TomcatWebSocketClient;
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,12 +35,20 @@ class DemoIntegrationTest {
 	private ReviewService reviewService;
 
 	private HttpGraphQlTester graphQlTester;
+	private WebSocketGraphQlTester webSocketGraphQlTester;
 
 	@BeforeEach
-	void setUpTester() {
+	void setUpTesters() {
 		WebTestClient webTestClient = WebTestClient.bindToServer().baseUrl("http://localhost:" + port + "/graphql")
 				.build();
 		graphQlTester = HttpGraphQlTester.create(webTestClient);
+		webSocketGraphQlTester = WebSocketGraphQlTester
+				.builder("ws://localhost:" + port + "/graphql", new TomcatWebSocketClient()).build();
+	}
+
+	@AfterEach
+	void stopWebSocketTester() {
+		webSocketGraphQlTester.stop().block();
 	}
 
 	@Test
@@ -47,11 +62,23 @@ class DemoIntegrationTest {
 
 	@Test
 	void query_returnsOneProduct_byId() {
-		graphQlTester.document("""
-				query {
-				  product(id: "p1") { id name }
-				}
-				""").execute().path("product.name").entity(String.class).isEqualTo("Mini Widget");
+		// product(id) has a real 5% simulated failure (FailureSimulator), so a single call can spuriously fail;
+		// retry past that (same statistical approach used for the other FailureSimulator-affected tests below).
+		for (int attempt = 0; attempt < 20; attempt++) {
+			List<ResponseError> errors = new ArrayList<>();
+			GraphQlTester.Traversable afterErrors = graphQlTester.document("""
+					query {
+					  product(id: "p1") { id name }
+					}
+					""").execute().errors().satisfy(errors::addAll);
+
+			if (errors.isEmpty()) {
+				afterErrors.path("product.name").entity(String.class).isEqualTo("Mini Widget");
+				return;
+			}
+		}
+
+		fail("product query kept simulating failure across 20 attempts (5% failure rate)");
 	}
 
 	@Test
@@ -98,6 +125,33 @@ class DemoIntegrationTest {
 			// rather than assuming it's the only error.
 			assertThat(errors).anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
 		});
+	}
+
+	@Test
+	void subscription_streamsReviewAdded_whenMutationPublishes() {
+		Flux<Review> subscription = webSocketGraphQlTester.document("""
+				subscription {
+				  reviewAdded(productId: "p1") {
+				    id
+				    productId
+				    author
+				    rating
+				    comment
+				  }
+				}
+				""").executeSubscription().toFlux("reviewAdded", Review.class);
+
+		// thenAwait: the WebSocket "subscribe" message needs a round trip to the server before DemoController's
+		// reviewAdded() resolver is actually registered on the sink; without this gap the mutation below can fire
+		// (and directBestEffort() will drop it) before the subscription is live server-side.
+		StepVerifier.create(subscription).thenAwait(Duration.ofSeconds(2)).then(() -> graphQlTester.document("""
+				mutation {
+				  addReview(input: { productId: "p1", author: "Riley", rating: 4, comment: "Solid" }) {
+				    id
+				  }
+				}
+				""").execute()).assertNext(review -> assertThat(review.author()).isEqualTo("Riley")).thenCancel()
+				.verify(Duration.ofSeconds(10));
 	}
 
 	@Test

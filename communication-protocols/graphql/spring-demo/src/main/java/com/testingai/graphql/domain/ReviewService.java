@@ -25,7 +25,11 @@ public class ReviewService {
 	private static final List<String> SEED_AUTHORS = List.of("Alex", "Priya", "Sam");
 
 	private final Map<String, List<Review>> reviewsByProductId = new ConcurrentHashMap<>();
-	private final Sinks.Many<Review> reviewAddedSink = Sinks.many().multicast().onBackpressureBuffer();
+	// directBestEffort(): delivered only to subscribers already connected at emission time, nothing queued for
+	// subscribers that haven't connected yet — the right semantics for "subscribe to reviews from now on" (an
+	// onBackpressureBuffer() sink would instead buffer emissions indefinitely until the first-ever subscriber
+	// connects, then replay them, which is both a memory leak risk and observably wrong for a live subscription).
+	private final Sinks.Many<Review> reviewAddedSink = Sinks.many().multicast().directBestEffort();
 	private final AtomicInteger batchCallCount = new AtomicInteger();
 
 	public ReviewService(ProductCatalogService productCatalogService) {

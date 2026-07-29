@@ -12,7 +12,9 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SubscriptionMapping;
 import org.springframework.stereotype.Controller;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
@@ -75,5 +77,15 @@ public class DemoController {
 			throw new IllegalArgumentException("Unknown product: " + input.productId());
 		}
 		return reviewService.addReview(input.productId(), input.author(), input.rating(), input.comment());
+	}
+
+	/**
+	 * Subscription — streams every review added from this point on, optionally filtered to one product.
+	 */
+	@SubscriptionMapping
+	public Flux<Review> reviewAdded(@Argument String productId) {
+		log.info("[reviewAdded] subscription opened, productId={}", productId);
+		Flux<Review> stream = reviewService.reviewAdded();
+		return productId == null ? stream : stream.filter(review -> review.productId().equals(productId));
 	}
 }
