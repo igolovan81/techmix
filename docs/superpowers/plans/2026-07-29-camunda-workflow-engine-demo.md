@@ -1275,9 +1275,7 @@ Add this method and the two new imports:
 	public ResponseEntity<Void> approveOrder(@PathVariable String orderId, @RequestBody ApprovalRequest request) {
 		OrderView order = orderReadModel.find(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
 
-		UserTask userTask = camundaClient.newUserTaskSearchRequest()
-				.filter(f -> f.processInstanceKey(order.processInstanceKey()).state(UserTaskState.CREATED)).execute()
-				.singleItem();
+		UserTask userTask = findPendingUserTask(order.processInstanceKey());
 
 		camundaClient.newCompleteUserTaskCommand(userTask.getUserTaskKey()).variable("approved", request.approved())
 				.execute();
@@ -1285,7 +1283,40 @@ Add this method and the two new imports:
 		log.info("[approveOrder] orderId={} approved={}", orderId, request.approved());
 		return ResponseEntity.ok().build();
 	}
+
+	/**
+	 * The user task search index is populated asynchronously (Zeebe exporter → Elasticsearch), so a search run
+	 * immediately after the process instance reaches the user task can momentarily return no results — confirmed by a
+	 * live smoke test against a real docker-compose stack, where a same-instant approval call right after
+	 * {@code startOrder} got a {@code null} user task (this is why {@code SearchResponse.singleItem()} is avoided
+	 * here: it returns {@code null} rather than throwing when the result list is empty). Retries for up to 5 seconds
+	 * rather than assuming the index is already caught up.
+	 */
+	private UserTask findPendingUserTask(long processInstanceKey) {
+		Instant deadline = Instant.now().plus(Duration.ofSeconds(5));
+		while (true) {
+			UserTask userTask = camundaClient.newUserTaskSearchRequest()
+					.filter(f -> f.processInstanceKey(processInstanceKey).state(UserTaskState.CREATED)).execute()
+					.items().stream().findFirst().orElse(null);
+			if (userTask != null) {
+				return userTask;
+			}
+			if (Instant.now().isAfter(deadline)) {
+				throw new IllegalStateException(
+						"No pending user task found for processInstanceKey=" + processInstanceKey);
+			}
+			try {
+				Thread.sleep(200);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException(
+						"Interrupted while waiting for user task for processInstanceKey=" + processInstanceKey, e);
+			}
+		}
+	}
 ```
+
+Add `import java.time.Duration;` and `import java.time.Instant;` alongside the two imports below.
 
 Imports to add to `DemoController.java`:
 
@@ -1459,7 +1490,7 @@ services:
       - elasticsearch
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.4
     container_name: camunda-elasticsearch
     environment:
       - discovery.type=single-node
@@ -1469,18 +1500,18 @@ services:
       - "9200:9200"
 ```
 
-Note: if `camunda/camunda:8.8.0` fails to start against Elasticsearch `8.15.0` (an incompatible pairing), check Camunda 8.8's release notes for the Elasticsearch version it was actually validated against and adjust the tag — the two images' compatibility wasn't independently verified against a live pull in this plan (unlike every Java API above, which was checked against real jars); this is the one unverified detail, flagged explicitly so it gets checked during implementation rather than causing a silent runtime surprise.
+Note: `8.17.4` is confirmed working against `camunda/camunda:8.8.0` by an actual live `docker compose up` in this session — `8.15.0` was tried first and failed with a Jackson `HealthResponseBody`/`requireNonNull` deserialization error from Camunda's Elasticsearch client (a genuine version incompatibility, not a config issue), which went away entirely on `8.17.4`.
 
 - [ ] **Step 2: Verify docker-compose starts (manual)**
 
 ```bash
 cd workflow-engines/camunda/docker
 docker compose up -d
-sleep 30
-curl -f http://localhost:8080/actuator/health
+sleep 40
+curl -s http://localhost:8080/v2/topology
 ```
 
-Expected: healthy response. If Elasticsearch compatibility fails per the note above, fix the image tag and retry before proceeding.
+Expected: a JSON body with `"brokers":[{...,"partitions":[{"partitionId":1,"role":"leader","health":"healthy"}]...}]`. Note there is no `/actuator/health` endpoint on this unified image (unlike the Axon Server demo) — `/v2/topology` is the equivalent readiness signal; `/operate` and `/tasklist` (redirecting to their respective SPAs, HTTP 302) are also good manual liveness checks.
 
 ```bash
 docker compose down
@@ -1645,10 +1676,10 @@ cd workflow-engines/camunda
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-Wait ~30 seconds, then verify it's healthy:
+Wait ~40 seconds, then verify it's healthy (no `/actuator/health` on this unified image — `/v2/topology` is the equivalent readiness signal):
 
 ```bash
-curl -f http://localhost:8080/actuator/health
+curl -s http://localhost:8080/v2/topology
 ```
 
 Operate (visual process-instance monitoring — watch instances move through the diagram live as you exercise the API below) is at [http://localhost:8080/operate](http://localhost:8080/operate); Tasklist (browse/complete the `Approve Order` user task by hand instead of via `curl`) at [http://localhost:8080/tasklist](http://localhost:8080/tasklist).
