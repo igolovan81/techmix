@@ -28,7 +28,8 @@ class InventoryWorkerTest {
 		Map<String, Object> result = worker.reserveInventory(job);
 
 		assertThat(result).containsEntry("inventoryReserved", true);
-		assertThat(orderReadModel.find("o1").orElseThrow().completedSteps()).containsExactly(OrderStep.RESERVE_INVENTORY);
+		assertThat(orderReadModel.find("o1").orElseThrow().completedSteps())
+				.containsExactly(OrderStep.RESERVE_INVENTORY);
 	}
 
 	@Test

@@ -26,6 +26,7 @@ class ShippingWorkerTest {
 		worker.arrangeShipping(job);
 
 		assertThat(orderReadModel.find("o1").orElseThrow().status()).isEqualTo(OrderStatus.FULFILLED);
-		assertThat(orderReadModel.find("o1").orElseThrow().completedSteps()).containsExactly(OrderStep.ARRANGE_SHIPPING);
+		assertThat(orderReadModel.find("o1").orElseThrow().completedSteps())
+				.containsExactly(OrderStep.ARRANGE_SHIPPING);
 	}
 }

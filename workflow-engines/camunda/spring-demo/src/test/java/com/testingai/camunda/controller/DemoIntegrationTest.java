@@ -110,9 +110,9 @@ class DemoIntegrationTest {
 
 	/**
 	 * Job workers process asynchronously on their own polling thread, so a {@code GET} taken immediately after
-	 * starting/advancing a process instance can race the worker updating {@link com.testingai.camunda.domain.OrderReadModel}.
-	 * Polls for up to 5 seconds rather than assuming zero latency between "process instance advanced" and "read model
-	 * updated."
+	 * starting/advancing a process instance can race the worker updating
+	 * {@link com.testingai.camunda.domain.OrderReadModel}. Polls for up to 5 seconds rather than assuming zero latency
+	 * between "process instance advanced" and "read model updated."
 	 */
 	private OrderStatus awaitOrderStatus(String orderId) {
 		Instant deadline = Instant.now().plus(Duration.ofSeconds(5));
