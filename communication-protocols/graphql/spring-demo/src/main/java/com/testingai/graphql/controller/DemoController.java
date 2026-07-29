@@ -2,15 +2,19 @@ package com.testingai.graphql.controller;
 
 import com.testingai.graphql.domain.Product;
 import com.testingai.graphql.domain.ProductCatalogService;
+import com.testingai.graphql.domain.Review;
 import com.testingai.graphql.domain.ReviewService;
 import com.testingai.graphql.util.FailureSimulator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.BatchMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Hosts every GraphQL operation for this demo — queries, the batch-mapped {@code reviews} field, the mutation, and the
@@ -44,5 +48,18 @@ public class DemoController {
 		log.info("[product] looking up productId={}", id);
 		FailureSimulator.maybeThrow("product query");
 		return productCatalogService.findProduct(id).orElse(null);
+	}
+
+	/**
+	 * Batch mapping for {@code Product.reviews} — the DataLoader pattern. However many products are being resolved in a
+	 * single query, this method runs exactly once, fetching every product's reviews in one call to
+	 * {@link ReviewService#findByProductIds(List)} instead of once per product (the N+1 problem).
+	 */
+	@BatchMapping
+	public Map<Product, List<Review>> reviews(List<Product> products) {
+		List<String> productIds = products.stream().map(Product::id).toList();
+		Map<String, List<Review>> reviewsByProductId = reviewService.findByProductIds(productIds);
+		return products.stream().collect(Collectors.toMap(product -> product,
+				product -> reviewsByProductId.getOrDefault(product.id(), List.of())));
 	}
 }

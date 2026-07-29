@@ -2,10 +2,14 @@ package com.testingai.graphql.controller;
 
 import com.testingai.graphql.domain.Product;
 import com.testingai.graphql.domain.ProductCatalogService;
+import com.testingai.graphql.domain.Review;
 import com.testingai.graphql.domain.ReviewService;
 import com.testingai.graphql.util.FailureSimulator;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -51,5 +55,15 @@ class DemoControllerTest {
 			assertThatThrownBy(() -> controller.product("p1")).isInstanceOf(RuntimeException.class)
 					.hasMessage("Simulated");
 		}
+	}
+
+	@Test
+	void reviews_batchesAllProducts_inOneCall() {
+		List<Product> products = productCatalogService.listProducts().subList(0, 3);
+
+		Map<Product, List<Review>> reviewsByProduct = controller.reviews(products);
+
+		assertThat(reviewsByProduct).hasSize(3);
+		assertThat(reviewService.getBatchCallCount()).isEqualTo(1);
 	}
 }

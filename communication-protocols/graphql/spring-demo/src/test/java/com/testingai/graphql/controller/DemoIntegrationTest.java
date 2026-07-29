@@ -1,7 +1,9 @@
 package com.testingai.graphql.controller;
 
+import com.testingai.graphql.domain.ReviewService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.graphql.ResponseError;
@@ -21,6 +23,9 @@ class DemoIntegrationTest {
 
 	@LocalServerPort
 	private int port;
+
+	@Autowired
+	private ReviewService reviewService;
 
 	private HttpGraphQlTester graphQlTester;
 
@@ -47,6 +52,23 @@ class DemoIntegrationTest {
 				  product(id: "p1") { id name }
 				}
 				""").execute().path("product.name").entity(String.class).isEqualTo("Mini Widget");
+	}
+
+	@Test
+	void query_returnsProductsWithNestedReviews_batchedInOneCall() {
+		int batchCallsBefore = reviewService.getBatchCallCount();
+
+		graphQlTester.document("""
+				query {
+				  products {
+				    id
+				    name
+				    reviews { id author rating }
+				  }
+				}
+				""").execute().path("products").entityList(Object.class).hasSize(40);
+
+		assertThat(reviewService.getBatchCallCount()).isEqualTo(batchCallsBefore + 1);
 	}
 
 	@Test
