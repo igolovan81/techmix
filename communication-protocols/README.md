@@ -5,5 +5,6 @@ This directory contains runnable demos for communication protocols used between 
 | Protocol | Demo | Best fit |
 |---|---|---|
 | [gRPC](grpc/) | Two independent Spring Boot apps (server + client) covering all four RPC patterns | High-performance, strongly-typed service-to-service calls; streaming workloads |
+| [GraphQL](graphql/) | Single Spring Boot app covering query/nested-fetch, DataLoader batching, mutation, and subscription patterns | Client-driven field selection over one endpoint; aggregating/relational data from a single request |
 
-More protocol demos may be added here over time (e.g. GraphQL, WebSocket).
+More protocol demos may be added here over time (e.g. WebSocket).
