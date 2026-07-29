@@ -1,0 +1,9 @@
+server:
+  port: 8092
+
+spring:
+  graphql:
+    graphiql:
+      enabled: true
+    websocket:
+      path: /graphql

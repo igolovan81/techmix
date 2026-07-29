@@ -20,6 +20,7 @@
     <modules>
         <module>grpc/server-demo</module>
         <module>grpc/client-demo</module>
+        <module>graphql/spring-demo</module>
     </modules>
 
     <properties>
