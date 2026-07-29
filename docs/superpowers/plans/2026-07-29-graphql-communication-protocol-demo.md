@@ -1231,9 +1231,11 @@ Add to `DemoIntegrationTest`:
 				  }
 				}
 				""").execute().errors().satisfy(errors -> {
-					assertThat(errors).hasSize(1);
-					assertThat(errors.get(0).getErrorType()).isEqualTo(ErrorType.BAD_REQUEST);
-				});
+			// addReview is a non-nullable field (Review!), so throwing here also produces graphql-java's own
+			// "null value for non-nullable field" error alongside our classified one — assert ours is present
+			// rather than assuming it's the only error.
+			assertThat(errors).anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+		});
 	}
 ```
 

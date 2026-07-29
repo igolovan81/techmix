@@ -1,5 +1,6 @@
 package com.testingai.graphql.controller;
 
+import com.testingai.graphql.domain.AddReviewInput;
 import com.testingai.graphql.domain.Product;
 import com.testingai.graphql.domain.ProductCatalogService;
 import com.testingai.graphql.domain.Review;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
+import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 
@@ -61,5 +63,17 @@ public class DemoController {
 		Map<String, List<Review>> reviewsByProductId = reviewService.findByProductIds(productIds);
 		return products.stream().collect(Collectors.toMap(product -> product,
 				product -> reviewsByProductId.getOrDefault(product.id(), List.of())));
+	}
+
+	/**
+	 * Mutation — adds a review to a product and publishes it to {@link #reviewAdded} subscribers.
+	 */
+	@MutationMapping
+	public Review addReview(@Argument AddReviewInput input) {
+		log.info("[addReview] productId={} author={} rating={}", input.productId(), input.author(), input.rating());
+		if (productCatalogService.findProduct(input.productId()).isEmpty()) {
+			throw new IllegalArgumentException("Unknown product: " + input.productId());
+		}
+		return reviewService.addReview(input.productId(), input.author(), input.rating(), input.comment());
 	}
 }

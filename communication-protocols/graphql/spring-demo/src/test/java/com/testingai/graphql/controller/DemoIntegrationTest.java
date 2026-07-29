@@ -72,6 +72,35 @@ class DemoIntegrationTest {
 	}
 
 	@Test
+	void mutation_addReview_returnsCreatedReview() {
+		graphQlTester.document("""
+				mutation {
+				  addReview(input: { productId: "p1", author: "Jordan", rating: 5, comment: "Great product" }) {
+				    author
+				    rating
+				    comment
+				  }
+				}
+				""").execute().path("addReview.author").entity(String.class).isEqualTo("Jordan");
+	}
+
+	@Test
+	void mutation_addReview_isRejected_whenProductUnknown() {
+		graphQlTester.document("""
+				mutation {
+				  addReview(input: { productId: "unknown", author: "Jordan", rating: 5, comment: "x" }) {
+				    id
+				  }
+				}
+				""").execute().errors().satisfy(errors -> {
+			// addReview is a non-nullable field (Review!), so throwing here also produces graphql-java's own
+			// "null value for non-nullable field" error alongside our classified one — assert ours is present
+			// rather than assuming it's the only error.
+			assertThat(errors).anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.BAD_REQUEST));
+		});
+	}
+
+	@Test
 	void query_partiallyFails_whenProductLookupSimulatesFailure() {
 		// FailureSimulator's 5% failure is real (not mocked): the GraphQL execution runs on a Tomcat worker
 		// thread, not the test thread, so Mockito's thread-confined mockStatic can't reach it here. Instead,

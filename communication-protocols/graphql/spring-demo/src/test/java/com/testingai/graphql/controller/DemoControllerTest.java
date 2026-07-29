@@ -1,5 +1,6 @@
 package com.testingai.graphql.controller;
 
+import com.testingai.graphql.domain.AddReviewInput;
 import com.testingai.graphql.domain.Product;
 import com.testingai.graphql.domain.ProductCatalogService;
 import com.testingai.graphql.domain.Review;
@@ -65,5 +66,19 @@ class DemoControllerTest {
 
 		assertThat(reviewsByProduct).hasSize(3);
 		assertThat(reviewService.getBatchCallCount()).isEqualTo(1);
+	}
+
+	@Test
+	void addReview_addsReview_whenProductExists() {
+		Review review = controller.addReview(new AddReviewInput("p1", "Jordan", 5, "Great product"));
+
+		assertThat(review.author()).isEqualTo("Jordan");
+		assertThat(reviewService.findByProductIds(List.of("p1")).get("p1")).contains(review);
+	}
+
+	@Test
+	void addReview_throws_whenProductUnknown() {
+		assertThatThrownBy(() -> controller.addReview(new AddReviewInput("unknown", "Jordan", 5, "comment")))
+				.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("unknown");
 	}
 }
