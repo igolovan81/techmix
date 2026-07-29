@@ -2,6 +2,8 @@ package com.testingai.camunda.controller;
 
 import com.testingai.camunda.domain.CheckoutRequest;
 import com.testingai.camunda.domain.OrderLine;
+import com.testingai.camunda.domain.OrderStatus;
+import com.testingai.camunda.domain.OrderStep;
 import com.testingai.camunda.domain.OrderView;
 import io.camunda.process.test.api.CamundaSpringProcessTest;
 import io.camunda.process.test.api.assertions.ProcessInstanceSelectors;
@@ -13,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 import static io.camunda.process.test.api.CamundaAssert.assertThatProcessInstance;
@@ -79,8 +83,54 @@ class DemoIntegrationTest {
 		restTemplate.postForEntity("http://localhost:" + port + "/demo/camunda/orders/" + orderId + "/approval",
 				new ApprovalRequest(false), Void.class);
 
-		ResponseEntity<OrderView> orderView = restTemplate
-				.getForEntity("http://localhost:" + port + "/demo/camunda/orders/" + orderId, OrderView.class);
-		assertThat(orderView.getBody().status()).isEqualTo(com.testingai.camunda.domain.OrderStatus.CANCELLED);
+		assertThat(awaitOrderStatus(orderId)).isEqualTo(OrderStatus.CANCELLED);
+	}
+
+	@Test
+	void order_isCancelled_whenInventoryReservationFailsAt() {
+		CheckoutRequest request = new CheckoutRequest("customer-1",
+				List.of(new OrderLine("p1", 1, BigDecimal.valueOf(10.00))), OrderStep.RESERVE_INVENTORY);
+
+		ResponseEntity<StartOrderResponse> response = restTemplate
+				.postForEntity("http://localhost:" + port + "/demo/camunda/orders", request, StartOrderResponse.class);
+
+		assertThat(awaitOrderStatus(response.getBody().orderId())).isEqualTo(OrderStatus.CANCELLED);
+	}
+
+	@Test
+	void order_isCancelled_whenPaymentFailsAt() {
+		CheckoutRequest request = new CheckoutRequest("customer-1",
+				List.of(new OrderLine("p1", 1, BigDecimal.valueOf(10.00))), OrderStep.PROCESS_PAYMENT);
+
+		ResponseEntity<StartOrderResponse> response = restTemplate
+				.postForEntity("http://localhost:" + port + "/demo/camunda/orders", request, StartOrderResponse.class);
+
+		assertThat(awaitOrderStatus(response.getBody().orderId())).isEqualTo(OrderStatus.CANCELLED);
+	}
+
+	/**
+	 * Job workers process asynchronously on their own polling thread, so a {@code GET} taken immediately after
+	 * starting/advancing a process instance can race the worker updating {@link com.testingai.camunda.domain.OrderReadModel}.
+	 * Polls for up to 5 seconds rather than assuming zero latency between "process instance advanced" and "read model
+	 * updated."
+	 */
+	private OrderStatus awaitOrderStatus(String orderId) {
+		Instant deadline = Instant.now().plus(Duration.ofSeconds(5));
+		OrderStatus lastSeen = null;
+		while (Instant.now().isBefore(deadline)) {
+			ResponseEntity<OrderView> orderView = restTemplate
+					.getForEntity("http://localhost:" + port + "/demo/camunda/orders/" + orderId, OrderView.class);
+			lastSeen = orderView.getBody().status();
+			if (lastSeen == OrderStatus.CANCELLED || lastSeen == OrderStatus.FULFILLED) {
+				return lastSeen;
+			}
+			try {
+				Thread.sleep(200);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return lastSeen;
+			}
+		}
+		return lastSeen;
 	}
 }
