@@ -6,6 +6,8 @@ import com.testingai.camunda.domain.OrderStatus;
 import com.testingai.camunda.domain.OrderView;
 import io.camunda.client.CamundaClient;
 import io.camunda.client.api.response.ProcessInstanceEvent;
+import io.camunda.client.api.search.enums.UserTaskState;
+import io.camunda.client.api.search.response.UserTask;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -63,6 +65,21 @@ public class DemoController {
 		log.info("[startOrder] orderId={} processInstanceKey={} totalCents={}", orderId,
 				instance.getProcessInstanceKey(), totalCents);
 		return ResponseEntity.ok(new StartOrderResponse(orderId, instance.getProcessInstanceKey()));
+	}
+
+	@PostMapping("/orders/{orderId}/approval")
+	public ResponseEntity<Void> approveOrder(@PathVariable String orderId, @RequestBody ApprovalRequest request) {
+		OrderView order = orderReadModel.find(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
+
+		UserTask userTask = camundaClient.newUserTaskSearchRequest()
+				.filter(f -> f.processInstanceKey(order.processInstanceKey()).state(UserTaskState.CREATED)).execute()
+				.singleItem();
+
+		camundaClient.newCompleteUserTaskCommand(userTask.getUserTaskKey()).variable("approved", request.approved())
+				.execute();
+
+		log.info("[approveOrder] orderId={} approved={}", orderId, request.approved());
+		return ResponseEntity.ok().build();
 	}
 
 	@GetMapping("/orders/{orderId}")
