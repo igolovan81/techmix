@@ -86,6 +86,20 @@ mvn gatling:test -pl graphql/spring-demo                 # Gatling load test —
 mvn verify -Pjmeter-load-test -pl graphql/spring-demo    # JMeter load test — requires the app running first
 ```
 
+### Camunda workflow engine demo (run from the reactor root — requires Docker for both the app and `mvn test`)
+
+```bash
+docker compose -f workflow-engines/camunda/docker/docker-compose.yml up -d   # Camunda 8 (Zeebe/Operate/Tasklist) + Elasticsearch
+
+cd workflow-engines
+
+mvn clean package                                      # build (part of the reactor build)
+mvn test -pl camunda/spring-demo                        # unit + integration tests — requires a working Docker daemon (Testcontainers), NOT the compose stack above
+mvn test -pl camunda/spring-demo -Dtest=ClassName        # single test class
+mvn -pl camunda/spring-demo spring-boot:run              # run the app (:8093) against the compose stack; Operate/Tasklist UI at :8080 (redirects to /operate, /tasklist)
+mvn gatling:test -pl camunda/spring-demo                 # Gatling load test — requires the app running first
+```
+
 ### Project Reactor demo (run from the reactor root, no docker infrastructure required)
 
 ```bash
@@ -178,6 +192,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `communication-protocols/grpc/{server-demo,client-demo}/` | gRPC demo — two independent Spring Boot apps covering all four RPC patterns (unary, server/client/bidi streaming); `server-demo` must be started before `client-demo` — no external infrastructure required |
 | `communication-protocols/graphql/spring-demo/` | GraphQL demo — single Spring Boot app covering query/nested-fetch, DataLoader batching, mutation, and subscription patterns against a Products↔Reviews domain — no external infrastructure required |
 | `reactive-programming/project-reactor/{spring-demo,upstream-demo}/` | Project Reactor demo — two independent Spring Boot WebFlux apps covering Mono/Flux basics, backpressure/error handling, schedulers/concurrency, and SSE/WebClient streaming; `upstream-demo` must be started before `spring-demo`'s `streaming/upstream/*` endpoints work — no external infrastructure required |
+| `workflow-engines/camunda/spring-demo/` | Camunda 8 (Zeebe) BPMN workflow demo — service tasks, exclusive gateway, user task (approval), and error-boundary-driven failure routing over the order-fulfillment domain shared with `distributed-transactions/saga`; requires Docker for both the running app (`docker compose`) and `mvn test` (Testcontainers) |
 | `spring-boot-starters/<starter>/<starter>-spring-boot-starter/` + `.../spring-demo/` | Custom Spring Boot starter demos — each starter is an auto-configuration jar plus a consuming demo app in the same Maven reactor (currently: request-logging) — no external infrastructure required |
 | `docker-compose.yml` | Shared infrastructure stack |
 

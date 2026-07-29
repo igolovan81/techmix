@@ -19,14 +19,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Starts and observes order-fulfillment process instances. Job workers ({@code InventoryWorker},
- * {@code PaymentWorker}, {@code ShippingWorker}) do the actual step-by-step work and update {@link OrderReadModel} as
- * they go; this controller only starts instances and reads that model back.
+ * Starts and observes order-fulfillment process instances. Job workers ({@code InventoryWorker}, {@code PaymentWorker},
+ * {@code ShippingWorker}) do the actual step-by-step work and update {@link OrderReadModel} as they go; this controller
+ * only starts instances and reads that model back.
  */
 @Slf4j
 @RestController
@@ -43,9 +45,8 @@ public class DemoController {
 	@PostMapping("/orders")
 	public ResponseEntity<StartOrderResponse> startOrder(@RequestBody CheckoutRequest request) {
 		String orderId = UUID.randomUUID().toString();
-		long totalCents = request.items().stream().mapToLong(
-				item -> item.unitPrice().multiply(BigDecimal.valueOf(item.quantity())).movePointRight(2).longValueExact())
-				.sum();
+		long totalCents = request.items().stream().mapToLong(item -> item.unitPrice()
+				.multiply(BigDecimal.valueOf(item.quantity())).movePointRight(2).longValueExact()).sum();
 
 		Map<String, Object> variables = new HashMap<>();
 		variables.put("orderId", orderId);
@@ -55,7 +56,8 @@ public class DemoController {
 			variables.put("failAt", request.failAt().name());
 		}
 
-		OrderStatus initialStatus = totalCents > HIGH_VALUE_THRESHOLD_CENTS ? OrderStatus.PENDING_APPROVAL
+		OrderStatus initialStatus = totalCents > HIGH_VALUE_THRESHOLD_CENTS
+				? OrderStatus.PENDING_APPROVAL
 				: OrderStatus.IN_PROGRESS;
 
 		ProcessInstanceEvent instance = camundaClient.newCreateInstanceCommand().bpmnProcessId(PROCESS_ID)
@@ -71,15 +73,41 @@ public class DemoController {
 	public ResponseEntity<Void> approveOrder(@PathVariable String orderId, @RequestBody ApprovalRequest request) {
 		OrderView order = orderReadModel.find(orderId).orElseThrow(() -> new OrderNotFoundException(orderId));
 
-		UserTask userTask = camundaClient.newUserTaskSearchRequest()
-				.filter(f -> f.processInstanceKey(order.processInstanceKey()).state(UserTaskState.CREATED)).execute()
-				.singleItem();
+		UserTask userTask = findPendingUserTask(order.processInstanceKey());
 
 		camundaClient.newCompleteUserTaskCommand(userTask.getUserTaskKey()).variable("approved", request.approved())
 				.execute();
 
 		log.info("[approveOrder] orderId={} approved={}", orderId, request.approved());
 		return ResponseEntity.ok().build();
+	}
+
+	/**
+	 * The user task search index is populated asynchronously (Zeebe exporter → Elasticsearch), so a search run
+	 * immediately after the process instance reaches the user task can momentarily return no results. Retries for up to
+	 * 5 seconds rather than assuming the index is already caught up.
+	 */
+	private UserTask findPendingUserTask(long processInstanceKey) {
+		Instant deadline = Instant.now().plus(Duration.ofSeconds(5));
+		while (true) {
+			UserTask userTask = camundaClient.newUserTaskSearchRequest()
+					.filter(f -> f.processInstanceKey(processInstanceKey).state(UserTaskState.CREATED)).execute()
+					.items().stream().findFirst().orElse(null);
+			if (userTask != null) {
+				return userTask;
+			}
+			if (Instant.now().isAfter(deadline)) {
+				throw new IllegalStateException(
+						"No pending user task found for processInstanceKey=" + processInstanceKey);
+			}
+			try {
+				Thread.sleep(200);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				throw new IllegalStateException(
+						"Interrupted while waiting for user task for processInstanceKey=" + processInstanceKey, e);
+			}
+		}
 	}
 
 	@GetMapping("/orders/{orderId}")
