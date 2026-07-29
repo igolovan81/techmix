@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" id="Definitions_OrderFulfillment" targetNamespace="http://bpmn.io/schema/bpmn" exporter="techmix-copy" exporterVersion="1.0">
+
+  <bpmn:error id="Error_InventoryUnavailable" name="Inventory Unavailable" errorCode="INVENTORY_UNAVAILABLE" />
+  <bpmn:error id="Error_PaymentDeclined" name="Payment Declined" errorCode="PAYMENT_DECLINED" />
+
+  <bpmn:process id="order-fulfillment" name="Order Fulfillment" isExecutable="true">
+
+    <bpmn:startEvent id="StartEvent_OrderPlaced" name="Order Placed">
+      <bpmn:outgoing>Flow_StartToReserve</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="ServiceTask_ReserveInventory" name="Reserve Inventory">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="reserve-inventory" retries="1" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_StartToReserve</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReserveToGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:boundaryEvent id="BoundaryEvent_InventoryUnavailable" name="Inventory Unavailable" attachedToRef="ServiceTask_ReserveInventory">
+      <bpmn:outgoing>Flow_InventoryErrorToCancelled</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_InventoryUnavailable" errorRef="Error_InventoryUnavailable" />
+    </bpmn:boundaryEvent>
+
+    <bpmn:exclusiveGateway id="Gateway_HighValueOrder" name="High-Value Order?" default="Flow_GatewayToPayment">
+      <bpmn:incoming>Flow_ReserveToGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_GatewayToApproval</bpmn:outgoing>
+      <bpmn:outgoing>Flow_GatewayToPayment</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:userTask id="UserTask_ApproveOrder" name="Approve Order">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_GatewayToApproval</bpmn:incoming>
+      <bpmn:outgoing>Flow_ApprovalToDecision</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gateway_ApprovalDecision" name="Approved?" default="Flow_DecisionRejected">
+      <bpmn:incoming>Flow_ApprovalToDecision</bpmn:incoming>
+      <bpmn:outgoing>Flow_DecisionApproved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_DecisionRejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="ServiceTask_ProcessPayment" name="Process Payment">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="process-payment" retries="1" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_GatewayToPayment</bpmn:incoming>
+      <bpmn:incoming>Flow_DecisionApproved</bpmn:incoming>
+      <bpmn:outgoing>Flow_PaymentToShipping</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:boundaryEvent id="BoundaryEvent_PaymentDeclined" name="Payment Declined" attachedToRef="ServiceTask_ProcessPayment">
+      <bpmn:outgoing>Flow_PaymentErrorToRelease</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_PaymentDeclined" errorRef="Error_PaymentDeclined" />
+    </bpmn:boundaryEvent>
+
+    <bpmn:serviceTask id="ServiceTask_ArrangeShipping" name="Arrange Shipping">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="arrange-shipping" retries="1" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PaymentToShipping</bpmn:incoming>
+      <bpmn:outgoing>Flow_ShippingToFulfilled</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="EndEvent_OrderFulfilled" name="Order Fulfilled">
+      <bpmn:incoming>Flow_ShippingToFulfilled</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:serviceTask id="ServiceTask_ReleaseInventory" name="Release Inventory">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="release-inventory" retries="1" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_PaymentErrorToRelease</bpmn:incoming>
+      <bpmn:incoming>Flow_DecisionRejected</bpmn:incoming>
+      <bpmn:outgoing>Flow_ReleaseToCancelled</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="EndEvent_OrderCancelled" name="Order Cancelled">
+      <bpmn:incoming>Flow_InventoryErrorToCancelled</bpmn:incoming>
+      <bpmn:incoming>Flow_ReleaseToCancelled</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_StartToReserve" sourceRef="StartEvent_OrderPlaced" targetRef="ServiceTask_ReserveInventory" />
+    <bpmn:sequenceFlow id="Flow_ReserveToGateway" sourceRef="ServiceTask_ReserveInventory" targetRef="Gateway_HighValueOrder" />
+    <bpmn:sequenceFlow id="Flow_GatewayToApproval" sourceRef="Gateway_HighValueOrder" targetRef="UserTask_ApproveOrder">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=totalCents &gt; 50000</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_GatewayToPayment" sourceRef="Gateway_HighValueOrder" targetRef="ServiceTask_ProcessPayment" />
+    <bpmn:sequenceFlow id="Flow_ApprovalToDecision" sourceRef="UserTask_ApproveOrder" targetRef="Gateway_ApprovalDecision" />
+    <bpmn:sequenceFlow id="Flow_DecisionApproved" sourceRef="Gateway_ApprovalDecision" targetRef="ServiceTask_ProcessPayment">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=approved = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_DecisionRejected" sourceRef="Gateway_ApprovalDecision" targetRef="ServiceTask_ReleaseInventory" />
+    <bpmn:sequenceFlow id="Flow_PaymentToShipping" sourceRef="ServiceTask_ProcessPayment" targetRef="ServiceTask_ArrangeShipping" />
+    <bpmn:sequenceFlow id="Flow_ShippingToFulfilled" sourceRef="ServiceTask_ArrangeShipping" targetRef="EndEvent_OrderFulfilled" />
+    <bpmn:sequenceFlow id="Flow_InventoryErrorToCancelled" sourceRef="BoundaryEvent_InventoryUnavailable" targetRef="EndEvent_OrderCancelled" />
+    <bpmn:sequenceFlow id="Flow_PaymentErrorToRelease" sourceRef="BoundaryEvent_PaymentDeclined" targetRef="ServiceTask_ReleaseInventory" />
+    <bpmn:sequenceFlow id="Flow_ReleaseToCancelled" sourceRef="ServiceTask_ReleaseInventory" targetRef="EndEvent_OrderCancelled" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="order-fulfillment">
+      <bpmndi:BPMNShape id="StartEvent_OrderPlaced_di" bpmnElement="StartEvent_OrderPlaced">
+        <dc:Bounds x="160" y="142" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_ReserveInventory_di" bpmnElement="ServiceTask_ReserveInventory">
+        <dc:Bounds x="250" y="120" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryEvent_InventoryUnavailable_di" bpmnElement="BoundaryEvent_InventoryUnavailable">
+        <dc:Bounds x="282" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_HighValueOrder_di" bpmnElement="Gateway_HighValueOrder">
+        <dc:Bounds x="410" y="135" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="UserTask_ApproveOrder_di" bpmnElement="UserTask_ApproveOrder">
+        <dc:Bounds x="410" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ApprovalDecision_di" bpmnElement="Gateway_ApprovalDecision">
+        <dc:Bounds x="570" y="295" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_ProcessPayment_di" bpmnElement="ServiceTask_ProcessPayment">
+        <dc:Bounds x="560" y="120" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BoundaryEvent_PaymentDeclined_di" bpmnElement="BoundaryEvent_PaymentDeclined">
+        <dc:Bounds x="592" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_ArrangeShipping_di" bpmnElement="ServiceTask_ArrangeShipping">
+        <dc:Bounds x="720" y="120" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_OrderFulfilled_di" bpmnElement="EndEvent_OrderFulfilled">
+        <dc:Bounds x="880" y="142" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_ReleaseInventory_di" bpmnElement="ServiceTask_ReleaseInventory">
+        <dc:Bounds x="560" y="420" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_OrderCancelled_di" bpmnElement="EndEvent_OrderCancelled">
+        <dc:Bounds x="720" y="442" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_StartToReserve_di" bpmnElement="Flow_StartToReserve">
+        <di:waypoint x="196" y="160" />
+        <di:waypoint x="250" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ReserveToGateway_di" bpmnElement="Flow_ReserveToGateway">
+        <di:waypoint x="350" y="160" />
+        <di:waypoint x="410" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GatewayToApproval_di" bpmnElement="Flow_GatewayToApproval">
+        <di:waypoint x="435" y="185" />
+        <di:waypoint x="435" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_GatewayToPayment_di" bpmnElement="Flow_GatewayToPayment">
+        <di:waypoint x="460" y="160" />
+        <di:waypoint x="560" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ApprovalToDecision_di" bpmnElement="Flow_ApprovalToDecision">
+        <di:waypoint x="510" y="320" />
+        <di:waypoint x="570" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DecisionApproved_di" bpmnElement="Flow_DecisionApproved">
+        <di:waypoint x="595" y="295" />
+        <di:waypoint x="595" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DecisionRejected_di" bpmnElement="Flow_DecisionRejected">
+        <di:waypoint x="595" y="345" />
+        <di:waypoint x="595" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentToShipping_di" bpmnElement="Flow_PaymentToShipping">
+        <di:waypoint x="660" y="160" />
+        <di:waypoint x="720" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ShippingToFulfilled_di" bpmnElement="Flow_ShippingToFulfilled">
+        <di:waypoint x="820" y="160" />
+        <di:waypoint x="880" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_InventoryErrorToCancelled_di" bpmnElement="Flow_InventoryErrorToCancelled">
+        <di:waypoint x="300" y="218" />
+        <di:waypoint x="300" y="460" />
+        <di:waypoint x="720" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentErrorToRelease_di" bpmnElement="Flow_PaymentErrorToRelease">
+        <di:waypoint x="610" y="218" />
+        <di:waypoint x="610" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ReleaseToCancelled_di" bpmnElement="Flow_ReleaseToCancelled">
+        <di:waypoint x="660" y="460" />
+        <di:waypoint x="720" y="460" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
