@@ -57,13 +57,29 @@ public class ReviewService {
 	 * resolving {@code Product.reviews} for a list of products in a single GraphQL query.
 	 */
 	public Map<String, List<Review>> findByProductIds(List<String> productIds) {
+		return findByProductIds(productIds, null);
+	}
+
+	/**
+	 * Same batching contract as {@link #findByProductIds(List)}, with an optional {@link ReviewFilter} applied to each
+	 * product's list before it's returned.
+	 */
+	public Map<String, List<Review>> findByProductIds(List<String> productIds, ReviewFilter filter) {
 		batchCallCount.incrementAndGet();
 		log.info("batch fetching reviews for {} products in one call", productIds.size());
 		Map<String, List<Review>> result = new LinkedHashMap<>();
 		for (String productId : productIds) {
-			result.put(productId, reviewsByProductId.getOrDefault(productId, List.of()));
+			List<Review> reviews = reviewsByProductId.getOrDefault(productId, List.of());
+			result.put(productId, filterReviews(reviews, filter));
 		}
 		return result;
+	}
+
+	private static List<Review> filterReviews(List<Review> reviews, ReviewFilter filter) {
+		if (filter == null || filter.minRating() == null) {
+			return reviews;
+		}
+		return reviews.stream().filter(review -> review.rating() >= filter.minRating()).toList();
 	}
 
 	public Review addReview(String productId, String author, int rating, String comment) {

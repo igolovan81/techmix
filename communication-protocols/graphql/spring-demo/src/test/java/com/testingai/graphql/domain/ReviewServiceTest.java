@@ -64,4 +64,31 @@ class ReviewServiceTest {
 
 		assertThat(service.findByProductIds(List.of("p2")).get("p2")).contains(reviewOnP2);
 	}
+
+	@Test
+	void findByProductIds_withNullFilter_returnsAllReviews() {
+		service.addReview("p1", "Jordan", 2, "meh");
+		service.addReview("p1", "Sam", 5, "great");
+
+		List<Review> reviews = service.findByProductIds(List.of("p1"), null).get("p1");
+
+		assertThat(reviews).extracting(Review::rating).contains(2, 5);
+	}
+
+	@Test
+	void findByProductIds_filtersByMinRating() {
+		service.addReview("p1", "Jordan", 2, "meh");
+		service.addReview("p1", "Sam", 5, "great");
+
+		List<Review> reviews = service.findByProductIds(List.of("p1"), new ReviewFilter(4)).get("p1");
+
+		assertThat(reviews).extracting(Review::rating).containsOnly(5);
+	}
+
+	@Test
+	void findByProductIds_withFilter_stillBatchesInOneCall() {
+		service.findByProductIds(List.of("p1", "p2", "p3"), new ReviewFilter(3));
+
+		assertThat(service.getBatchCallCount()).isEqualTo(1);
+	}
 }
