@@ -75,7 +75,11 @@ public class ReviewService {
 		return result;
 	}
 
-	private static List<Review> filterReviews(List<Review> reviews, ReviewFilter filter) {
+	/**
+	 * Applies a {@link ReviewFilter} to an already-fetched review list — exposed so a caller that loaded the raw list
+	 * through its own DataLoader (which can't take a {@link ReviewFilter} argument directly) can filter afterward.
+	 */
+	public List<Review> filterReviews(List<Review> reviews, ReviewFilter filter) {
 		if (filter == null || filter.minRating() == null) {
 			return reviews;
 		}
