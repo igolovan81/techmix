@@ -77,6 +77,20 @@ public class ReviewService {
 		return reviewAddedSink.asFlux();
 	}
 
+	/**
+	 * Removes the first review matching {@code reviewId} across every product, returning whether one was found.
+	 * {@code CopyOnWriteArrayList.removeIf} is atomic per list, so this is safe under concurrent {@link #addReview}
+	 * calls without any additional synchronization.
+	 */
+	public boolean deleteReview(String reviewId) {
+		for (List<Review> reviews : reviewsByProductId.values()) {
+			if (reviews.removeIf(review -> review.id().equals(reviewId))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public int getBatchCallCount() {
 		return batchCallCount.get();
 	}
