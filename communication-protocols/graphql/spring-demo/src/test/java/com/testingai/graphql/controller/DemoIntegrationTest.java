@@ -165,7 +165,7 @@ class DemoIntegrationTest {
 				}
 				""").execute();
 
-		graphQlTester.document("""
+		String query = """
 				query {
 				  product(id: "p1") {
 				    reviews(filter: { minRating: 4 }, first: 10) {
@@ -173,10 +173,25 @@ class DemoIntegrationTest {
 				    }
 				  }
 				}
-				""").execute().path("product.reviews.edges").entityList(java.util.Map.class)
-				.satisfies(edges -> assertThat(edges).isNotEmpty()
-						.allSatisfy(edge -> assertThat((Integer) ((java.util.Map<?, ?>) edge.get("node")).get("rating"))
-								.isGreaterThanOrEqualTo(4)));
+				""";
+
+		// product(id) has a real 5% simulated failure (FailureSimulator), so a single call can spuriously fail;
+		// retry past that (same statistical approach used elsewhere in this file).
+		for (int attempt = 0; attempt < 20; attempt++) {
+			List<ResponseError> errors = new ArrayList<>();
+			GraphQlTester.Traversable afterErrors = graphQlTester.document(query).execute().errors()
+					.satisfy(errors::addAll);
+
+			if (errors.isEmpty()) {
+				afterErrors.path("product.reviews.edges").entityList(java.util.Map.class)
+						.satisfies(edges -> assertThat(edges).isNotEmpty().allSatisfy(
+								edge -> assertThat((Integer) ((java.util.Map<?, ?>) edge.get("node")).get("rating"))
+										.isGreaterThanOrEqualTo(4)));
+				return;
+			}
+		}
+
+		fail("product query kept simulating failure across 20 attempts (5% failure rate)");
 	}
 
 	@Test
