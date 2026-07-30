@@ -3,8 +3,12 @@ package com.testingai.graphql.controller;
 import com.testingai.graphql.domain.AddReviewInput;
 import com.testingai.graphql.domain.Product;
 import com.testingai.graphql.domain.ProductCatalogService;
+import com.testingai.graphql.domain.ProductFilter;
 import com.testingai.graphql.domain.Review;
+import com.testingai.graphql.domain.ReviewFilter;
 import com.testingai.graphql.domain.ReviewService;
+import com.testingai.graphql.pagination.Connection;
+import com.testingai.graphql.pagination.CursorPagination;
 import com.testingai.graphql.util.FailureSimulator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,12 +39,16 @@ public class DemoController {
 	private final ReviewService reviewService;
 
 	/**
-	 * Query — returns the full in-memory catalog.
+	 * Query — returns a filtered, paginated page of the in-memory catalog. See {@link CursorPagination} for the
+	 * pagination contract (forward-only, {@code first} defaults to 10 and is clamped to 50).
 	 */
 	@QueryMapping
-	public List<Product> products() {
-		log.info("[products] returning {} products", productCatalogService.listProducts().size());
-		return productCatalogService.listProducts();
+	public Connection<Product> products(@Argument ProductFilter filter, @Argument Integer first,
+			@Argument String after) {
+		List<Product> filtered = productCatalogService.listProducts(filter);
+		Connection<Product> page = CursorPagination.paginate(filtered, first, after);
+		log.info("[products] returning {} of {} filtered products", page.edges().size(), filtered.size());
+		return page;
 	}
 
 	/**
@@ -58,14 +66,17 @@ public class DemoController {
 	/**
 	 * Batch mapping for {@code Product.reviews} — the DataLoader pattern. However many products are being resolved in a
 	 * single query, this method runs exactly once, fetching every product's reviews in one call to
-	 * {@link ReviewService#findByProductIds(List)} instead of once per product (the N+1 problem).
+	 * {@link ReviewService#findByProductIds(List, ReviewFilter)} instead of once per product (the N+1 problem). Every
+	 * product being resolved shares the same {@code filter}/{@code first}/{@code after} arguments — they come from one
+	 * field selection in the query, not per-product.
 	 */
 	@BatchMapping
-	public Map<Product, List<Review>> reviews(List<Product> products) {
+	public Map<Product, Connection<Review>> reviews(List<Product> products, @Argument ReviewFilter filter,
+			@Argument Integer first, @Argument String after) {
 		List<String> productIds = products.stream().map(Product::id).toList();
-		Map<String, List<Review>> reviewsByProductId = reviewService.findByProductIds(productIds);
-		return products.stream().collect(Collectors.toMap(product -> product,
-				product -> reviewsByProductId.getOrDefault(product.id(), List.of())));
+		Map<String, List<Review>> reviewsByProductId = reviewService.findByProductIds(productIds, filter);
+		return products.stream().collect(Collectors.toMap(product -> product, product -> CursorPagination
+				.paginate(reviewsByProductId.getOrDefault(product.id(), List.of()), first, after)));
 	}
 
 	/**

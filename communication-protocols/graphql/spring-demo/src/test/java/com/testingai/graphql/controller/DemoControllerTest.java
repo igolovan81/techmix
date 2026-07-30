@@ -3,8 +3,11 @@ package com.testingai.graphql.controller;
 import com.testingai.graphql.domain.AddReviewInput;
 import com.testingai.graphql.domain.Product;
 import com.testingai.graphql.domain.ProductCatalogService;
+import com.testingai.graphql.domain.ProductFilter;
 import com.testingai.graphql.domain.Review;
+import com.testingai.graphql.domain.ReviewFilter;
 import com.testingai.graphql.domain.ReviewService;
+import com.testingai.graphql.pagination.Connection;
 import com.testingai.graphql.util.FailureSimulator;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -25,8 +28,21 @@ class DemoControllerTest {
 	private final DemoController controller = new DemoController(productCatalogService, reviewService);
 
 	@Test
-	void products_returnsFullCatalog() {
-		assertThat(controller.products()).hasSize(40);
+	void products_returnsFullCatalog_whenNoFilterOrPagination() {
+		Connection<Product> connection = controller.products(null, null, null);
+
+		assertThat(connection.edges()).hasSize(10);
+		assertThat(connection.totalCount()).isEqualTo(40);
+		assertThat(connection.pageInfo().hasNextPage()).isTrue();
+	}
+
+	@Test
+	void products_appliesFilter_beforePagination() {
+		Connection<Product> connection = controller.products(new ProductFilter("mini", null, null), 50, null);
+
+		assertThat(connection.edges()).extracting(edge -> edge.node().name())
+				.allSatisfy(name -> assertThat(name.toLowerCase()).contains("mini"));
+		assertThat(connection.pageInfo().hasNextPage()).isFalse();
 	}
 
 	@Test
@@ -63,10 +79,22 @@ class DemoControllerTest {
 	void reviews_batchesAllProducts_inOneCall() {
 		List<Product> products = productCatalogService.listProducts().subList(0, 3);
 
-		Map<Product, List<Review>> reviewsByProduct = controller.reviews(products);
+		Map<Product, Connection<Review>> reviewsByProduct = controller.reviews(products, null, null, null);
 
 		assertThat(reviewsByProduct).hasSize(3);
 		assertThat(reviewService.getBatchCallCount()).isEqualTo(1);
+	}
+
+	@Test
+	void reviews_appliesFilterAndPagination_perProduct() {
+		controller.addReview(new AddReviewInput("p1", "Jordan", 2, "meh"));
+		controller.addReview(new AddReviewInput("p1", "Sam", 5, "great"));
+		List<Product> products = List.of(productCatalogService.findProduct("p1").orElseThrow());
+
+		Map<Product, Connection<Review>> reviewsByProduct = controller.reviews(products, new ReviewFilter(4), 10, null);
+
+		assertThat(reviewsByProduct.values()).extracting(Connection::edges)
+				.allSatisfy(edges -> assertThat(edges).extracting(edge -> edge.node().rating()).containsOnly(5));
 	}
 
 	@Test

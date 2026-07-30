@@ -2,7 +2,7 @@ type Product {
     id: ID!
     name: String!
     priceCents: Int!
-    reviews: [Review!]!
+    reviews(filter: ReviewFilter, first: Int, after: String): ReviewConnection!
 }
 
 type Review {
@@ -13,8 +13,42 @@ type Review {
     comment: String
 }
 
+type PageInfo {
+    hasNextPage: Boolean!
+    endCursor: String
+}
+
+type ProductConnection {
+    edges: [ProductEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+}
+type ProductEdge {
+    node: Product!
+    cursor: String!
+}
+
+type ReviewConnection {
+    edges: [ReviewEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+}
+type ReviewEdge {
+    node: Review!
+    cursor: String!
+}
+
+input ProductFilter {
+    nameContains: String
+    minPriceCents: Int
+    maxPriceCents: Int
+}
+input ReviewFilter {
+    minRating: Int
+}
+
 type Query {
-    products: [Product!]!
+    products(filter: ProductFilter, first: Int, after: String): ProductConnection!
     product(id: ID!): Product
 }
 
