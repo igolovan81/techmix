@@ -90,4 +90,19 @@ class DemoControllerTest {
 				.then(() -> controller.addReview(new AddReviewInput("p1", "Sam", 4, "for p1")))
 				.assertNext(review -> assertThat(review.productId()).isEqualTo("p1")).verifyComplete();
 	}
+
+	@Test
+	void deleteReview_removesReview_andReturnsTrue() {
+		Review review = controller.addReview(new AddReviewInput("p1", "Jordan", 5, "Great product"));
+
+		boolean deleted = controller.deleteReview(review.id());
+
+		assertThat(deleted).isTrue();
+		assertThat(reviewService.findByProductIds(List.of("p1")).get("p1")).doesNotContain(review);
+	}
+
+	@Test
+	void deleteReview_returnsFalse_whenReviewUnknown() {
+		assertThat(controller.deleteReview("unknown-id")).isFalse();
+	}
 }

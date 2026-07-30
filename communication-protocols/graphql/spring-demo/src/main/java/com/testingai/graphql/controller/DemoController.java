@@ -13,6 +13,7 @@ import org.springframework.graphql.data.method.annotation.BatchMapping;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SubscriptionMapping;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Flux;
 
@@ -71,6 +72,7 @@ public class DemoController {
 	 * Mutation — adds a review to a product and publishes it to {@link #reviewAdded} subscribers.
 	 */
 	@MutationMapping
+	@PreAuthorize("isAuthenticated()")
 	public Review addReview(@Argument AddReviewInput input) {
 		log.info("[addReview] productId={} author={} rating={}", input.productId(), input.author(), input.rating());
 		if (productCatalogService.findProduct(input.productId()).isEmpty()) {
@@ -80,9 +82,21 @@ public class DemoController {
 	}
 
 	/**
+	 * Mutation — ADMIN-only. The one action where USER and ADMIN behave differently; every other operation in this demo
+	 * either requires no role or just "logged in."
+	 */
+	@MutationMapping
+	@PreAuthorize("hasRole('ADMIN')")
+	public boolean deleteReview(@Argument String id) {
+		log.info("[deleteReview] reviewId={}", id);
+		return reviewService.deleteReview(id);
+	}
+
+	/**
 	 * Subscription — streams every review added from this point on, optionally filtered to one product.
 	 */
 	@SubscriptionMapping
+	@PreAuthorize("isAuthenticated()")
 	public Flux<Review> reviewAdded(@Argument String productId) {
 		log.info("[reviewAdded] subscription opened, productId={}", productId);
 		Flux<Review> stream = reviewService.reviewAdded();
