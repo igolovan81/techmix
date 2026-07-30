@@ -86,6 +86,20 @@ mvn gatling:test -pl graphql/spring-demo                 # Gatling load test —
 mvn verify -Pjmeter-load-test -pl graphql/spring-demo    # JMeter load test — requires the app running first
 ```
 
+### Webhooks communication protocol demo (run from the reactor root, no docker infrastructure required)
+
+```bash
+cd communication-protocols
+
+mvn clean package                                                      # build both apps (reactor build)
+mvn test -pl webhooks/producer-demo,webhooks/consumer-demo              # unit tests for both modules (Gatling excluded automatically)
+mvn test -pl webhooks/consumer-demo -Dtest=ClassName                    # single test class
+mvn -pl webhooks/consumer-demo spring-boot:run                          # run the consumer first (receives on :8097)
+mvn -pl webhooks/producer-demo spring-boot:run                          # then the producer (dispatches from :8096)
+mvn gatling:test -pl webhooks/producer-demo                             # Gatling load test — requires both apps running first
+mvn verify -Pjmeter-load-test -pl webhooks/producer-demo                # JMeter load test — requires both apps running first
+```
+
 ### Camunda workflow engine demo (run from the reactor root — requires Docker for both the app and `mvn test`)
 
 ```bash
@@ -191,6 +205,8 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
 | `communication-protocols/grpc/{server-demo,client-demo}/` | gRPC demo — two independent Spring Boot apps covering all four RPC patterns (unary, server/client/bidi streaming); `server-demo` must be started before `client-demo` — no external infrastructure required |
 | `communication-protocols/graphql/spring-demo/` | GraphQL demo — single Spring Boot app covering query/nested-fetch, DataLoader batching, mutation, and subscription patterns against a Products↔Reviews domain — no external infrastructure required |
+| `communication-protocols/webhooks/producer-demo/` | Webhooks demo — subscription registry, HMAC-signed dispatch, retry/backoff, dead-lettering — no external infrastructure required |
+| `communication-protocols/webhooks/consumer-demo/` | Webhooks demo — signature verification, delivery-id idempotency/dedup, on-demand failure simulation — no external infrastructure required |
 | `reactive-programming/project-reactor/{spring-demo,upstream-demo}/` | Project Reactor demo — two independent Spring Boot WebFlux apps covering Mono/Flux basics, backpressure/error handling, schedulers/concurrency, and SSE/WebClient streaming; `upstream-demo` must be started before `spring-demo`'s `streaming/upstream/*` endpoints work — no external infrastructure required |
 | `workflow-engines/camunda/spring-demo/` | Camunda 8 (Zeebe) BPMN workflow demo — service tasks, exclusive gateway, user task (approval), and error-boundary-driven failure routing over the order-fulfillment domain shared with `distributed-transactions/saga`; requires Docker for both the running app (`docker compose`) and `mvn test` (Testcontainers) |
 | `spring-boot-starters/<starter>/<starter>-spring-boot-starter/` + `.../spring-demo/` | Custom Spring Boot starter demos — each starter is an auto-configuration jar plus a consuming demo app in the same Maven reactor (currently: request-logging) — no external infrastructure required |
