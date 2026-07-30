@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>GraphiQL</title>
+    <style>
+        body {
+            height: 100%;
+            margin: 0;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #graphiql {
+            height: 100vh;
+        }
+    </style>
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/graphiql@3.9.0/graphiql.min.js" type="application/javascript"></script>
+    <link rel="stylesheet" href="https://unpkg.com/graphiql@3.9.0/graphiql.min.css" />
+</head>
+<body>
+<!--
+    This overrides Spring GraphQL's built-in graphiql/index.html (bundled inside spring-graphql-*.jar), which
+    references unversioned unpkg.com URLs (e.g. unpkg.com/graphiql/graphiql.min.js). Those resolve to whatever
+    "latest" is at request time — graphiql's latest major restructured its build output and no longer publishes
+    graphiql.min.js/.min.css at that path, so the default page hangs on "Loading..." forever. Pinning exact,
+    confirmed-working versions here (a file at this same classpath-relative location shadows the one in the
+    dependency jar) avoids that. The @graphiql/plugin-explorer sidebar plugin from the original template is
+    dropped rather than paired with a version pin, since it's non-essential and adds another moving part that can
+    break the same way.
+-->
+<div id="graphiql">Loading...</div>
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const path = params.get("path") || "/graphql";
+    const url = `${location.protocol}//${location.host}${path}`;
+    const wsPath = params.get("wsPath") || "/graphql";
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const subscriptionUrl = `${wsProtocol}//${location.host}${wsPath}`;
+    const gqlFetcher = GraphiQL.createFetcher({'url': url, 'subscriptionUrl': subscriptionUrl});
+    const xsrfToken = document.cookie.match(new RegExp('(?:^| )XSRF-TOKEN=([^;]+)'));
+    const headers = xsrfToken ? `{ "X-XSRF-TOKEN" : "${ xsrfToken[1] }" }` : `{}`;
+    ReactDOM.render(
+        React.createElement(GraphiQL, {
+            fetcher: gqlFetcher,
+            defaultVariableEditorOpen: true,
+            headerEditorEnabled: true,
+            shouldPersistHeaders: true,
+            headers: headers
+        }),
+        document.getElementById('graphiql'),
+    );
+</script>
+</body>
+</html>
