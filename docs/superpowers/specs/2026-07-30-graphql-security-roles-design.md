@@ -48,16 +48,9 @@ Add `deleteReview(String reviewId): boolean` — scans `reviewsByProductId`'s va
 
 ## Error handling
 
-`ErrorType.UNAUTHORIZED` and `ErrorType.FORBIDDEN` (already present in the enum, unused until now) map directly onto Spring Security's two method-security failure modes:
+`ErrorType.UNAUTHORIZED` and `ErrorType.FORBIDDEN` (already present in the enum, unused until now) map onto Spring Security's method-security failures — but both "not authenticated" and "wrong role" throw the **same** exception type (`org.springframework.security.authorization.AuthorizationDeniedException`, which extends `AccessDeniedException` — verified against the `spring-security-core` jar), so `DemoExceptionResolver` can't distinguish them by `instanceof` alone the way `IllegalArgumentException` → `BAD_REQUEST` already does. It instead inspects the current `SecurityContextHolder`'s `Authentication` when it catches an `AccessDeniedException`: if it's `null` or an `AnonymousAuthenticationToken` (no real credentials presented) → `UNAUTHORIZED`; otherwise (a genuinely authenticated principal, just missing the required role) → `FORBIDDEN`.
 
-| Exception | Classified as |
-|---|---|
-| Authentication-required failure (anonymous caller hits `@PreAuthorize("isAuthenticated()")`) | `UNAUTHORIZED` |
-| `org.springframework.security.access.AccessDeniedException` (authenticated as USER, hits `@PreAuthorize("hasRole('ADMIN')")`) | `FORBIDDEN` |
-
-Extend `DemoExceptionResolver.resolveToSingleError`'s existing `instanceof` chain with these two branches (same pattern already used for `IllegalArgumentException` → `BAD_REQUEST`).
-
-Because errors are per-field, a single query like `{ products { id } deleteReview(id: "r1") }` called anonymously returns `products` data **and** an `UNAUTHORIZED` error in the same response — the same partial-failure story the module's `FailureSimulator`-driven `product(id)` query already tells, now for authorization instead of simulated infrastructure failure.
+Because errors are per-field, a single **mutation** selecting both `addReview` and `deleteReview` in one operation, called as an authenticated USER (not ADMIN), returns `addReview`'s data **and** a `FORBIDDEN` error for `deleteReview` in the same response — the same partial-failure story the module's `FailureSimulator`-driven `product(id)` query already tells, now for authorization instead of simulated infrastructure failure. (A query mixing `products` with a mutation field in one operation, as originally sketched here, isn't valid GraphQL — an operation has exactly one root type — so the demonstration uses two mutation-type fields together instead.)
 
 ## Testing
 
@@ -66,8 +59,9 @@ Because errors are per-field, a single query like `{ products { id } deleteRevie
   - anonymous: `products` succeeds; `addReview` and `deleteReview` both return an `UNAUTHORIZED` error
   - authenticated USER: `addReview` succeeds; `deleteReview` returns a `FORBIDDEN` error
   - authenticated ADMIN: both `addReview` and `deleteReview` succeed
-  - one mixed-request test asserting the partial-failure shape described above (`products` data present alongside an `UNAUTHORIZED` error in the same response)
-- **Subscription auth** — the exact way to attach a Basic-auth header to `WebSocketGraphQlTester`'s handshake request needs verifying against the real `spring-graphql-test` jar (same rigor as the rest of this module — no guessing from docs) before finalizing that test in the implementation plan; if no clean header-attachment API exists on the tester builder, fall back to constructing the underlying `WebSocketClient`/handshake manually.
+  - one mixed-mutation test (both `addReview` and `deleteReview` selected in the same operation, called as USER) asserting the partial-failure shape described above
+  - anonymous subscription attempt on `reviewAdded` is rejected the same way as the anonymous mutation attempts
+- **Subscription auth** — `WebSocketGraphQlTester.Builder` extends `WebGraphQlTester.Builder`, which exposes `.header(String, String...)` (verified against the `spring-graphql-test` jar), so a Basic-auth header attaches the same way as on `HttpGraphQlTester`. `@PreAuthorize` on the Flux-returning `reviewAdded` method behaves synchronously exactly like the query/mutation methods (not deferred to subscribe-time) because this module's `SecurityConfig` uses plain `@EnableMethodSecurity`, not `@EnableReactiveMethodSecurity` — the latter is a separate, explicitly-opted-into annotation in Spring Security, not something that activates automatically just because a method returns `Flux`/`Mono` (verified against Spring Security's reference docs).
 - No changes to the existing `InventoryWorkerTest`-equivalent style tests for `DemoController`'s other methods — `products`/`product`/`addReview`'s existing unit tests in `DemoControllerTest` are unaffected since method security is enforced by the Spring AOP proxy, not by the plain Java method call `DemoControllerTest` already exercises directly (calling `controller.deleteReview(...)` directly bypasses `@PreAuthorize` entirely, same as it already does for the existing methods) — so authorization behavior can only be verified through `DemoIntegrationTest`'s real Spring context, not the plain-object `DemoControllerTest`.
 
 ## Docs
