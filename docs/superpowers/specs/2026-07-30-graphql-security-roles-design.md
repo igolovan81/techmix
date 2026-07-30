@@ -27,11 +27,11 @@ Authorization for individual GraphQL operations happens entirely at the method l
 ```graphql
 type Mutation {
   addReview(input: AddReviewInput!): Review!
-  deleteReview(id: ID!): Boolean!
+  deleteReview(id: ID!): Boolean
 }
 ```
 
-`deleteReview` returns `true` if a review with that id existed and was removed, `false` otherwise (no error for "not found" — deleting something already gone is treated as a no-op success, standard idempotent-delete semantics).
+`deleteReview` returns `true` if a review with that id existed and was removed, `false` otherwise (no error for "not found" — deleting something already gone is treated as a no-op success, standard idempotent-delete semantics). The return type is the **nullable** `Boolean`, not `Boolean!` — this was empirically verified (live, reverted probe) to matter: graphql-java propagates a null result up past a non-nullable field to the nearest nullable ancestor, and since `deleteReview` sits directly under the root `Mutation` object, a `Boolean!` declaration would wipe out the **entire response's `data`** (including a successful sibling `addReview` in the same operation) whenever `deleteReview` is denied — silently defeating the partial-failure story this addendum exists to demonstrate. With the nullable `Boolean`, a denied call correctly yields `data: { deleteReview: null }` (or, alongside another field, `data: { addReview: {...}, deleteReview: null }`) plus exactly one classified error — confirmed live for all three cases (anonymous, wrong role, admin success).
 
 ## Patterns implemented (extends the existing 4-pattern table)
 
