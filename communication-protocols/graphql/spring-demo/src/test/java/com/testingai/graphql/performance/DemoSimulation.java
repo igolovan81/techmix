@@ -17,7 +17,7 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 public class DemoSimulation extends Simulation {
 
 	private static final String PRODUCTS_QUERY_BODY = """
-			{"query":"{ products { id name priceCents reviews { id author rating } } }"}""";
+			{"query":"{ products(first: 40) { edges { node { id name priceCents reviews(first: 10) { edges { node { id author rating } } } } } } }"}""";
 
 	private static final String PRODUCT_QUERY_BODY = """
 			{"query":"{ product(id: \\"p1\\") { id name priceCents } }"}""";

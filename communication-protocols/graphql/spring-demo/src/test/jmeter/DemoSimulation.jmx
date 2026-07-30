@@ -50,7 +50,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{&quot;query&quot;:&quot;{ products { id name priceCents reviews { id author rating } } }&quot;}</stringProp>
+                <stringProp name="Argument.value">{&quot;query&quot;:&quot;{ products(first: 40) { edges { node { id name priceCents reviews(first: 10) { edges { node { id author rating } } } } } } }&quot;}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
