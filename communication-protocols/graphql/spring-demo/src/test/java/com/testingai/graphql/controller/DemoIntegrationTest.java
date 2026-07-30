@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.graphql.ResponseError;
+import org.springframework.graphql.client.SubscriptionErrorException;
 import org.springframework.graphql.execution.ErrorType;
 import org.springframework.graphql.test.tester.GraphQlTester;
 import org.springframework.graphql.test.tester.HttpGraphQlTester;
@@ -18,8 +19,10 @@ import org.springframework.web.reactive.socket.client.TomcatWebSocketClient;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -99,8 +102,8 @@ class DemoIntegrationTest {
 	}
 
 	@Test
-	void mutation_addReview_returnsCreatedReview() {
-		graphQlTester.document("""
+	void mutation_addReview_succeeds_whenAuthenticatedAsUser() {
+		asUser().document("""
 				mutation {
 				  addReview(input: { productId: "p1", author: "Jordan", rating: 5, comment: "Great product" }) {
 				    author
@@ -113,7 +116,7 @@ class DemoIntegrationTest {
 
 	@Test
 	void mutation_addReview_isRejected_whenProductUnknown() {
-		graphQlTester.document("""
+		asUser().document("""
 				mutation {
 				  addReview(input: { productId: "unknown", author: "Jordan", rating: 5, comment: "x" }) {
 				    id
@@ -128,30 +131,119 @@ class DemoIntegrationTest {
 	}
 
 	@Test
+	void mutation_addReview_isRejected_whenAnonymous() {
+		graphQlTester.document("""
+				mutation {
+				  addReview(input: { productId: "p1", author: "Jordan", rating: 5, comment: "x" }) { id }
+				}
+				""").execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.UNAUTHORIZED)));
+	}
+
+	@Test
+	void mutation_deleteReview_isRejected_whenAnonymous() {
+		graphQlTester.document("""
+				mutation {
+				  deleteReview(id: "does-not-matter")
+				}
+				""").execute().errors().satisfy(errors -> {
+			assertThat(errors).hasSize(1);
+			assertThat(errors.get(0).getErrorType()).isEqualTo(ErrorType.UNAUTHORIZED);
+		});
+	}
+
+	@Test
+	void mutation_deleteReview_isRejected_whenAuthenticatedAsUser() {
+		asUser().document("""
+				mutation {
+				  deleteReview(id: "does-not-matter")
+				}
+				""").execute().errors().satisfy(errors -> {
+			assertThat(errors).hasSize(1);
+			assertThat(errors.get(0).getErrorType()).isEqualTo(ErrorType.FORBIDDEN);
+		});
+	}
+
+	@Test
+	void mutation_deleteReview_succeeds_whenAuthenticatedAsAdmin() {
+		Review review = reviewService.addReview("p1", "Temp", 3, "to be deleted");
+
+		asAdmin().document("""
+				mutation {
+				  deleteReview(id: "%s")
+				}
+				""".formatted(review.id())).execute().path("deleteReview").entity(Boolean.class).isEqualTo(true);
+	}
+
+	@Test
+	void mutation_mixedFields_partiallyFails_whenUserLacksAdminRole() {
+		List<ResponseError> errors = new ArrayList<>();
+
+		asUser().document("""
+				mutation {
+				  addReview(input: { productId: "p1", author: "Casey", rating: 5, comment: "Nice" }) { id author }
+				  deleteReview(id: "does-not-matter")
+				}
+				""").execute().errors().satisfy(errors::addAll).path("addReview.author").entity(String.class)
+				.isEqualTo("Casey");
+
+		assertThat(errors).hasSize(1);
+		assertThat(errors.get(0).getErrorType()).isEqualTo(ErrorType.FORBIDDEN);
+	}
+
+	@Test
 	void subscription_streamsReviewAdded_whenMutationPublishes() {
+		WebSocketGraphQlTester authenticatedTester = webSocketGraphQlTester.mutate()
+				.header("Authorization", basicAuthHeader("user", "userPassword")).build();
+		try {
+			Flux<Review> subscription = authenticatedTester.document("""
+					subscription {
+					  reviewAdded(productId: "p1") {
+					    id
+					    productId
+					    author
+					    rating
+					    comment
+					  }
+					}
+					""").executeSubscription().toFlux("reviewAdded", Review.class);
+
+			// thenAwait: the WebSocket "subscribe" message needs a round trip to the server before DemoController's
+			// reviewAdded() resolver is actually registered on the sink; without this gap the mutation below can fire
+			// (and directBestEffort() will drop it) before the subscription is live server-side.
+			StepVerifier.create(subscription).thenAwait(Duration.ofSeconds(2)).then(() -> asUser().document("""
+					mutation {
+					  addReview(input: { productId: "p1", author: "Riley", rating: 4, comment: "Solid" }) {
+					    id
+					  }
+					}
+					""").execute()).assertNext(review -> assertThat(review.author()).isEqualTo("Riley")).thenCancel()
+					.verify(Duration.ofSeconds(10));
+		} finally {
+			authenticatedTester.stop().block();
+		}
+	}
+
+	@Test
+	void subscription_isRejected_whenAnonymous() {
 		Flux<Review> subscription = webSocketGraphQlTester.document("""
 				subscription {
 				  reviewAdded(productId: "p1") {
 				    id
-				    productId
-				    author
-				    rating
-				    comment
 				  }
 				}
 				""").executeSubscription().toFlux("reviewAdded", Review.class);
 
-		// thenAwait: the WebSocket "subscribe" message needs a round trip to the server before DemoController's
-		// reviewAdded() resolver is actually registered on the sink; without this gap the mutation below can fire
-		// (and directBestEffort() will drop it) before the subscription is live server-side.
-		StepVerifier.create(subscription).thenAwait(Duration.ofSeconds(2)).then(() -> graphQlTester.document("""
-				mutation {
-				  addReview(input: { productId: "p1", author: "Riley", rating: 4, comment: "Solid" }) {
-				    id
-				  }
-				}
-				""").execute()).assertNext(review -> assertThat(review.author()).isEqualTo("Riley")).thenCancel()
-				.verify(Duration.ofSeconds(10));
+		// Subscription-establishment authorization failures don't route through DemoExceptionResolver the way
+		// query/mutation errors do (verified live, both before and after Task 3's resolver changes) — the client
+		// instead sees a generic SubscriptionErrorException classified INTERNAL_ERROR, not our UNAUTHORIZED. This
+		// is a documented Spring GraphQL scope-limit, not a bug this demo works around.
+		StepVerifier.create(subscription).expectErrorSatisfies(error -> {
+			assertThat(error).isInstanceOf(SubscriptionErrorException.class);
+			SubscriptionErrorException subscriptionError = (SubscriptionErrorException) error;
+			assertThat(subscriptionError.getErrors()).anySatisfy(
+					responseError -> assertThat(responseError.getErrorType()).isEqualTo(ErrorType.INTERNAL_ERROR));
+		}).verify(Duration.ofSeconds(10));
 	}
 
 	@Test
@@ -183,5 +275,18 @@ class DemoIntegrationTest {
 		}
 
 		fail("Expected at least one simulated failure across 200 attempts (5% failure rate)");
+	}
+
+	private HttpGraphQlTester asUser() {
+		return graphQlTester.mutate().header("Authorization", basicAuthHeader("user", "userPassword")).build();
+	}
+
+	private HttpGraphQlTester asAdmin() {
+		return graphQlTester.mutate().header("Authorization", basicAuthHeader("admin", "adminPassword")).build();
+	}
+
+	private static String basicAuthHeader(String username, String password) {
+		String credentials = username + ":" + password;
+		return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
 	}
 }
