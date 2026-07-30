@@ -70,6 +70,63 @@ curl -s http://localhost:8092/graphql \
 # {"errors":[{"message":"Simulated 5% failure in product query", ...}],"data":{"products":[...40 items...],"product":null}}
 ```
 
+## Security
+
+Three operations are gated by HTTP Basic auth and Spring Security method security (`@PreAuthorize` on `DemoController`), demonstrating that GraphQL authorization is field-level, not URL-level — there's only one endpoint (`/graphql`) for every operation:
+
+| Operation | Rule |
+|---|---|
+| `products`, `product(id)` | Public — no annotation |
+| `addReview`, `reviewAdded` (subscription) | `isAuthenticated()` — any of the two demo users |
+| `deleteReview(id)` | `hasRole('ADMIN')` — the one action where the two demo users behave differently |
+
+Demo users (same credentials as `backend/rest-api`, in-memory, not for production use): `user`/`userPassword` (ROLE_USER), `admin`/`adminPassword` (ROLE_ADMIN).
+
+**Anonymous — public query still works:**
+
+```bash
+curl -s http://localhost:8092/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ products { id } }"}'
+```
+
+**Anonymous — protected mutation is rejected:**
+
+```bash
+curl -s http://localhost:8092/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"mutation { addReview(input: { productId: \"p1\", author: \"a\", rating: 5, comment: \"c\" }) { id } }"}'
+# {"errors":[{"message":"Access Denied", "extensions":{"classification":"UNAUTHORIZED"}}, ...],"data":null}
+```
+
+**USER — allowed to add a review, forbidden from deleting one:**
+
+```bash
+curl -s -u user:userPassword http://localhost:8092/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"mutation { addReview(input: { productId: \"p1\", author: \"Jordan\", rating: 5, comment: \"Great product\" }) { id author } }"}'
+
+curl -s -u user:userPassword http://localhost:8092/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"mutation { deleteReview(id: \"some-review-id\") }"}'
+# {"errors":[{"message":"Access Denied", "extensions":{"classification":"FORBIDDEN"}}],"data":{"deleteReview":null}}
+```
+
+**ADMIN — allowed to delete a review:**
+
+```bash
+curl -s -u admin:adminPassword http://localhost:8092/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"mutation { deleteReview(id: \"some-review-id\") }"}'
+# {"data":{"deleteReview":true}}
+```
+
+**Scope limits:**
+
+- Demo credentials only — HTTP Basic, plaintext (`{noop}`-prefixed) in-memory users, matching this repo's "local demo" scope everywhere else. Not a production security guide: no JWT/OAuth2/OIDC, no real password encoding, no per-user data ownership (roles gate *actions*, not *which data a user can see*).
+- CSRF is disabled in `SecurityConfig` — matches `backend/rest-api`, and is irrelevant here since this is a stateless Basic-auth API with no cookie-based session.
+- Subscription-establishment authorization failures don't go through the same error classification as query/mutation fields — an unauthenticated `reviewAdded` subscription attempt fails with a generic transport-level error (`SubscriptionErrorException`, classified `INTERNAL_ERROR`) rather than `UNAUTHORIZED`. This is a Spring GraphQL limitation for this failure mode, not something this demo works around.
+
 ## Build & test
 
 ```bash
