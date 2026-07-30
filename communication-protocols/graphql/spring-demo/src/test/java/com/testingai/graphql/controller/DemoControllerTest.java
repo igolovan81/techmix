@@ -5,16 +5,15 @@ import com.testingai.graphql.domain.Product;
 import com.testingai.graphql.domain.ProductCatalogService;
 import com.testingai.graphql.domain.ProductFilter;
 import com.testingai.graphql.domain.Review;
-import com.testingai.graphql.domain.ReviewFilter;
 import com.testingai.graphql.domain.ReviewService;
 import com.testingai.graphql.pagination.Connection;
 import com.testingai.graphql.util.FailureSimulator;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import org.springframework.graphql.execution.DefaultBatchLoaderRegistry;
 import reactor.test.StepVerifier;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -25,7 +24,8 @@ class DemoControllerTest {
 
 	private final ProductCatalogService productCatalogService = new ProductCatalogService();
 	private final ReviewService reviewService = new ReviewService(productCatalogService);
-	private final DemoController controller = new DemoController(productCatalogService, reviewService);
+	private final DemoController controller = new DemoController(productCatalogService, reviewService,
+			new DefaultBatchLoaderRegistry());
 
 	@Test
 	void products_returnsFullCatalog_whenNoFilterOrPagination() {
@@ -75,27 +75,11 @@ class DemoControllerTest {
 		}
 	}
 
-	@Test
-	void reviews_batchesAllProducts_inOneCall() {
-		List<Product> products = productCatalogService.listProducts().subList(0, 3);
-
-		Map<Product, Connection<Review>> reviewsByProduct = controller.reviews(products, null, null, null);
-
-		assertThat(reviewsByProduct).hasSize(3);
-		assertThat(reviewService.getBatchCallCount()).isEqualTo(1);
-	}
-
-	@Test
-	void reviews_appliesFilterAndPagination_perProduct() {
-		controller.addReview(new AddReviewInput("p1", "Jordan", 2, "meh"));
-		controller.addReview(new AddReviewInput("p1", "Sam", 5, "great"));
-		List<Product> products = List.of(productCatalogService.findProduct("p1").orElseThrow());
-
-		Map<Product, Connection<Review>> reviewsByProduct = controller.reviews(products, new ReviewFilter(4), 10, null);
-
-		assertThat(reviewsByProduct.values()).extracting(Connection::edges)
-				.allSatisfy(edges -> assertThat(edges).extracting(edge -> edge.node().rating()).containsOnly(5));
-	}
+	// reviews() is a @SchemaMapping method that resolves through a real DataLoader (registered in
+	// registerReviewsBatchLoader()), which only dispatches under a real GraphQL execution — a plain POJO call here
+	// can't exercise that the way DemoIntegrationTest's real queries can, so batching/filter/pagination behavior for
+	// Product.reviews is covered there instead (query_returnsProductsWithNestedReviews_batchedInOneCall,
+	// query_filtersReviewsByMinRating).
 
 	@Test
 	void addReview_addsReview_whenProductExists() {

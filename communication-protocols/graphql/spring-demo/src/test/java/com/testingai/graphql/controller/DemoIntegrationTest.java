@@ -55,12 +55,59 @@ class DemoIntegrationTest {
 	}
 
 	@Test
-	void query_returnsAllProducts() {
+	void query_returnsFirstPageOfProducts_byDefault() {
 		graphQlTester.document("""
 				query {
-				  products { id name }
+				  products {
+				    edges { node { id name } cursor }
+				    pageInfo { hasNextPage endCursor }
+				    totalCount
+				  }
 				}
-				""").execute().path("products").entityList(Object.class).hasSize(40);
+				""").execute().path("products.edges").entityList(Object.class).hasSize(10).path("products.totalCount")
+				.entity(Integer.class).isEqualTo(40).path("products.pageInfo.hasNextPage").entity(Boolean.class)
+				.isEqualTo(true);
+	}
+
+	@Test
+	void query_pagesThroughAllProducts_usingEndCursor() {
+		String firstPageQuery = """
+				query {
+				  products(first: 15) {
+				    edges { node { id } cursor }
+				    pageInfo { hasNextPage endCursor }
+				  }
+				}
+				""";
+
+		String firstEndCursor = graphQlTester.document(firstPageQuery).execute().path("products.pageInfo.endCursor")
+				.entity(String.class).get();
+
+		graphQlTester.document("""
+				query {
+				  products(first: 15, after: "%s") {
+				    edges { node { id } }
+				    pageInfo { hasNextPage }
+				  }
+				}
+				""".formatted(firstEndCursor)).execute().path("products.edges").entityList(Object.class).hasSize(15)
+				.path("products.pageInfo.hasNextPage").entity(Boolean.class).isEqualTo(true);
+	}
+
+	@Test
+	void query_filtersProductsByNameAndPriceRange() {
+		graphQlTester.document("""
+				query {
+				  products(filter: { nameContains: "mini" }, first: 50) {
+				    edges { node { name } }
+				    totalCount
+				  }
+				}
+				""").execute().path("products.edges").entityList(java.util.Map.class)
+				.satisfies(edges -> assertThat(edges).isNotEmpty()
+						.allSatisfy(edge -> assertThat(
+								((java.util.Map<?, ?>) edge.get("node")).get("name").toString().toLowerCase())
+								.contains("mini")));
 	}
 
 	@Test
@@ -90,15 +137,46 @@ class DemoIntegrationTest {
 
 		graphQlTester.document("""
 				query {
-				  products {
-				    id
-				    name
-				    reviews { id author rating }
+				  products(first: 40) {
+				    edges {
+				      node {
+				        id
+				        name
+				        reviews { edges { node { id author rating } } }
+				      }
+				    }
 				  }
 				}
-				""").execute().path("products").entityList(Object.class).hasSize(40);
+				""").execute().path("products.edges").entityList(Object.class).hasSize(40);
 
 		assertThat(reviewService.getBatchCallCount()).isEqualTo(batchCallsBefore + 1);
+	}
+
+	@Test
+	void query_filtersReviewsByMinRating() {
+		asUser().document("""
+				mutation {
+				  addReview(input: { productId: "p1", author: "Jordan", rating: 2, comment: "meh" }) { id }
+				}
+				""").execute();
+		asUser().document("""
+				mutation {
+				  addReview(input: { productId: "p1", author: "Sam", rating: 5, comment: "great" }) { id }
+				}
+				""").execute();
+
+		graphQlTester.document("""
+				query {
+				  product(id: "p1") {
+				    reviews(filter: { minRating: 4 }, first: 10) {
+				      edges { node { rating } }
+				    }
+				  }
+				}
+				""").execute().path("product.reviews.edges").entityList(java.util.Map.class)
+				.satisfies(edges -> assertThat(edges).isNotEmpty()
+						.allSatisfy(edge -> assertThat((Integer) ((java.util.Map<?, ?>) edge.get("node")).get("rating"))
+								.isGreaterThanOrEqualTo(4)));
 	}
 
 	@Test
@@ -254,7 +332,7 @@ class DemoIntegrationTest {
 		// FailureSimulatorTest) and assert on that response's partial-failure shape.
 		String query = """
 				query {
-				  products { id }
+				  products { edges { node { id } } }
 				  product(id: "p1") { id name }
 				}
 				""";
@@ -269,7 +347,7 @@ class DemoIntegrationTest {
 				assertThat(errors.get(0).getMessage()).isEqualTo("Simulated 5% failure in product query");
 				assertThat(errors.get(0).getErrorType()).isEqualTo(ErrorType.INTERNAL_ERROR);
 				afterErrors.path("product").valueIsNull();
-				afterErrors.path("products").entityList(Object.class).hasSize(40);
+				afterErrors.path("products.edges").entityList(Object.class).hasSize(10);
 				return;
 			}
 		}

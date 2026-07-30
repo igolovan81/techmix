@@ -33,9 +33,9 @@ class SecurityConfigTest {
 
 		authenticated.document("""
 				query {
-				  products { id }
+				  products { edges { node { id } } }
 				}
-				""").execute().path("products").entityList(Object.class).hasSize(40);
+				""").execute().path("products.edges").entityList(Object.class).hasSize(10);
 	}
 
 	@Test
