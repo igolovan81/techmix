@@ -18,7 +18,7 @@ A new `deleteReview` mutation (ADMIN-only) is added specifically because the exi
 - New `communication-protocols/graphql/spring-demo/src/main/java/com/testingai/graphql/config/SecurityConfig.java`:
   - `@EnableWebSecurity` + `@EnableMethodSecurity` (the latter is what `backend/rest-api` turns on but never actually uses via `@PreAuthorize` — here it does real work).
   - `SecurityFilterChain` bean: `permitAll()` on `/graphql` (covers the HTTP POST endpoint and the WebSocket upgrade request, since both share the same path) and `/graphiql`; CSRF disabled (matches `backend/rest-api`; irrelevant for a stateless Basic-auth API with no cookie-based session).
-  - `InMemoryUserDetailsManager` bean with the same two users/roles as `backend/rest-api/src/main/java/com/testingai/config/SecurityConfig.java`.
+  - `InMemoryUserDetailsManager` bean with the same two users/roles as `backend/rest-api/src/main/java/com/testingai/config/SecurityConfig.java` — **with one deliberate deviation**: passwords are prefixed `{noop}userPassword` / `{noop}adminPassword` instead of the bare `"userPassword"` / `"adminPassword"` that `backend/rest-api` uses. This is not a stylistic choice — it was empirically verified (temporary probe, reverted) that Spring Security 6.x's default `PasswordEncoderFactories.createDelegatingPasswordEncoder()` **throws `IllegalArgumentException`** ("no default password encoder configured... prefix this password with `{noop}`") when `matches()` is called against a password with no `{id}` prefix, meaning `backend/rest-api`'s exact pattern would fail every single Basic-auth attempt rather than silently succeeding. This module fixes that so Basic auth actually functions, and the divergence is called out explicitly in code comments and the README rather than silently copied forward.
 
 Authorization for individual GraphQL operations happens entirely at the method layer (`@PreAuthorize` on `DemoController`), **not** the HTTP layer — this is the actual point being demonstrated: you cannot secure "the endpoint" in GraphQL, only individual fields, and one query can legally mix public and protected fields in the same request/response.
 
@@ -70,7 +70,7 @@ Because errors are per-field, a single **mutation** selecting both `addReview` a
 
 ## Scope limits
 
-- Same demo credentials and mechanism as `backend/rest-api` (HTTP Basic, plaintext in-memory users) — not a production security guide, consistent with this repo's "local demo" scope everywhere else.
+- Same demo credentials and mechanism as `backend/rest-api` (HTTP Basic, plaintext in-memory users, `{noop}`-prefixed so the demo actually authenticates — see the dependency/configuration section above) — not a production security guide, consistent with this repo's "local demo" scope everywhere else.
 - No JWT, no OAuth2/OIDC, no password encoding.
 - No per-user data ownership (e.g., "only delete your own review") — roles gate *actions* uniformly, not *data visibility* scoped to the caller.
 - CSRF disabled — matches `backend/rest-api`, irrelevant for a stateless Basic-auth API.
