@@ -35,4 +35,22 @@ public class ProductCatalogService {
 	public List<Product> listProducts() {
 		return products;
 	}
+
+	public List<Product> listProducts(ProductFilter filter) {
+		return products.stream().filter(product -> matches(product, filter)).toList();
+	}
+
+	private static boolean matches(Product product, ProductFilter filter) {
+		if (filter == null) {
+			return true;
+		}
+		if (filter.nameContains() != null
+				&& !product.name().toLowerCase().contains(filter.nameContains().toLowerCase())) {
+			return false;
+		}
+		if (filter.minPriceCents() != null && product.priceCents() < filter.minPriceCents()) {
+			return false;
+		}
+		return filter.maxPriceCents() == null || product.priceCents() <= filter.maxPriceCents();
+	}
 }
