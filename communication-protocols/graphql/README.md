@@ -4,14 +4,15 @@ Demonstrates GraphQL — a schema-first query language for APIs, served over a s
 
 Unlike the [gRPC demo](../grpc/), GraphQL doesn't need a client/server split: any HTTP (or WebSocket, for subscriptions) client can talk to the schema directly, so this module is a single app.
 
-## The four patterns
+## The five patterns
 
 | Pattern | Field/operation | What it demonstrates |
 |---|---|---|
 | Query + nested fetch | `products { reviews { ... } }` | Client asks for exactly the fields it wants, including a nested child collection, in one round trip |
-| DataLoader batching | `Product.reviews` via `@BatchMapping` | Solves the N+1 problem: fetching `reviews` for N products in one query triggers **one** batched call, not N |
+| DataLoader batching | `Product.reviews` via a registered `BatchLoaderRegistry` loader | Solves the N+1 problem: fetching `reviews` for N products in one query triggers **one** batched call, not N |
 | Mutation | `addReview` | A write that returns the created object and publishes it to the subscription stream |
 | Subscription | `reviewAdded(productId)` | Real-time push over a GraphQL-over-WebSocket session, optionally filtered server-side by `productId` |
+| Pagination & filtering | `products(filter, first, after)`, `Product.reviews(filter, first, after)` | Relay-style cursor connections (`edges`/`node`/`cursor`/`pageInfo`) plus input-object filtering, at both the root-query and nested level |
 
 ### Query + nested fetch
 
@@ -38,7 +39,7 @@ Unlike the [gRPC demo](../grpc/), GraphQL doesn't need a client/server split: an
 - Transparent to the schema/client — no change to the query shape, just to how the server resolves it
 
 **Cons**
-- Requires deliberate implementation (`@BatchMapping` in Spring GraphQL, or a `DataLoader` registry in vanilla graphql-java) — nothing prevents writing the naive N+1 version by mistake
+- Requires deliberate implementation (`@BatchMapping` in Spring GraphQL, or a manually registered `BatchLoaderRegistry` loader plus a `@SchemaMapping` resolver — this demo uses the latter for `Product.reviews`, since `@BatchMapping` methods can't accept `@Argument` parameters and this field needs `filter`/`first`/`after`) — nothing prevents writing the naive N+1 version by mistake
 - Batching only helps within a single query execution; it doesn't cache across separate requests
 
 **Typical use cases**
@@ -75,6 +76,22 @@ Unlike the [gRPC demo](../grpc/), GraphQL doesn't need a client/server split: an
 - Live updates: new reviews/comments, order status changes, notifications
 - Dashboards and UIs that should reflect server-side changes without polling
 
+### Pagination & filtering
+
+**Pros**
+- `edges`/`node`/`cursor`/`pageInfo` is the GraphQL-idiomatic pagination shape (Relay connections) — a client can page forward and know whether more data exists without a separate count call
+- Input-object filters (`ProductFilter`, `ReviewFilter`) keep filtering criteria typed and self-documenting in the schema, instead of ad-hoc string query parameters
+- The same generic connection wrapper works for both a root query (`products`) and a nested field (`Product.reviews`)
+
+**Cons**
+- More verbose response shape than a bare list — every item is wrapped in an `edges { node { ... } }` layer
+- This demo's cursors encode a plain list position, not an opaque, storage-independent key — fine for in-memory data, not representative of a cursor scheme robust to underlying reordering
+- A cursor issued under one filter isn't guaranteed meaningful against a different filter — callers are expected to page within one filter, not mix cursors across filters
+
+**Typical use cases**
+- Any list endpoint large enough that returning everything in one response is wasteful (product catalogs, comment threads, activity feeds)
+- APIs where clients need to narrow a large collection by one or more criteria before paging through it
+
 ## Running the demo
 
 No Docker required — everything is in-memory.
@@ -86,7 +103,7 @@ mvn -pl graphql/spring-demo spring-boot:run
 
 GraphiQL (interactive schema explorer): http://localhost:8092/graphiql
 
-See [spring-demo/README.md](spring-demo/README.md) for `curl` and subscription walkthroughs of all four patterns.
+See [spring-demo/README.md](spring-demo/README.md) for `curl` and subscription walkthroughs of all five patterns.
 
 ## Scope
 
