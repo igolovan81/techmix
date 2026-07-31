@@ -1204,6 +1204,7 @@ import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.time.Instant;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -1229,8 +1230,9 @@ class OrderStatusControllerTest {
 
 		controller.statusRequest("order-1", headerAccessor);
 
+		// any(Map.class) disambiguates from convertAndSendToUser's MessagePostProcessor overload
 		verify(messagingTemplate).convertAndSendToUser(eq("session-42"), eq("/queue/orders/order-1/status"), any(),
-				any());
+				any(Map.class));
 	}
 
 	@Test
