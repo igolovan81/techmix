@@ -1223,16 +1223,20 @@ class OrderStatusControllerTest {
 
 	@Test
 	void statusRequest_repliesToSenderSessionQueue_withCurrentOrderState() {
-		Order order = new Order("order-1", OrderStatus.SHIPPED, Instant.now());
-		when(orderTrackingService.get("order-1")).thenReturn(order);
-		SimpMessageHeaderAccessor headerAccessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);
-		headerAccessor.setSessionId("session-42");
+		// Must mock FailureSimulator here too — otherwise this test hits the real 5% failure rate and is flaky.
+		try (MockedStatic<FailureSimulator> mocked = mockStatic(FailureSimulator.class)) {
+			mocked.when(() -> FailureSimulator.maybeThrow(anyString())).thenAnswer(invocation -> null);
+			Order order = new Order("order-1", OrderStatus.SHIPPED, Instant.now());
+			when(orderTrackingService.get("order-1")).thenReturn(order);
+			SimpMessageHeaderAccessor headerAccessor = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);
+			headerAccessor.setSessionId("session-42");
 
-		controller.statusRequest("order-1", headerAccessor);
+			controller.statusRequest("order-1", headerAccessor);
 
-		// any(Map.class) disambiguates from convertAndSendToUser's MessagePostProcessor overload
-		verify(messagingTemplate).convertAndSendToUser(eq("session-42"), eq("/queue/orders/order-1/status"), any(),
-				any(Map.class));
+			// any(Map.class) disambiguates from convertAndSendToUser's MessagePostProcessor overload
+			verify(messagingTemplate).convertAndSendToUser(eq("session-42"), eq("/queue/orders/order-1/status"),
+					any(), any(Map.class));
+		}
 	}
 
 	@Test
