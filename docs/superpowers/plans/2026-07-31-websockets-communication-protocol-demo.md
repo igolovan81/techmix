@@ -1505,6 +1505,8 @@ Expected: PASS
 ```java
 package com.testingai.websockets.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.testingai.websockets.domain.Order;
 import com.testingai.websockets.domain.OrderEvent;
 import org.junit.jupiter.api.Test;
@@ -1538,7 +1540,12 @@ class StompIntegrationTest {
 
 	private StompSession connect() throws Exception {
 		WebSocketStompClient stompClient = new WebSocketStompClient(new StandardWebSocketClient());
-		stompClient.setMessageConverter(new MappingJackson2MessageConverter());
+		// A bare ObjectMapper can't deserialize OrderEvent's Instant field (unlike the app's own autoconfigured
+		// ObjectMapper, which registers JavaTimeModule automatically) — without this, incoming frames fail to
+		// deserialize and are silently dropped by the STOMP client instead of reaching the test's frame handler.
+		MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
+		converter.setObjectMapper(new ObjectMapper().registerModule(new JavaTimeModule()));
+		stompClient.setMessageConverter(converter);
 		return stompClient.connectAsync("ws://localhost:" + port + "/ws-stomp-native", new StompSessionHandlerAdapter() {
 		}).get(5, TimeUnit.SECONDS);
 	}
