@@ -1355,7 +1355,7 @@ class DisconnectEventListenerTest {
 
 		String description = listener.describe(event);
 
-		assertThat(description).contains("session-99").contains("GOING_AWAY");
+		assertThat(description).contains("session-99").contains("1001"); // CloseStatus.toString() renders the numeric code, not the constant name
 	}
 
 	@Test
