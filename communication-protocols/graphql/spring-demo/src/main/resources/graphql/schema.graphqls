@@ -2,16 +2,25 @@ type Product {
     id: ID!
     name: String!
     priceCents: Int!
+    stockQty: Int!
     reviews(filter: ReviewFilter, first: Int, after: String): ReviewConnection!
 }
 
 type Review {
     id: ID!
     productId: ID!
-    author: String!
+    author: User!
     rating: Int!
     comment: String
 }
+
+type User {
+    id: ID!
+    username: String!
+    displayName: String!
+    role: Role!
+}
+enum Role { CUSTOMER ADMIN }
 
 type PageInfo {
     hasNextPage: Boolean!
@@ -63,7 +72,6 @@ type Subscription {
 
 input AddReviewInput {
     productId: ID!
-    author: String!
     rating: Int!
     comment: String
 }

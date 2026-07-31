@@ -7,5 +7,8 @@
 
     <include file="db/changelog/db.changelog-1-create-users-table.xml"/>
     <include file="db/changelog/db.changelog-2-create-categories-table.xml"/>
+    <include file="db/changelog/db.changelog-3-create-products-table.xml"/>
+    <include file="db/changelog/db.changelog-4-create-product-categories-table.xml"/>
+    <include file="db/changelog/db.changelog-5-create-reviews-table.xml"/>
 
 </databaseChangeLog>

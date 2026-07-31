@@ -1,7 +1,10 @@
 package com.testingai.graphql.config;
 
+import com.testingai.graphql.entity.ProductEntity;
+import com.testingai.graphql.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.graphql.test.tester.HttpGraphQlTester;
@@ -17,6 +20,9 @@ class SecurityConfigTest {
 	@LocalServerPort
 	private int port;
 
+	@Autowired
+	private ProductRepository productRepository;
+
 	private HttpGraphQlTester graphQlTester;
 
 	@BeforeEach
@@ -24,6 +30,18 @@ class SecurityConfigTest {
 		WebTestClient webTestClient = WebTestClient.bindToServer().baseUrl("http://localhost:" + port + "/graphql")
 				.build();
 		graphQlTester = HttpGraphQlTester.create(webTestClient);
+
+		// This class shares its Spring context (and thus its database) with other @SpringBootTest(RANDOM_PORT)
+		// classes in this module, none of which roll back between tests — so unlike the original in-memory catalog
+		// (always exactly 40 products), nothing here can assume products already exist. Seed enough to satisfy the
+		// default page size below regardless of what other test classes have (or haven't) inserted yet.
+		for (int i = 0; i < 10; i++) {
+			ProductEntity product = new ProductEntity();
+			product.setName("SecurityConfigTest Product " + i);
+			product.setPriceCents(1000 + i);
+			product.setStockQty(10);
+			productRepository.save(product);
+		}
 	}
 
 	@Test

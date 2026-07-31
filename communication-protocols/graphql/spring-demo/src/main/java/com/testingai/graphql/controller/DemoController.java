@@ -7,6 +7,8 @@ import com.testingai.graphql.domain.ProductFilter;
 import com.testingai.graphql.domain.Review;
 import com.testingai.graphql.domain.ReviewFilter;
 import com.testingai.graphql.domain.ReviewService;
+import com.testingai.graphql.domain.User;
+import com.testingai.graphql.domain.UserService;
 import com.testingai.graphql.pagination.Connection;
 import com.testingai.graphql.pagination.CursorPagination;
 import com.testingai.graphql.util.FailureSimulator;
@@ -16,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.dataloader.DataLoader;
 import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.BatchMapping;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
@@ -26,8 +29,11 @@ import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.security.Principal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -42,6 +48,7 @@ public class DemoController {
 
 	private final ProductCatalogService productCatalogService;
 	private final ReviewService reviewService;
+	private final UserService userService;
 	private final BatchLoaderRegistry batchLoaderRegistry;
 
 	/**
@@ -60,15 +67,14 @@ public class DemoController {
 	}
 
 	/**
-	 * Query — returns a filtered, paginated page of the in-memory catalog. See {@link CursorPagination} for the
-	 * pagination contract (forward-only, {@code first} defaults to 10 and is clamped to 50).
+	 * Query — returns a filtered, paginated page of the catalog, pushed down to the database via keyset pagination (see
+	 * {@link com.testingai.graphql.pagination.KeysetPagination}) rather than loading the full table.
 	 */
 	@QueryMapping
 	public Connection<Product> products(@Argument ProductFilter filter, @Argument Integer first,
 			@Argument String after) {
-		List<Product> filtered = productCatalogService.listProducts(filter);
-		Connection<Product> page = CursorPagination.paginate(filtered, first, after);
-		log.info("[products] returning {} of {} filtered products", page.edges().size(), filtered.size());
+		Connection<Product> page = productCatalogService.listProducts(filter, first, after);
+		log.info("[products] returning {} of {} total products", page.edges().size(), page.totalCount());
 		return page;
 	}
 
@@ -99,16 +105,33 @@ public class DemoController {
 	}
 
 	/**
-	 * Mutation — adds a review to a product and publishes it to {@link #reviewAdded} subscribers.
+	 * Mutation — adds a review to a product and publishes it to {@link #reviewAdded} subscribers. The author is the
+	 * authenticated principal, resolved to a domain {@link User}, not a caller-supplied value.
 	 */
 	@MutationMapping
 	@PreAuthorize("isAuthenticated()")
-	public Review addReview(@Argument AddReviewInput input) {
-		log.info("[addReview] productId={} author={} rating={}", input.productId(), input.author(), input.rating());
-		if (productCatalogService.findProduct(input.productId()).isEmpty()) {
-			throw new IllegalArgumentException("Unknown product: " + input.productId());
+	public Review addReview(@Argument AddReviewInput input, Principal principal) {
+		log.info("[addReview] productId={} username={} rating={}", input.productId(), principal.getName(),
+				input.rating());
+		Long authorId = userService.findByUsername(principal.getName()).orElseThrow(
+				() -> new IllegalStateException("Authenticated principal has no matching User: " + principal.getName()))
+				.id();
+		return reviewService.addReview(input.productId(), authorId, input.rating(), input.comment());
+	}
+
+	/**
+	 * Batch mapping for {@code Review.author} — no {@code @Argument} is needed here (unlike {@link #reviews}), so
+	 * unlike the manual {@code DataLoader} registered in {@link #registerReviewsBatchLoader()}, this can use
+	 * {@code @BatchMapping} directly and let Spring GraphQL register the batch loader itself.
+	 */
+	@BatchMapping
+	public Map<Review, User> author(List<Review> reviews) {
+		Map<Long, User> byId = userService.findByIds(reviews.stream().map(Review::authorId).distinct().toList());
+		Map<Review, User> result = new LinkedHashMap<>();
+		for (Review review : reviews) {
+			result.put(review, byId.get(review.authorId()));
 		}
-		return reviewService.addReview(input.productId(), input.author(), input.rating(), input.comment());
+		return result;
 	}
 
 	/**

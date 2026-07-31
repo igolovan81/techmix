@@ -1,30 +1,31 @@
 package com.testingai.graphql.domain;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Sinks;
-
+import com.testingai.graphql.entity.ProductEntity;
+import com.testingai.graphql.entity.ReviewEntity;
+import com.testingai.graphql.entity.UserEntity;
+import com.testingai.graphql.repository.ProductRepository;
+import com.testingai.graphql.repository.ReviewRepository;
+import com.testingai.graphql.repository.UserRepository;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
-/**
- * In-memory reviews keyed by product id, plus the event stream {@code addReview} publishes to for the
- * {@code reviewAdded} subscription. {@link #findByProductIds(List)} is this demo's DataLoader batch endpoint: however
- * many product ids are passed in, it runs as a single call — see {@link #batchCallCount}.
- */
 @Slf4j
 @Service
 public class ReviewService {
 
-	private static final List<String> SEED_AUTHORS = List.of("Alex", "Priya", "Sam");
-
-	private final Map<String, List<Review>> reviewsByProductId = new ConcurrentHashMap<>();
+	private final ReviewRepository reviewRepository;
+	private final ProductRepository productRepository;
+	private final UserRepository userRepository;
 	// directBestEffort(): delivered only to subscribers already connected at emission time, nothing queued for
 	// subscribers that haven't connected yet — the right semantics for "subscribe to reviews from now on" (an
 	// onBackpressureBuffer() sink would instead buffer emissions indefinitely until the first-ever subscriber
@@ -32,53 +33,34 @@ public class ReviewService {
 	private final Sinks.Many<Review> reviewAddedSink = Sinks.many().multicast().directBestEffort();
 	private final AtomicInteger batchCallCount = new AtomicInteger();
 
-	public ReviewService(ProductCatalogService productCatalogService) {
-		seedReviews(productCatalogService);
+	public ReviewService(ReviewRepository reviewRepository, ProductRepository productRepository,
+			UserRepository userRepository) {
+		this.reviewRepository = reviewRepository;
+		this.productRepository = productRepository;
+		this.userRepository = userRepository;
 	}
 
-	private void seedReviews(ProductCatalogService productCatalogService) {
-		int authorIndex = 0;
-		for (Product product : productCatalogService.listProducts()) {
-			int reviewCount = Integer.parseInt(product.id().substring(1)) % 3;
-			List<Review> seeded = new CopyOnWriteArrayList<>();
-			for (int i = 0; i < reviewCount; i++) {
-				String author = SEED_AUTHORS.get(authorIndex % SEED_AUTHORS.size());
-				authorIndex++;
-				int rating = 3 + (i % 3);
-				seeded.add(new Review(UUID.randomUUID().toString(), product.id(), author, rating,
-						author + "'s review #" + (i + 1) + " of " + product.name()));
-			}
-			reviewsByProductId.put(product.id(), seeded);
-		}
-	}
-
-	/**
-	 * Batch-fetches reviews for every product id in one call — the DataLoader pattern that avoids the N+1 problem when
-	 * resolving {@code Product.reviews} for a list of products in a single GraphQL query.
-	 */
 	public Map<String, List<Review>> findByProductIds(List<String> productIds) {
 		return findByProductIds(productIds, null);
 	}
 
-	/**
-	 * Same batching contract as {@link #findByProductIds(List)}, with an optional {@link ReviewFilter} applied to each
-	 * product's list before it's returned.
-	 */
+	@Transactional(readOnly = true)
 	public Map<String, List<Review>> findByProductIds(List<String> productIds, ReviewFilter filter) {
 		batchCallCount.incrementAndGet();
 		log.info("batch fetching reviews for {} products in one call", productIds.size());
+		List<Long> ids = productIds.stream().map(Long::parseLong).toList();
+		Map<Long, List<Review>> byProductId = reviewRepository.findByProductIdIn(ids).stream()
+				.map(ReviewService::toReview).collect(Collectors.groupingBy(
+						review -> Long.parseLong(review.productId()), LinkedHashMap::new, Collectors.toList()));
+
 		Map<String, List<Review>> result = new LinkedHashMap<>();
 		for (String productId : productIds) {
-			List<Review> reviews = reviewsByProductId.getOrDefault(productId, List.of());
+			List<Review> reviews = byProductId.getOrDefault(Long.parseLong(productId), List.of());
 			result.put(productId, filterReviews(reviews, filter));
 		}
 		return result;
 	}
 
-	/**
-	 * Applies a {@link ReviewFilter} to an already-fetched review list — exposed so a caller that loaded the raw list
-	 * through its own DataLoader (which can't take a {@link ReviewFilter} argument directly) can filter afterward.
-	 */
 	public List<Review> filterReviews(List<Review> reviews, ReviewFilter filter) {
 		if (filter == null || filter.minRating() == null) {
 			return reviews;
@@ -86,9 +68,20 @@ public class ReviewService {
 		return reviews.stream().filter(review -> review.rating() >= filter.minRating()).toList();
 	}
 
-	public Review addReview(String productId, String author, int rating, String comment) {
-		Review review = new Review(UUID.randomUUID().toString(), productId, author, rating, comment);
-		reviewsByProductId.computeIfAbsent(productId, key -> new CopyOnWriteArrayList<>()).add(review);
+	@Transactional
+	public Review addReview(String productId, Long authorId, int rating, String comment) {
+		ProductEntity product = productRepository.findById(Long.parseLong(productId))
+				.orElseThrow(() -> new IllegalArgumentException("Unknown product: " + productId));
+		UserEntity author = userRepository.findById(authorId)
+				.orElseThrow(() -> new NoSuchElementException("Unknown user: " + authorId));
+
+		ReviewEntity entity = new ReviewEntity();
+		entity.setProduct(product);
+		entity.setAuthor(author);
+		entity.setRating(rating);
+		entity.setComment(comment);
+		Review review = toReview(reviewRepository.save(entity));
+
 		reviewAddedSink.tryEmitNext(review);
 		return review;
 	}
@@ -97,21 +90,27 @@ public class ReviewService {
 		return reviewAddedSink.asFlux();
 	}
 
-	/**
-	 * Removes the first review matching {@code reviewId} across every product, returning whether one was found.
-	 * {@code CopyOnWriteArrayList.removeIf} is atomic per list, so this is safe under concurrent {@link #addReview}
-	 * calls without any additional synchronization.
-	 */
+	@Transactional
 	public boolean deleteReview(String reviewId) {
-		for (List<Review> reviews : reviewsByProductId.values()) {
-			if (reviews.removeIf(review -> review.id().equals(reviewId))) {
-				return true;
-			}
+		UUID id;
+		try {
+			id = UUID.fromString(reviewId);
+		} catch (IllegalArgumentException e) {
+			return false;
 		}
-		return false;
+		if (!reviewRepository.existsById(id)) {
+			return false;
+		}
+		reviewRepository.deleteById(id);
+		return true;
 	}
 
 	public int getBatchCallCount() {
 		return batchCallCount.get();
+	}
+
+	static Review toReview(ReviewEntity entity) {
+		return new Review(entity.getId().toString(), entity.getProduct().getId().toString(), entity.getAuthor().getId(),
+				entity.getRating(), entity.getComment());
 	}
 }

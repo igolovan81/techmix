@@ -5,7 +5,7 @@ spring:
     websocket:
       path: /graphql
   datasource:
-    url: jdbc:h2:mem:graphqldemo;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:graphqldemo-${random.uuid};MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
     username: sa
     password:

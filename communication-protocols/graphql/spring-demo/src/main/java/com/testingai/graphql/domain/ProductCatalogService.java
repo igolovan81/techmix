@@ -1,56 +1,62 @@
 package com.testingai.graphql.domain;
 
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
+import com.testingai.graphql.entity.ProductEntity;
+import com.testingai.graphql.pagination.Connection;
+import com.testingai.graphql.pagination.KeysetPagination;
+import com.testingai.graphql.repository.ProductRepository;
+import com.testingai.graphql.repository.ProductSpecifications;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
 
 @Service
 public class ProductCatalogService {
 
-	private static final List<String> PRODUCT_NAMES = List.of("Widget", "Gadget", "Gizmo", "Doohickey", "Thingamajig",
-			"Contraption", "Doodad", "Whatsit", "Gizmotron", "Thingamabob");
-	private static final List<String> PRODUCT_VARIANTS = List.of("Mini", "Standard", "Pro", "Max");
+	private final ProductRepository productRepository;
 
-	private final List<Product> products = buildCatalog();
-
-	private static List<Product> buildCatalog() {
-		List<Product> catalog = new ArrayList<>();
-		int id = 1;
-		for (String variant : PRODUCT_VARIANTS) {
-			for (String name : PRODUCT_NAMES) {
-				long priceCents = 499 + (id * 137L % 4500);
-				catalog.add(new Product("p" + id, variant + " " + name, priceCents));
-				id++;
-			}
-		}
-		return List.copyOf(catalog);
+	public ProductCatalogService(ProductRepository productRepository) {
+		this.productRepository = productRepository;
 	}
 
 	public Optional<Product> findProduct(String productId) {
-		return products.stream().filter(product -> product.id().equals(productId)).findFirst();
+		return parseId(productId).flatMap(productRepository::findById).map(ProductCatalogService::toProduct);
 	}
 
-	public List<Product> listProducts() {
-		return products;
+	public Connection<Product> listProducts(ProductFilter filter, Integer first, String after) {
+		Long cursorId = KeysetPagination.decodeCursor(after);
+		int limit = KeysetPagination.normalizeFirst(first);
+		var spec = ProductSpecifications.matching(filter).and(ProductSpecifications.idAfter(cursorId));
+
+		List<ProductEntity> rows = productRepository.findAll(spec, PageRequest.of(0, limit + 1, Sort.by("id")))
+				.getContent();
+		long totalCount = productRepository.count(ProductSpecifications.matching(filter));
+
+		return KeysetPagination.paginate(rows, limit, ProductEntity::getId, ProductCatalogService::toProduct,
+				totalCount);
 	}
 
-	public List<Product> listProducts(ProductFilter filter) {
-		return products.stream().filter(product -> matches(product, filter)).toList();
+	public Map<String, Product> findByIds(List<String> productIds) {
+		List<Long> ids = productIds.stream().map(Long::parseLong).toList();
+		Map<String, Product> result = new LinkedHashMap<>();
+		for (ProductEntity entity : productRepository.findAllById(ids)) {
+			result.put(entity.getId().toString(), toProduct(entity));
+		}
+		return result;
 	}
 
-	private static boolean matches(Product product, ProductFilter filter) {
-		if (filter == null) {
-			return true;
+	private static Optional<Long> parseId(String productId) {
+		try {
+			return Optional.of(Long.parseLong(productId));
+		} catch (NumberFormatException e) {
+			return Optional.empty();
 		}
-		if (filter.nameContains() != null
-				&& !product.name().toLowerCase().contains(filter.nameContains().toLowerCase())) {
-			return false;
-		}
-		if (filter.minPriceCents() != null && product.priceCents() < filter.minPriceCents()) {
-			return false;
-		}
-		return filter.maxPriceCents() == null || product.priceCents() <= filter.maxPriceCents();
+	}
+
+	static Product toProduct(ProductEntity entity) {
+		return new Product(entity.getId().toString(), entity.getName(), entity.getPriceCents(), entity.getStockQty());
 	}
 }

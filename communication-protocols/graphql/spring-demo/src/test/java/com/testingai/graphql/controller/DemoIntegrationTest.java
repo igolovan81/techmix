@@ -2,6 +2,11 @@ package com.testingai.graphql.controller;
 
 import com.testingai.graphql.domain.Review;
 import com.testingai.graphql.domain.ReviewService;
+import com.testingai.graphql.domain.Role;
+import com.testingai.graphql.entity.ProductEntity;
+import com.testingai.graphql.entity.UserEntity;
+import com.testingai.graphql.repository.ProductRepository;
+import com.testingai.graphql.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,9 +41,15 @@ class DemoIntegrationTest {
 
 	@Autowired
 	private ReviewService reviewService;
+	@Autowired
+	private ProductRepository productRepository;
+	@Autowired
+	private UserRepository userRepository;
 
 	private HttpGraphQlTester graphQlTester;
 	private WebSocketGraphQlTester webSocketGraphQlTester;
+
+	private Long productId1;
 
 	@BeforeEach
 	void setUpTesters() {
@@ -47,6 +58,14 @@ class DemoIntegrationTest {
 		graphQlTester = HttpGraphQlTester.create(webTestClient);
 		webSocketGraphQlTester = WebSocketGraphQlTester
 				.builder("ws://localhost:" + port + "/graphql", new TomcatWebSocketClient()).build();
+
+		// SpringBootTest doesn't roll back between tests, and the "user"/"admin" demo accounts (SecurityConfig)
+		// must have matching User rows for addReview's principal-to-author resolution to work — idempotent so a
+		// later test method's call is a no-op once an earlier one has already created them.
+		ensureUser("user", Role.CUSTOMER);
+		ensureUser("admin", Role.ADMIN);
+
+		productId1 = saveProduct("Mini Widget", 636, 50);
 	}
 
 	@AfterEach
@@ -54,57 +73,97 @@ class DemoIntegrationTest {
 		webSocketGraphQlTester.stop().block();
 	}
 
+	private void ensureUser(String username, Role role) {
+		if (userRepository.findByUsername(username).isEmpty()) {
+			UserEntity user = new UserEntity();
+			user.setUsername(username);
+			user.setEmail(username + "@example.com");
+			user.setDisplayName(username);
+			user.setRole(role);
+			userRepository.save(user);
+		}
+	}
+
+	private Long saveProduct(String name, long priceCents, int stockQty) {
+		ProductEntity entity = new ProductEntity();
+		entity.setName(name);
+		entity.setPriceCents(priceCents);
+		entity.setStockQty(stockQty);
+		return productRepository.save(entity).getId();
+	}
+
+	// A per-test-method unique tag so filtered count/pagination assertions aren't polluted by fixture rows other
+	// test methods leave behind (this class's @SpringBootTest doesn't roll back between tests).
+	private String uniqueTag() {
+		return "tag" + System.nanoTime();
+	}
+
 	@Test
 	void query_returnsFirstPageOfProducts_byDefault() {
+		String tag = uniqueTag();
+		for (int i = 0; i < 15; i++) {
+			saveProduct(tag + "-Item" + i, 1000 + i, 10);
+		}
+
 		graphQlTester.document("""
 				query {
-				  products {
+				  products(filter: { nameContains: "%s" }) {
 				    edges { node { id name } cursor }
 				    pageInfo { hasNextPage endCursor }
 				    totalCount
 				  }
 				}
-				""").execute().path("products.edges").entityList(Object.class).hasSize(10).path("products.totalCount")
-				.entity(Integer.class).isEqualTo(40).path("products.pageInfo.hasNextPage").entity(Boolean.class)
-				.isEqualTo(true);
+				""".formatted(tag)).execute().path("products.edges").entityList(Object.class).hasSize(10)
+				.path("products.totalCount").entity(Integer.class).isEqualTo(15).path("products.pageInfo.hasNextPage")
+				.entity(Boolean.class).isEqualTo(true);
 	}
 
 	@Test
 	void query_pagesThroughAllProducts_usingEndCursor() {
+		String tag = uniqueTag();
+		for (int i = 0; i < 20; i++) {
+			saveProduct(tag + "-Item" + i, 1000 + i, 10);
+		}
+
 		String firstPageQuery = """
 				query {
-				  products(first: 15) {
+				  products(filter: { nameContains: "%s" }, first: 15) {
 				    edges { node { id } cursor }
 				    pageInfo { hasNextPage endCursor }
 				  }
 				}
-				""";
+				""".formatted(tag);
 
 		String firstEndCursor = graphQlTester.document(firstPageQuery).execute().path("products.pageInfo.endCursor")
 				.entity(String.class).get();
 
 		graphQlTester.document("""
 				query {
-				  products(first: 15, after: "%s") {
+				  products(filter: { nameContains: "%s" }, first: 15, after: "%s") {
 				    edges { node { id } }
 				    pageInfo { hasNextPage }
 				  }
 				}
-				""".formatted(firstEndCursor)).execute().path("products.edges").entityList(Object.class).hasSize(15)
-				.path("products.pageInfo.hasNextPage").entity(Boolean.class).isEqualTo(true);
+				""".formatted(tag, firstEndCursor)).execute().path("products.edges").entityList(Object.class).hasSize(5)
+				.path("products.pageInfo.hasNextPage").entity(Boolean.class).isEqualTo(false);
 	}
 
 	@Test
 	void query_filtersProductsByNameAndPriceRange() {
+		String tag = uniqueTag();
+		saveProduct(tag + "-mini-widget", 1000, 10);
+		saveProduct(tag + "-standard-widget", 5000, 10);
+
 		graphQlTester.document("""
 				query {
-				  products(filter: { nameContains: "mini" }, first: 50) {
+				  products(filter: { nameContains: "%s-mini" }, first: 50) {
 				    edges { node { name } }
 				    totalCount
 				  }
 				}
-				""").execute().path("products.edges").entityList(java.util.Map.class)
-				.satisfies(edges -> assertThat(edges).isNotEmpty()
+				""".formatted(tag)).execute().path("products.totalCount").entity(Integer.class).isEqualTo(1)
+				.path("products.edges").entityList(java.util.Map.class)
+				.satisfies(edges -> assertThat(edges).hasSize(1)
 						.allSatisfy(edge -> assertThat(
 								((java.util.Map<?, ?>) edge.get("node")).get("name").toString().toLowerCase())
 								.contains("mini")));
@@ -118,9 +177,9 @@ class DemoIntegrationTest {
 			List<ResponseError> errors = new ArrayList<>();
 			GraphQlTester.Traversable afterErrors = graphQlTester.document("""
 					query {
-					  product(id: "p1") { id name }
+					  product(id: "%s") { id name }
 					}
-					""").execute().errors().satisfy(errors::addAll);
+					""".formatted(productId1)).execute().errors().satisfy(errors::addAll);
 
 			if (errors.isEmpty()) {
 				afterErrors.path("product.name").entity(String.class).isEqualTo("Mini Widget");
@@ -133,21 +192,25 @@ class DemoIntegrationTest {
 
 	@Test
 	void query_returnsProductsWithNestedReviews_batchedInOneCall() {
+		String tag = uniqueTag();
+		for (int i = 0; i < 5; i++) {
+			saveProduct(tag + "-Item" + i, 1000 + i, 10);
+		}
 		int batchCallsBefore = reviewService.getBatchCallCount();
 
 		graphQlTester.document("""
 				query {
-				  products(first: 40) {
+				  products(filter: { nameContains: "%s" }, first: 50) {
 				    edges {
 				      node {
 				        id
 				        name
-				        reviews { edges { node { id author rating } } }
+				        reviews { edges { node { id rating } } }
 				      }
 				    }
 				  }
 				}
-				""").execute().path("products.edges").entityList(Object.class).hasSize(40);
+				""".formatted(tag)).execute().path("products.edges").entityList(Object.class).hasSize(5);
 
 		assertThat(reviewService.getBatchCallCount()).isEqualTo(batchCallsBefore + 1);
 	}
@@ -156,24 +219,24 @@ class DemoIntegrationTest {
 	void query_filtersReviewsByMinRating() {
 		asUser().document("""
 				mutation {
-				  addReview(input: { productId: "p1", author: "Jordan", rating: 2, comment: "meh" }) { id }
+				  addReview(input: { productId: "%s", rating: 2, comment: "meh" }) { id }
 				}
-				""").execute();
+				""".formatted(productId1)).execute();
 		asUser().document("""
 				mutation {
-				  addReview(input: { productId: "p1", author: "Sam", rating: 5, comment: "great" }) { id }
+				  addReview(input: { productId: "%s", rating: 5, comment: "great" }) { id }
 				}
-				""").execute();
+				""".formatted(productId1)).execute();
 
 		String query = """
 				query {
-				  product(id: "p1") {
+				  product(id: "%s") {
 				    reviews(filter: { minRating: 4 }, first: 10) {
 				      edges { node { rating } }
 				    }
 				  }
 				}
-				""";
+				""".formatted(productId1);
 
 		// product(id) has a real 5% simulated failure (FailureSimulator), so a single call can spuriously fail;
 		// retry past that (same statistical approach used elsewhere in this file).
@@ -198,20 +261,21 @@ class DemoIntegrationTest {
 	void mutation_addReview_succeeds_whenAuthenticatedAsUser() {
 		asUser().document("""
 				mutation {
-				  addReview(input: { productId: "p1", author: "Jordan", rating: 5, comment: "Great product" }) {
-				    author
+				  addReview(input: { productId: "%s", rating: 5, comment: "Great product" }) {
+				    author { username }
 				    rating
 				    comment
 				  }
 				}
-				""").execute().path("addReview.author").entity(String.class).isEqualTo("Jordan");
+				""".formatted(productId1)).execute().path("addReview.author.username").entity(String.class)
+				.isEqualTo("user");
 	}
 
 	@Test
 	void mutation_addReview_isRejected_whenProductUnknown() {
 		asUser().document("""
 				mutation {
-				  addReview(input: { productId: "unknown", author: "Jordan", rating: 5, comment: "x" }) {
+				  addReview(input: { productId: "999999999", rating: 5, comment: "x" }) {
 				    id
 				  }
 				}
@@ -227,9 +291,9 @@ class DemoIntegrationTest {
 	void mutation_addReview_isRejected_whenAnonymous() {
 		graphQlTester.document("""
 				mutation {
-				  addReview(input: { productId: "p1", author: "Jordan", rating: 5, comment: "x" }) { id }
+				  addReview(input: { productId: "%s", rating: 5, comment: "x" }) { id }
 				}
-				""").execute().errors().satisfy(errors -> assertThat(errors)
+				""".formatted(productId1)).execute().errors().satisfy(errors -> assertThat(errors)
 				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.UNAUTHORIZED)));
 	}
 
@@ -259,7 +323,8 @@ class DemoIntegrationTest {
 
 	@Test
 	void mutation_deleteReview_succeeds_whenAuthenticatedAsAdmin() {
-		Review review = reviewService.addReview("p1", "Temp", 3, "to be deleted");
+		Long userId = userRepository.findByUsername("user").orElseThrow().getId();
+		Review review = reviewService.addReview(productId1.toString(), userId, 3, "to be deleted");
 
 		asAdmin().document("""
 				mutation {
@@ -274,11 +339,11 @@ class DemoIntegrationTest {
 
 		asUser().document("""
 				mutation {
-				  addReview(input: { productId: "p1", author: "Casey", rating: 5, comment: "Nice" }) { id author }
+				  addReview(input: { productId: "%s", rating: 5, comment: "Nice" }) { id author { username } }
 				  deleteReview(id: "does-not-matter")
 				}
-				""").execute().errors().satisfy(errors::addAll).path("addReview.author").entity(String.class)
-				.isEqualTo("Casey");
+				""".formatted(productId1)).execute().errors().satisfy(errors::addAll).path("addReview.author.username")
+				.entity(String.class).isEqualTo("user");
 
 		assertThat(errors).hasSize(1);
 		assertThat(errors.get(0).getErrorType()).isEqualTo(ErrorType.FORBIDDEN);
@@ -289,29 +354,31 @@ class DemoIntegrationTest {
 		WebSocketGraphQlTester authenticatedTester = webSocketGraphQlTester.mutate()
 				.header("Authorization", basicAuthHeader("user", "userPassword")).build();
 		try {
-			Flux<Review> subscription = authenticatedTester.document("""
+			Flux<java.util.Map> subscription = authenticatedTester.document("""
 					subscription {
-					  reviewAdded(productId: "p1") {
+					  reviewAdded(productId: "%s") {
 					    id
 					    productId
-					    author
+					    author { username }
 					    rating
 					    comment
 					  }
 					}
-					""").executeSubscription().toFlux("reviewAdded", Review.class);
+					""".formatted(productId1)).executeSubscription().toFlux("reviewAdded", java.util.Map.class);
 
 			// thenAwait: the WebSocket "subscribe" message needs a round trip to the server before DemoController's
 			// reviewAdded() resolver is actually registered on the sink; without this gap the mutation below can fire
 			// (and directBestEffort() will drop it) before the subscription is live server-side.
 			StepVerifier.create(subscription).thenAwait(Duration.ofSeconds(2)).then(() -> asUser().document("""
 					mutation {
-					  addReview(input: { productId: "p1", author: "Riley", rating: 4, comment: "Solid" }) {
+					  addReview(input: { productId: "%s", rating: 4, comment: "Solid" }) {
 					    id
 					  }
 					}
-					""").execute()).assertNext(review -> assertThat(review.author()).isEqualTo("Riley")).thenCancel()
-					.verify(Duration.ofSeconds(10));
+					""".formatted(productId1)).execute())
+					.assertNext(review -> assertThat(((java.util.Map<?, ?>) review.get("author")).get("username"))
+							.isEqualTo("user"))
+					.thenCancel().verify(Duration.ofSeconds(10));
 		} finally {
 			authenticatedTester.stop().block();
 		}
@@ -319,13 +386,13 @@ class DemoIntegrationTest {
 
 	@Test
 	void subscription_isRejected_whenAnonymous() {
-		Flux<Review> subscription = webSocketGraphQlTester.document("""
+		Flux<java.util.Map> subscription = webSocketGraphQlTester.document("""
 				subscription {
-				  reviewAdded(productId: "p1") {
+				  reviewAdded(productId: "does-not-matter") {
 				    id
 				  }
 				}
-				""").executeSubscription().toFlux("reviewAdded", Review.class);
+				""").executeSubscription().toFlux("reviewAdded", java.util.Map.class);
 
 		// Subscription-establishment authorization failures don't route through DemoExceptionResolver the way
 		// query/mutation errors do (verified live, both before and after Task 3's resolver changes) — the client
@@ -345,12 +412,17 @@ class DemoIntegrationTest {
 		// thread, not the test thread, so Mockito's thread-confined mockStatic can't reach it here. Instead,
 		// repeat until one of the ~5%-chance failures actually happens (same statistical approach as
 		// FailureSimulatorTest) and assert on that response's partial-failure shape.
+		String tag = uniqueTag();
+		for (int i = 0; i < 10; i++) {
+			saveProduct(tag + "-Item" + i, 1000 + i, 10);
+		}
+
 		String query = """
 				query {
 				  products { edges { node { id } } }
-				  product(id: "p1") { id name }
+				  product(id: "%s") { id name }
 				}
-				""";
+				""".formatted(productId1);
 
 		for (int attempt = 0; attempt < 200; attempt++) {
 			List<ResponseError> errors = new ArrayList<>();
