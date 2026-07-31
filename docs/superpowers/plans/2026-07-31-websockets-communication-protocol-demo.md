@@ -1241,7 +1241,7 @@ class OrderStatusControllerTest {
 			headerAccessor.setSessionId("session-42");
 
 			assertThatThrownBy(() -> controller.statusRequest("order-1", headerAccessor))
-					.isInstanceOf(RuntimeException.class).hasMessage("Simulated 5% failure in status-request");
+					.isInstanceOf(RuntimeException.class).hasMessage("Simulated");
 		}
 	}
 }
