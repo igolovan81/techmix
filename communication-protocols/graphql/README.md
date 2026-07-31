@@ -1,8 +1,10 @@
 # GraphQL Demo
 
-Demonstrates GraphQL — a schema-first query language for APIs, served over a single endpoint (`/graphql`), where the client specifies exactly which fields it wants — via one Spring Boot app (`spring-demo`) built on `spring-boot-starter-graphql`, against a Products↔Reviews domain.
+Demonstrates GraphQL — a schema-first query language for APIs, served over a single endpoint (`/graphql`), where the client specifies exactly which fields it wants — via one Spring Boot app (`spring-demo`) built on `spring-boot-starter-graphql`, against a small Postgres-backed e-commerce domain (Product, Category, Review, User, Order, OrderItem).
 
 Unlike the [gRPC demo](../grpc/), GraphQL doesn't need a client/server split: any HTTP (or WebSocket, for subscriptions) client can talk to the schema directly, so this module is a single app.
+
+Beyond the five patterns below, the domain also demonstrates: DB-pushed-down keyset pagination at 10,000-product scale (alongside the original in-memory cursor pagination, used where a parent's list is always small); `@BatchMapping` used directly wherever no argument is needed, side by side with the manual `DataLoader` registration required when one is; and row-level (not just role-level) authorization on `order(id)`. See [spring-demo/README.md](spring-demo/README.md#domain-model) for the full write-up.
 
 ## The five patterns
 
@@ -94,17 +96,19 @@ Unlike the [gRPC demo](../grpc/), GraphQL doesn't need a client/server split: an
 
 ## Running the demo
 
-No Docker required — everything is in-memory.
+Docker is needed to run the app (Postgres) — but not for `mvn test`, which runs against an embedded H2 database.
 
 ```bash
+docker compose -f docker/docker-compose.yml up -d   # Postgres :5433
+
 cd communication-protocols
 mvn -pl graphql/spring-demo spring-boot:run
 ```
 
 GraphiQL (interactive schema explorer): http://localhost:8092/graphiql
 
-See [spring-demo/README.md](spring-demo/README.md) for `curl` and subscription walkthroughs of all five patterns.
+See [spring-demo/README.md](spring-demo/README.md) for `curl` and subscription walkthroughs of all five patterns, plus the [domain model](spring-demo/README.md#domain-model) write-up.
 
 ## Scope
 
-In-memory data only, no persistence, no authentication/authorization, no query depth/complexity limiting, no persisted queries, no GraphQL federation — this is a protocol-pattern demo, not a production-hardening guide (same spirit as the gRPC demo's "no TLS" scope limit). Subscriptions are backed by a single in-process `Sinks.Many`, so this is a single-instance demo only.
+No query depth/complexity limiting, no persisted queries, no GraphQL federation — this is a protocol-pattern demo, not a production-hardening guide (same spirit as the gRPC demo's "no TLS" scope limit). Subscriptions are backed by a single in-process `Sinks.Many`, so this is a single-instance demo only. Authentication is HTTP Basic against in-memory demo credentials, not a production auth story — see [spring-demo/README.md#security](spring-demo/README.md#security).
