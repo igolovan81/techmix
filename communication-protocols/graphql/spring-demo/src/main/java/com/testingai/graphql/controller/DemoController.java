@@ -1,6 +1,8 @@
 package com.testingai.graphql.controller;
 
 import com.testingai.graphql.domain.AddReviewInput;
+import com.testingai.graphql.domain.Category;
+import com.testingai.graphql.domain.CategoryService;
 import com.testingai.graphql.domain.Product;
 import com.testingai.graphql.domain.ProductCatalogService;
 import com.testingai.graphql.domain.ProductFilter;
@@ -34,6 +36,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -49,6 +52,7 @@ public class DemoController {
 	private final ProductCatalogService productCatalogService;
 	private final ReviewService reviewService;
 	private final UserService userService;
+	private final CategoryService categoryService;
 	private final BatchLoaderRegistry batchLoaderRegistry;
 
 	/**
@@ -64,6 +68,17 @@ public class DemoController {
 	void registerReviewsBatchLoader() {
 		batchLoaderRegistry.<String, List<Review>>forName("reviews").registerMappedBatchLoader(
 				(productIds, environment) -> Mono.just(reviewService.findByProductIds(new ArrayList<>(productIds))));
+	}
+
+	/**
+	 * Registers the "categoryChildren" DataLoader — same idiom as {@link #registerReviewsBatchLoader()}: needed because
+	 * {@link #categoryChildren} takes pagination {@code @Argument}s that a {@code @BatchMapping} method can't accept.
+	 * Cheap regardless of overall table size since only ~100 categories exist in total.
+	 */
+	@PostConstruct
+	void registerCategoryChildrenBatchLoader() {
+		batchLoaderRegistry.<Long, List<Category>>forName("categoryChildren").registerMappedBatchLoader((parentIds,
+				environment) -> Mono.just(categoryService.findChildrenByParentIds(new ArrayList<>(parentIds))));
 	}
 
 	/**
@@ -102,6 +117,63 @@ public class DemoController {
 		DataLoader<String, List<Review>> loader = environment.getDataLoaderRegistry().getDataLoader("reviews");
 		return loader.load(product.id()).thenApply(
 				reviews -> CursorPagination.paginate(reviewService.filterReviews(reviews, filter), first, after));
+	}
+
+	@QueryMapping
+	public Connection<Category> categories(@Argument Integer first, @Argument String after) {
+		return categoryService.listCategories(first, after);
+	}
+
+	@QueryMapping
+	public Category category(@Argument Long id) {
+		return categoryService.findCategory(id).orElse(null);
+	}
+
+	/**
+	 * Batch mapping for {@code Product.categories} — no {@code @Argument} needed, so this uses {@code @BatchMapping}
+	 * directly (explicit {@code typeName}/{@code field} since the method name intentionally doesn't match either the
+	 * {@code Query.categories} query above or the schema field, to keep the two unambiguous to a reader).
+	 */
+	@BatchMapping(typeName = "Product", field = "categories")
+	public Map<Product, List<Category>> productCategories(List<Product> products) {
+		Map<String, List<Category>> byProductId = productCatalogService
+				.findCategoriesByProductIds(products.stream().map(Product::id).toList());
+		Map<Product, List<Category>> result = new LinkedHashMap<>();
+		for (Product product : products) {
+			result.put(product, byProductId.getOrDefault(product.id(), List.of()));
+		}
+		return result;
+	}
+
+	@BatchMapping(typeName = "Category", field = "parent")
+	public Map<Category, Category> categoryParent(List<Category> categories) {
+		List<Long> parentIds = categories.stream().map(Category::parentId).filter(Objects::nonNull).distinct().toList();
+		Map<Long, Category> byId = categoryService.findByIds(parentIds);
+		Map<Category, Category> result = new LinkedHashMap<>();
+		for (Category category : categories) {
+			result.put(category, category.parentId() == null ? null : byId.get(category.parentId()));
+		}
+		return result;
+	}
+
+	@SchemaMapping(typeName = "Category", field = "children")
+	public CompletableFuture<Connection<Category>> categoryChildren(Category category, @Argument Integer first,
+			@Argument String after, DataFetchingEnvironment environment) {
+		DataLoader<Long, List<Category>> loader = environment.getDataLoaderRegistry().getDataLoader("categoryChildren");
+		return loader.load(category.id()).thenApply(children -> CursorPagination.paginate(children, first, after));
+	}
+
+	/**
+	 * Schema mapping for {@code Category.products} — deliberately NOT a DataLoader: batching it the way
+	 * {@link #reviews} works would mean loading a category's entire unpaginated product list (potentially thousands of
+	 * rows) per key just to slice it in memory afterward, which defeats the point of {@code listProductsInCategory}
+	 * pushing pagination down to the database. One small keyset query per category node resolved instead — bounded by
+	 * the outer {@code categories(first: ...)} argument, not by table size.
+	 */
+	@SchemaMapping(typeName = "Category", field = "products")
+	public Connection<Product> categoryProducts(Category category, @Argument ProductFilter filter,
+			@Argument Integer first, @Argument String after) {
+		return productCatalogService.listProductsInCategory(category.id(), filter, first, after);
 	}
 
 	/**

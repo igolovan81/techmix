@@ -48,6 +48,33 @@ public class ProductCatalogService {
 		return result;
 	}
 
+	public Connection<Product> listProductsInCategory(Long categoryId, ProductFilter filter, Integer first,
+			String after) {
+		Long cursorId = KeysetPagination.decodeCursor(after);
+		int limit = KeysetPagination.normalizeFirst(first);
+		var spec = ProductSpecifications.matching(filter).and(ProductSpecifications.idAfter(cursorId))
+				.and(ProductSpecifications.inCategory(categoryId));
+		var countSpec = ProductSpecifications.matching(filter).and(ProductSpecifications.inCategory(categoryId));
+
+		List<ProductEntity> rows = productRepository.findAll(spec, PageRequest.of(0, limit + 1, Sort.by("id")))
+				.getContent();
+		return KeysetPagination.paginate(rows, limit, ProductEntity::getId, ProductCatalogService::toProduct,
+				productRepository.count(countSpec));
+	}
+
+	public Map<String, List<Category>> findCategoriesByProductIds(List<String> productIds) {
+		List<Long> ids = productIds.stream().map(Long::parseLong).toList();
+		Map<String, List<Category>> result = new LinkedHashMap<>();
+		for (ProductEntity entity : productRepository.findByIdInWithCategories(ids)) {
+			result.put(entity.getId().toString(),
+					entity.getCategories().stream().map(CategoryService::toCategory).toList());
+		}
+		for (String productId : productIds) {
+			result.putIfAbsent(productId, List.of());
+		}
+		return result;
+	}
+
 	private static Optional<Long> parseId(String productId) {
 		try {
 			return Optional.of(Long.parseLong(productId));

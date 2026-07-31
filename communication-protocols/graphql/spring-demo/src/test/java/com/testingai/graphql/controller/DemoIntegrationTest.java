@@ -3,8 +3,10 @@ package com.testingai.graphql.controller;
 import com.testingai.graphql.domain.Review;
 import com.testingai.graphql.domain.ReviewService;
 import com.testingai.graphql.domain.Role;
+import com.testingai.graphql.entity.CategoryEntity;
 import com.testingai.graphql.entity.ProductEntity;
 import com.testingai.graphql.entity.UserEntity;
+import com.testingai.graphql.repository.CategoryRepository;
 import com.testingai.graphql.repository.ProductRepository;
 import com.testingai.graphql.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -45,6 +47,8 @@ class DemoIntegrationTest {
 	private ProductRepository productRepository;
 	@Autowired
 	private UserRepository userRepository;
+	@Autowired
+	private CategoryRepository categoryRepository;
 
 	private HttpGraphQlTester graphQlTester;
 	private WebSocketGraphQlTester webSocketGraphQlTester;
@@ -90,6 +94,13 @@ class DemoIntegrationTest {
 		entity.setPriceCents(priceCents);
 		entity.setStockQty(stockQty);
 		return productRepository.save(entity).getId();
+	}
+
+	private CategoryEntity saveCategory(String name, CategoryEntity parent) {
+		CategoryEntity entity = new CategoryEntity();
+		entity.setName(name);
+		entity.setParent(parent);
+		return categoryRepository.save(entity);
 	}
 
 	// A per-test-method unique tag so filtered count/pagination assertions aren't polluted by fixture rows other
@@ -213,6 +224,94 @@ class DemoIntegrationTest {
 				""".formatted(tag)).execute().path("products.edges").entityList(Object.class).hasSize(5);
 
 		assertThat(reviewService.getBatchCallCount()).isEqualTo(batchCallsBefore + 1);
+	}
+
+	@Test
+	void query_categoryTree_resolvesParentAndChildren() {
+		CategoryEntity root = saveCategory("Electronics-" + uniqueTag(), null);
+		CategoryEntity child = saveCategory("Audio-" + uniqueTag(), root);
+
+		graphQlTester.document("""
+				query {
+				  category(id: "%s") {
+				    name
+				    parent { id }
+				    children(first: 10) { edges { node { id name } } totalCount }
+				  }
+				}
+				""".formatted(root.getId())).execute().path("category.parent").valueIsNull()
+				.path("category.children.totalCount").entity(Integer.class).isEqualTo(1)
+				.path("category.children.edges[0].node.name").entity(String.class).isEqualTo(child.getName());
+
+		graphQlTester.document("""
+				query {
+				  category(id: "%s") { parent { name } }
+				}
+				""".formatted(child.getId())).execute().path("category.parent.name").entity(String.class)
+				.isEqualTo(root.getName());
+	}
+
+	@Test
+	void query_categoryProducts_returnsOnlyProductsInThatCategory() {
+		CategoryEntity category = saveCategory("Category-" + uniqueTag(), null);
+		String tag = uniqueTag();
+
+		ProductEntity inCategory = new ProductEntity();
+		inCategory.setName(tag + "-in-category");
+		inCategory.setPriceCents(1000);
+		inCategory.setStockQty(10);
+		inCategory.getCategories().add(category);
+		productRepository.save(inCategory);
+
+		saveProduct(tag + "-outside-category", 1000, 10);
+
+		graphQlTester.document("""
+				query {
+				  category(id: "%s") {
+				    products(first: 50) { totalCount edges { node { name } } }
+				  }
+				}
+				""".formatted(category.getId())).execute().path("category.products.totalCount").entity(Integer.class)
+				.isEqualTo(1).path("category.products.edges[0].node.name").entity(String.class)
+				.isEqualTo(inCategory.getName());
+	}
+
+	@Test
+	void query_productCategories_resolvesViaBatchMapping() {
+		CategoryEntity categoryA = saveCategory("CategoryA-" + uniqueTag(), null);
+		CategoryEntity categoryB = saveCategory("CategoryB-" + uniqueTag(), null);
+		String tag = uniqueTag();
+
+		ProductEntity product = new ProductEntity();
+		product.setName(tag + "-multi-category-product");
+		product.setPriceCents(1000);
+		product.setStockQty(10);
+		product.getCategories().add(categoryA);
+		product.getCategories().add(categoryB);
+		productRepository.save(product);
+
+		graphQlTester.document("""
+				query {
+				  products(filter: { nameContains: "%s" }, first: 10) {
+				    edges { node { categories { name } } }
+				  }
+				}
+				""".formatted(tag)).execute().path("products.edges[0].node.categories").entityList(java.util.Map.class)
+				.satisfies(categories -> assertThat(categories).extracting(c -> c.get("name"))
+						.containsExactlyInAnyOrder(categoryA.getName(), categoryB.getName()));
+	}
+
+	@Test
+	void query_categories_respectsFirstArgument() {
+		graphQlTester.document("""
+				query {
+				  categories(first: 1) {
+				    edges { node { id } }
+				    pageInfo { hasNextPage }
+				  }
+				}
+				""").execute().path("categories.edges").entityList(Object.class).hasSize(1)
+				.path("categories.pageInfo.hasNextPage").entity(Boolean.class).isEqualTo(true);
 	}
 
 	@Test
