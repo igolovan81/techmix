@@ -81,6 +81,7 @@ cd communication-protocols
 mvn clean package                                      # build (part of the reactor build)
 mvn test -pl graphql/spring-demo                        # unit tests (Gatling excluded automatically)
 mvn test -pl graphql/spring-demo -Dtest=ClassName        # single test class
+docker compose -f communication-protocols/graphql/docker/docker-compose.yml up -d   # Postgres :5433
 mvn -pl graphql/spring-demo spring-boot:run              # run the app (GraphiQL at :8092/graphiql)
 mvn gatling:test -pl graphql/spring-demo                 # Gatling load test — requires the app running first
 mvn verify -Pjmeter-load-test -pl graphql/spring-demo    # JMeter load test — requires the app running first
@@ -204,7 +205,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
 | `communication-protocols/grpc/{server-demo,client-demo}/` | gRPC demo — two independent Spring Boot apps covering all four RPC patterns (unary, server/client/bidi streaming); `server-demo` must be started before `client-demo` — no external infrastructure required |
-| `communication-protocols/graphql/spring-demo/` | GraphQL demo — single Spring Boot app covering query/nested-fetch, DataLoader batching, mutation, and subscription patterns against a Products↔Reviews domain — no external infrastructure required |
+| `communication-protocols/graphql/spring-demo/` | GraphQL demo — single Spring Boot app covering query/nested-fetch, DataLoader batching, mutation, subscription, cursor-pagination, and an e-commerce domain (Category/User/Order) against Postgres; `mvn test` needs no external infrastructure (H2), but running the app needs `docker compose -f communication-protocols/graphql/docker/docker-compose.yml up -d` first |
 | `communication-protocols/webhooks/producer-demo/` | Webhooks demo — subscription registry, HMAC-signed dispatch, retry/backoff, dead-lettering — no external infrastructure required |
 | `communication-protocols/webhooks/consumer-demo/` | Webhooks demo — signature verification, delivery-id idempotency/dedup, on-demand failure simulation — no external infrastructure required |
 | `reactive-programming/project-reactor/{spring-demo,upstream-demo}/` | Project Reactor demo — two independent Spring Boot WebFlux apps covering Mono/Flux basics, backpressure/error handling, schedulers/concurrency, and SSE/WebClient streaming; `upstream-demo` must be started before `spring-demo`'s `streaming/upstream/*` endpoints work — no external infrastructure required |

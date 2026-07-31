@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: graphql-demo-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=graphqldemo
+      - POSTGRES_USER=graphql
+      - POSTGRES_PASSWORD=graphql
+    volumes:
+      - graphql_demo_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  graphql_demo_postgres_data:

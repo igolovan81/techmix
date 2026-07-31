@@ -7,3 +7,27 @@ spring:
       enabled: true
     websocket:
       path: /graphql
+  datasource:
+    url: jdbc:postgresql://localhost:5433/graphqldemo
+    username: graphql
+    password: graphql
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 500
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+app:
+  seed:
+    enabled: true
+    user-count: 100
+    category-count: 100
+    product-count: 10000
+    min-reviews-per-product: 3
+    max-reviews-per-product: 10
+    order-count: 3000
