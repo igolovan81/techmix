@@ -65,9 +65,13 @@ communication-protocols/
             │   │   │                                           own afterConnectionClosed for the raw registry — both log normal vs. abrupt
             │   │   │                                           closure and remove the session from its registry)
             │   │   ├── config/
-            │   │   │   └── StompConfig.java                   (@EnableWebSocketMessageBroker; registers /ws-stomp with SockJS fallback;
-            │   │   │                                           enableSimpleBroker("/topic", "/queue") with heartbeat[10000,10000] and a
-            │   │   │                                           TaskScheduler bean for heartbeat delivery; setApplicationDestinationPrefixes("/app"))
+            │   │   │   └── StompConfig.java                   (@EnableWebSocketMessageBroker; registers two STOMP endpoints on the same
+            │   │   │                                           broker — /ws-stomp with SockJS fallback for the browser test client, and
+            │   │   │                                           /ws-stomp-native as plain STOMP-over-WebSocket (no SockJS envelope) for
+            │   │   │                                           Gatling and the Spring integration tests, avoiding the need to hand-roll
+            │   │   │                                           SockJS frame parsing in test code; enableSimpleBroker("/topic", "/queue")
+            │   │   │                                           with heartbeat[10000,10000] and a TaskScheduler bean for heartbeat delivery;
+            │   │   │                                           setApplicationDestinationPrefixes("/app"))
             │   │   └── util/
             │   │       └── FailureSimulator.java              (same shape as every other module: FAILURE_RATE = 0.05, maybeThrow(String context))
             │   └── resources/
@@ -152,7 +156,7 @@ No Spring Security — this module has no auth-sensitive surface (unlike GraphQL
 - **`RawWebSocketIntegrationTest`** (`@SpringBootTest(webEnvironment = RANDOM_PORT)`) — a real `WebSocketClient` connects, an `advance()` REST call is made, the client asserts it receives the broadcast frame; also opens several connections in a loop and asserts the reject rate stays bounded (not 0%, not 100%) to exercise `FailureSimulator` on the handshake path.
 - **`StompIntegrationTest`** (`@SpringBootTest(webEnvironment = RANDOM_PORT)`) — `WebSocketStompClient` connects to `/ws-stomp`, subscribes to `/topic/orders` and `/topic/orders/{id}`, asserts both receive an event after `advance()`; sends a status-request and asserts the reply arrives on the private queue.
 - **`DisconnectEventListenerTest`** — publishing a `SessionDisconnectEvent` triggers cleanup of the corresponding registry entry.
-- **`performance/DemoSimulation.java`** (Gatling, WebSocket DSL) — opens a pool of raw + STOMP connections, drives concurrent `advance()` calls via REST, asserts expected frame counts are received; excluded from `mvn test` via the inherited surefire `**/performance/**` exclude, run explicitly with `mvn gatling:test`.
+- **`performance/DemoSimulation.java`** (Gatling, WebSocket DSL) — opens a pool of raw + STOMP connections (STOMP via `/ws-stomp-native`, sending hand-built `CONNECT`/`SUBSCRIBE` STOMP frames directly — no SockJS envelope to parse), drives concurrent `advance()` calls via REST, asserts expected frames are received; excluded from `mvn test` via the inherited surefire `**/performance/**` exclude, run explicitly with `mvn gatling:test`.
 - **No JMeter** for this module — JMeter has no first-party WebSocket sampler (the available option is an unofficial third-party plugin jar), whereas Gatling has native WebSocket DSL support already wired into every other module via `gatling:test`. Skipping JMeter here avoids taking on an unofficial plugin dependency purely for test-coverage-parity's sake.
 
 ## README
