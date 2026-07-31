@@ -10,5 +10,7 @@
     <include file="db/changelog/db.changelog-3-create-products-table.xml"/>
     <include file="db/changelog/db.changelog-4-create-product-categories-table.xml"/>
     <include file="db/changelog/db.changelog-5-create-reviews-table.xml"/>
+    <include file="db/changelog/db.changelog-6-create-orders-table.xml"/>
+    <include file="db/changelog/db.changelog-7-create-order-items-table.xml"/>
 
 </databaseChangeLog>
