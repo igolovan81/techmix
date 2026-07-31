@@ -1,5 +1,6 @@
 package com.testingai.webhooks.consumer.security;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
@@ -12,17 +13,21 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 @Component
+@Slf4j
 public class HmacVerifier {
 
 	private static final String ALGORITHM = "HmacSHA256";
 
 	public boolean verify(String secret, String payload, String signatureHeader) {
 		if (signatureHeader == null) {
+			log.debug("signature verification failed: no signature header present");
 			return false;
 		}
 		String expected = "sha256=" + sign(secret, payload);
-		return MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8),
+		boolean matches = MessageDigest.isEqual(expected.getBytes(StandardCharsets.UTF_8),
 				signatureHeader.getBytes(StandardCharsets.UTF_8));
+		log.debug("signature verification {}", matches ? "passed" : "failed");
+		return matches;
 	}
 
 	private String sign(String secret, String payload) {

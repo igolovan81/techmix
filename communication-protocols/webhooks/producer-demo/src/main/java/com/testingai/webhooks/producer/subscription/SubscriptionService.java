@@ -1,5 +1,6 @@
 package com.testingai.webhooks.producer.subscription;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@Slf4j
 public class SubscriptionService {
 
 	private final Map<String, Subscription> subscriptions = new ConcurrentHashMap<>();
@@ -19,6 +21,7 @@ public class SubscriptionService {
 		Subscription subscription = new Subscription(id, callbackUrl, secret,
 				Objects.requireNonNullElse(eventTypes, Set.of()));
 		subscriptions.put(id, subscription);
+		log.info("subscription {} registered for {} -> {}", id, eventTypes, callbackUrl);
 		return subscription;
 	}
 
@@ -32,6 +35,12 @@ public class SubscriptionService {
 	}
 
 	public boolean remove(String id) {
-		return subscriptions.remove(id) != null;
+		boolean removed = subscriptions.remove(id) != null;
+		if (removed) {
+			log.info("subscription {} removed", id);
+		} else {
+			log.warn("subscription {} not found for removal", id);
+		}
+		return removed;
 	}
 }

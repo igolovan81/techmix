@@ -2,6 +2,7 @@ package com.testingai.webhooks.producer.event;
 
 import com.testingai.webhooks.producer.delivery.WebhookDispatcher;
 import com.testingai.webhooks.producer.subscription.SubscriptionService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
+@Slf4j
 public class OrderEventController {
 
 	private final SubscriptionService subscriptionService;
@@ -30,6 +32,8 @@ public class OrderEventController {
 		OrderEvent event = new OrderEvent(fullEventType, orderId, Instant.now(), data == null ? Map.of() : data);
 		List<String> deliveryIds = subscriptionService.findByEventType(fullEventType).stream()
 				.map(subscription -> webhookDispatcher.dispatch(subscription, event)).toList();
+		log.info("order {} event {} triggered, fanned out to {} subscription(s)", orderId, fullEventType,
+				deliveryIds.size());
 		return ResponseEntity.accepted().body(deliveryIds);
 	}
 }

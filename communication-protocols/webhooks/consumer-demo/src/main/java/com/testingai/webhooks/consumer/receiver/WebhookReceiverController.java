@@ -3,6 +3,7 @@ package com.testingai.webhooks.consumer.receiver;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.testingai.webhooks.consumer.failure.FailureSimulationState;
 import com.testingai.webhooks.consumer.security.HmacVerifier;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 
 @RestController
+@Slf4j
 public class WebhookReceiverController {
 
 	private final HmacVerifier hmacVerifier;
@@ -39,13 +41,21 @@ public class WebhookReceiverController {
 			@RequestHeader(value = "X-Webhook-Signature", required = false) String signature,
 			@RequestBody String rawBody) throws IOException {
 		if (failureSimulationState.consumeFailure()) {
+			log.warn("delivery {} rejected by simulated failure ({} remaining)", deliveryId,
+					failureSimulationState.remaining());
 			return ResponseEntity.internalServerError().build();
 		}
 		if (!hmacVerifier.verify(secret, rawBody, signature)) {
+			log.warn("delivery {} rejected: signature verification failed", deliveryId);
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 		IncomingOrderEvent event = objectMapper.readValue(rawBody, IncomingOrderEvent.class);
-		receivedEventStore.recordIfNew(deliveryId, eventType, event.orderId());
+		boolean isNew = receivedEventStore.recordIfNew(deliveryId, eventType, event.orderId());
+		if (isNew) {
+			log.info("delivery {} received: event {} for order {}", deliveryId, eventType, event.orderId());
+		} else {
+			log.info("delivery {} is a duplicate of an already-recorded event, ignoring", deliveryId);
+		}
 		return ResponseEntity.ok().build();
 	}
 }

@@ -5,8 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.testingai.webhooks.producer.event.OrderEvent;
 import com.testingai.webhooks.producer.security.HmacSigner;
 import com.testingai.webhooks.producer.subscription.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
@@ -20,9 +19,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
+@Slf4j
 public class WebhookDispatcher {
-
-	private static final Logger log = LoggerFactory.getLogger(WebhookDispatcher.class);
 
 	private final RestClient restClient;
 	private final TaskScheduler taskScheduler;
@@ -46,6 +44,8 @@ public class WebhookDispatcher {
 		DeliveryAttempt attempt = new DeliveryAttempt(deliveryId, subscription.id(), event.eventType(), body,
 				subscription.callbackUrl(), subscription.secret());
 		deliveries.put(deliveryId, attempt);
+		log.info("delivery {} created for subscription {} (event {})", deliveryId, subscription.id(),
+				event.eventType());
 		attemptDelivery(attempt);
 		return deliveryId;
 	}
@@ -69,6 +69,7 @@ public class WebhookDispatcher {
 			attempt.markSucceeded();
 			log.info("delivery {} succeeded on attempt {}", attempt.deliveryId(), attempt.attemptCount());
 		} catch (RestClientException e) {
+			log.warn("delivery {} attempt {} failed: {}", attempt.deliveryId(), attempt.attemptCount(), e.getMessage());
 			handleFailure(attempt);
 		}
 	}
