@@ -3,12 +3,18 @@ package com.testingai.graphql.controller;
 import com.testingai.graphql.domain.AddReviewInput;
 import com.testingai.graphql.domain.Category;
 import com.testingai.graphql.domain.CategoryService;
+import com.testingai.graphql.domain.Order;
+import com.testingai.graphql.domain.OrderItem;
+import com.testingai.graphql.domain.OrderService;
+import com.testingai.graphql.domain.OrderStatus;
+import com.testingai.graphql.domain.PlaceOrderInput;
 import com.testingai.graphql.domain.Product;
 import com.testingai.graphql.domain.ProductCatalogService;
 import com.testingai.graphql.domain.ProductFilter;
 import com.testingai.graphql.domain.Review;
 import com.testingai.graphql.domain.ReviewFilter;
 import com.testingai.graphql.domain.ReviewService;
+import com.testingai.graphql.domain.Role;
 import com.testingai.graphql.domain.User;
 import com.testingai.graphql.domain.UserService;
 import com.testingai.graphql.pagination.Connection;
@@ -26,6 +32,7 @@ import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.graphql.data.method.annotation.SubscriptionMapping;
 import org.springframework.graphql.execution.BatchLoaderRegistry;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Flux;
@@ -53,6 +60,7 @@ public class DemoController {
 	private final ReviewService reviewService;
 	private final UserService userService;
 	private final CategoryService categoryService;
+	private final OrderService orderService;
 	private final BatchLoaderRegistry batchLoaderRegistry;
 
 	/**
@@ -79,6 +87,17 @@ public class DemoController {
 	void registerCategoryChildrenBatchLoader() {
 		batchLoaderRegistry.<Long, List<Category>>forName("categoryChildren").registerMappedBatchLoader((parentIds,
 				environment) -> Mono.just(categoryService.findChildrenByParentIds(new ArrayList<>(parentIds))));
+	}
+
+	/**
+	 * Registers the "userOrders" DataLoader — same idiom as {@link #registerReviewsBatchLoader()}/
+	 * {@link #registerCategoryChildrenBatchLoader()}: {@link #userOrders} needs pagination {@code @Argument}s that a
+	 * {@code @BatchMapping} method can't accept.
+	 */
+	@PostConstruct
+	void registerUserOrdersBatchLoader() {
+		batchLoaderRegistry.<Long, List<Order>>forName("userOrders").registerMappedBatchLoader(
+				(userIds, environment) -> Mono.just(orderService.findByUserIds(new ArrayList<>(userIds))));
 	}
 
 	/**
@@ -174,6 +193,109 @@ public class DemoController {
 	public Connection<Product> categoryProducts(Category category, @Argument ProductFilter filter,
 			@Argument Integer first, @Argument String after) {
 		return productCatalogService.listProductsInCategory(category.id(), filter, first, after);
+	}
+
+	/**
+	 * Query — the current authenticated user, resolved from the Basic-Auth principal.
+	 */
+	@QueryMapping
+	@PreAuthorize("isAuthenticated()")
+	public User me(Principal principal) {
+		return userService.findByUsername(principal.getName()).orElseThrow(() -> new IllegalStateException(
+				"Authenticated principal has no matching User: " + principal.getName()));
+	}
+
+	/**
+	 * Query — a single order by id. Row-level (not just role-level) authorization: the resolver loads the order, then
+	 * allows it only if the caller is the owning user or an ADMIN, throwing {@link AccessDeniedException} (classified
+	 * {@code FORBIDDEN}/{@code UNAUTHORIZED} by the existing {@code DemoExceptionResolver}, no changes needed there)
+	 * otherwise — genuinely new coverage vs. every other check in this module, which is role-only.
+	 */
+	@QueryMapping
+	@PreAuthorize("isAuthenticated()")
+	public Order order(@Argument Long id, Principal principal) {
+		Order order = orderService.findById(id).orElse(null);
+		if (order == null) {
+			return null;
+		}
+		User caller = userService.findByUsername(principal.getName()).orElseThrow(() -> new IllegalStateException(
+				"Authenticated principal has no matching User: " + principal.getName()));
+		boolean isOwner = order.userId().equals(caller.id());
+		boolean isAdmin = caller.role() == Role.ADMIN;
+		if (!isOwner && !isAdmin) {
+			throw new AccessDeniedException("Not authorized to view order " + id);
+		}
+		return order;
+	}
+
+	/**
+	 * Query — ADMIN-only browse-all, with DB-pushed-down keyset pagination (same reasoning as {@code products}).
+	 */
+	@QueryMapping
+	@PreAuthorize("hasRole('ADMIN')")
+	public Connection<Order> orders(@Argument OrderStatus status, @Argument Integer first, @Argument String after) {
+		return orderService.listOrders(status, first, after);
+	}
+
+	@BatchMapping(typeName = "Order", field = "user")
+	public Map<Order, User> orderUser(List<Order> orders) {
+		Map<Long, User> byId = userService.findByIds(orders.stream().map(Order::userId).distinct().toList());
+		Map<Order, User> result = new LinkedHashMap<>();
+		for (Order order : orders) {
+			result.put(order, byId.get(order.userId()));
+		}
+		return result;
+	}
+
+	@BatchMapping(typeName = "OrderItem", field = "product")
+	public Map<OrderItem, Product> orderItemProduct(List<OrderItem> orderItems) {
+		Map<String, Product> byId = productCatalogService
+				.findByIds(orderItems.stream().map(item -> item.productId().toString()).distinct().toList());
+		Map<OrderItem, Product> result = new LinkedHashMap<>();
+		for (OrderItem item : orderItems) {
+			result.put(item, byId.get(item.productId().toString()));
+		}
+		return result;
+	}
+
+	@BatchMapping(typeName = "Order", field = "items")
+	public Map<Order, List<OrderItem>> orderItems(List<Order> orders) {
+		Map<Long, List<OrderItem>> byOrderId = orderService
+				.findItemsByOrderIds(orders.stream().map(Order::id).toList());
+		Map<Order, List<OrderItem>> result = new LinkedHashMap<>();
+		for (Order order : orders) {
+			result.put(order, byOrderId.getOrDefault(order.id(), List.of()));
+		}
+		return result;
+	}
+
+	@SchemaMapping(typeName = "User", field = "orders")
+	public CompletableFuture<Connection<Order>> userOrders(User user, @Argument Integer first, @Argument String after,
+			DataFetchingEnvironment environment) {
+		DataLoader<Long, List<Order>> loader = environment.getDataLoaderRegistry().getDataLoader("userOrders");
+		return loader.load(user.id()).thenApply(orders -> CursorPagination.paginate(orders, first, after));
+	}
+
+	/**
+	 * Mutation — places an order for the authenticated principal, resolved to a domain {@link User}. Business logic
+	 * (stock validation, price snapshot, transactional rollback on any line failing) lives in
+	 * {@link OrderService#placeOrder}.
+	 */
+	@MutationMapping
+	@PreAuthorize("isAuthenticated()")
+	public Order placeOrder(@Argument PlaceOrderInput input, Principal principal) {
+		log.info("[placeOrder] username={} itemCount={}", principal.getName(), input.items().size());
+		return orderService.placeOrder(principal.getName(), input.items());
+	}
+
+	/**
+	 * Mutation — ADMIN-only, same pattern as {@link #deleteReview}.
+	 */
+	@MutationMapping
+	@PreAuthorize("hasRole('ADMIN')")
+	public Order updateOrderStatus(@Argument Long id, @Argument OrderStatus status) {
+		log.info("[updateOrderStatus] orderId={} status={}", id, status);
+		return orderService.updateOrderStatus(id, status);
 	}
 
 	/**

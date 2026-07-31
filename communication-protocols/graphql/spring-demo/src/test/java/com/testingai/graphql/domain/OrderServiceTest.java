@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -125,5 +126,45 @@ class OrderServiceTest {
 		Order updated = orderService.updateOrderStatus(placed.id(), OrderStatus.SHIPPED);
 
 		assertThat(updated.status()).isEqualTo(OrderStatus.SHIPPED);
+	}
+
+	@Test
+	void findByUserIds_returnsOnlyThatUsersOrders() {
+		orderService.placeOrder(user.getUsername(), List.of(new OrderItemInput(product.getId().toString(), 1)));
+
+		Map<Long, List<Order>> byUserId = orderService.findByUserIds(List.of(user.getId()));
+
+		assertThat(byUserId.get(user.getId())).hasSize(1);
+	}
+
+	@Test
+	void findItemsByOrderIds_returnsThatOrdersLineItems() {
+		Order order = orderService.placeOrder(user.getUsername(),
+				List.of(new OrderItemInput(product.getId().toString(), 2)));
+
+		Map<Long, List<OrderItem>> byOrderId = orderService.findItemsByOrderIds(List.of(order.id()));
+
+		assertThat(byOrderId.get(order.id())).extracting(OrderItem::quantity).containsExactly(2);
+	}
+
+	@Test
+	void listOrders_filtersByStatus() {
+		Order order = orderService.placeOrder(user.getUsername(),
+				List.of(new OrderItemInput(product.getId().toString(), 1)));
+		orderService.updateOrderStatus(order.id(), OrderStatus.SHIPPED);
+
+		var shipped = orderService.listOrders(OrderStatus.SHIPPED, 50, null);
+		var pending = orderService.listOrders(OrderStatus.PENDING, 50, null);
+
+		assertThat(shipped.edges()).extracting(edge -> edge.node().id()).contains(order.id());
+		assertThat(pending.edges()).extracting(edge -> edge.node().id()).doesNotContain(order.id());
+	}
+
+	@Test
+	void findById_returnsOrder_whenExists() {
+		Order placed = orderService.placeOrder(user.getUsername(),
+				List.of(new OrderItemInput(product.getId().toString(), 1)));
+
+		assertThat(orderService.findById(placed.id())).isPresent();
 	}
 }

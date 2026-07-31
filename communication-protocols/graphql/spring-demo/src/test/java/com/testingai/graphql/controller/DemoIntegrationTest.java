@@ -449,6 +449,129 @@ class DemoIntegrationTest {
 	}
 
 	@Test
+	void query_me_returnsAuthenticatedPrincipalsRoleAndUsername() {
+		asUser().document("""
+				query { me { username role } }
+				""").execute().path("me.username").entity(String.class).isEqualTo("user").path("me.role")
+				.entity(String.class).isEqualTo("CUSTOMER");
+
+		asAdmin().document("""
+				query { me { username role } }
+				""").execute().path("me.username").entity(String.class).isEqualTo("admin").path("me.role")
+				.entity(String.class).isEqualTo("ADMIN");
+	}
+
+	@Test
+	void mutation_placeOrder_succeeds_andComputesTotal() {
+		asUser().document("""
+				mutation {
+				  placeOrder(input: { items: [{ productId: "%s", quantity: 2 }] }) {
+				    status
+				    totalCents
+				    items { quantity product { id } }
+				  }
+				}
+				""".formatted(productId1)).execute().path("placeOrder.status").entity(String.class).isEqualTo("PENDING")
+				.path("placeOrder.totalCents").entity(Integer.class).isEqualTo(1272)
+				.path("placeOrder.items[0].quantity").entity(Integer.class).isEqualTo(2);
+	}
+
+	@Test
+	void mutation_placeOrder_isRejected_whenQuantityExceedsStock() {
+		asUser().document("""
+				mutation {
+				  placeOrder(input: { items: [{ productId: "%s", quantity: 9999 }] }) { id }
+				}
+				""".formatted(productId1)).execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.BAD_REQUEST)));
+	}
+
+	@Test
+	void mutation_placeOrder_isRejected_whenAnonymous() {
+		graphQlTester.document("""
+				mutation {
+				  placeOrder(input: { items: [{ productId: "%s", quantity: 1 }] }) { id }
+				}
+				""".formatted(productId1)).execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.UNAUTHORIZED)));
+	}
+
+	@Test
+	void query_order_rowLevelAuthorization_ownerAndAdminSucceed_otherUserForbidden() {
+		Long ownedByUser = placeOrderAs("user", productId1, 1);
+		Long ownedByAdmin = placeOrderAs("admin", productId1, 1);
+
+		// owner viewing their own order succeeds
+		asUser().document("""
+				query { order(id: "%s") { id } }
+				""".formatted(ownedByUser)).execute().path("order.id").entity(String.class)
+				.isEqualTo(ownedByUser.toString());
+
+		// admin viewing someone else's order succeeds regardless of ownership
+		asAdmin().document("""
+				query { order(id: "%s") { id } }
+				""".formatted(ownedByUser)).execute().path("order.id").entity(String.class)
+				.isEqualTo(ownedByUser.toString());
+
+		// a non-owner, non-admin user viewing someone else's order is forbidden
+		asUser().document("""
+				query { order(id: "%s") { id } }
+				""".formatted(ownedByAdmin)).execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.FORBIDDEN)));
+	}
+
+	@Test
+	void query_orders_isAdminOnly() {
+		asUser().document("""
+				query { orders(first: 10) { totalCount } }
+				""").execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.FORBIDDEN)));
+
+		Long orderId = placeOrderAs("admin", productId1, 1);
+
+		asAdmin().document("""
+				query { orders(status: PENDING, first: 50) { edges { node { id } } } }
+				""").execute().path("orders.edges").entityList(java.util.Map.class)
+				.satisfies(edges -> assertThat(edges)
+						.anySatisfy(edge -> assertThat(((java.util.Map<?, ?>) edge.get("node")).get("id"))
+								.isEqualTo(orderId.toString())));
+	}
+
+	@Test
+	void mutation_updateOrderStatus_isAdminOnly() {
+		Long orderId = placeOrderAs("user", productId1, 1);
+
+		asUser().document("""
+				mutation { updateOrderStatus(id: "%s", status: SHIPPED) { id } }
+				""".formatted(orderId)).execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.FORBIDDEN)));
+
+		asAdmin().document("""
+				mutation { updateOrderStatus(id: "%s", status: SHIPPED) { status } }
+				""".formatted(orderId)).execute().path("updateOrderStatus.status").entity(String.class)
+				.isEqualTo("SHIPPED");
+	}
+
+	@Test
+	void query_meOrders_traversesToPlacedOrders() {
+		placeOrderAs("user", productId1, 1);
+
+		asUser().document("""
+				query { me { orders(first: 5) { totalCount } } }
+				""").execute().path("me.orders.totalCount").entity(Integer.class)
+				.satisfies(totalCount -> assertThat(totalCount).isGreaterThanOrEqualTo(1));
+	}
+
+	private Long placeOrderAs(String username, Long productId, int quantity) {
+		HttpGraphQlTester tester = "admin".equals(username) ? asAdmin() : asUser();
+		return Long.valueOf(tester.document("""
+				mutation {
+				  placeOrder(input: { items: [{ productId: "%s", quantity: %d }] }) { id }
+				}
+				""".formatted(productId, quantity)).execute().path("placeOrder.id").entity(String.class).get());
+	}
+
+	@Test
 	void subscription_streamsReviewAdded_whenMutationPublishes() {
 		WebSocketGraphQlTester authenticatedTester = webSocketGraphQlTester.mutate()
 				.header("Authorization", basicAuthHeader("user", "userPassword")).build();
