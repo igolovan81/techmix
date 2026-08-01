@@ -1,0 +1,21 @@
+@if (order(); as o) {
+  <h2>Order {{ o.id }} — {{ o.status }}</h2>
+  <p>Placed by {{ o.user.displayName }} on {{ o.placedAt }}</p>
+
+  <mat-nav-list>
+    @for (item of o.items; track item.id) {
+      <mat-list-item>
+        {{ item.product.name }} × {{ item.quantity }} — {{ item.lineTotalCents / 100 | number: '1.2-2' }}
+      </mat-list-item>
+    }
+  </mat-nav-list>
+  <p>Total: {{ o.totalCents / 100 | number: '1.2-2' }}</p>
+
+  @if (authService.currentUser()?.role === 'ADMIN') {
+    <mat-select [value]="o.status" (selectionChange)="updateStatus($event.value)" data-testid="status-select">
+      @for (status of statuses; track status) {
+        <mat-option [value]="status">{{ status }}</mat-option>
+      }
+    </mat-select>
+  }
+}
