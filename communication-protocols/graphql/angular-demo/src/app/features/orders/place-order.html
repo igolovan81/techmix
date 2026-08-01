@@ -1,0 +1,15 @@
+<mat-nav-list>
+  @for (line of cartService.lines(); track line.product.id) {
+    <mat-list-item>{{ line.product.name }} × {{ line.quantity }}</mat-list-item>
+  }
+</mat-nav-list>
+<p>Total: {{ cartService.totalCents() / 100 | number: '1.2-2' }}</p>
+<button
+  mat-raised-button
+  color="primary"
+  [disabled]="cartService.lines().length === 0"
+  (click)="submit()"
+  data-testid="place-order-button"
+>
+  Place order
+</button>

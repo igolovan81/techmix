@@ -1,0 +1,54 @@
+<app-place-order (ordered)="refreshMyOrders()" />
+
+@if (authService.currentUser()?.role === 'ADMIN') {
+  <mat-tab-group>
+    <mat-tab label="My Orders">
+      <ng-template matTabContent>
+        <mat-nav-list>
+          @for (edge of myOrderEdges(); track edge.node.id) {
+            <a mat-list-item [routerLink]="[edge.node.id]">{{ edge.node.id }} — {{ edge.node.status }}</a>
+          }
+        </mat-nav-list>
+        <app-connection-paginator
+          [hasNextPage]="myOrderPageInfo().hasNextPage"
+          [totalCount]="myOrderTotalCount()"
+          [loadedCount]="myOrderEdges().length"
+          (loadMore)="loadMoreMyOrders()"
+        />
+      </ng-template>
+    </mat-tab>
+    <mat-tab label="All Orders">
+      <ng-template matTabContent>
+        <mat-select [value]="statusFilter()" (selectionChange)="filterAllOrdersByStatus($event.value)" data-testid="status-filter">
+          <mat-option [value]="null">Any status</mat-option>
+          @for (status of ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED']; track status) {
+            <mat-option [value]="status">{{ status }}</mat-option>
+          }
+        </mat-select>
+        <mat-nav-list>
+          @for (edge of allOrderEdges(); track edge.node.id) {
+            <a mat-list-item [routerLink]="[edge.node.id]">{{ edge.node.id }} — {{ edge.node.user.displayName }} — {{ edge.node.status }}</a>
+          }
+        </mat-nav-list>
+        <app-connection-paginator
+          [hasNextPage]="allOrderPageInfo().hasNextPage"
+          [totalCount]="allOrderTotalCount()"
+          [loadedCount]="allOrderEdges().length"
+          (loadMore)="loadMoreAllOrders()"
+        />
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
+} @else {
+  <mat-nav-list>
+    @for (edge of myOrderEdges(); track edge.node.id) {
+      <a mat-list-item [routerLink]="[edge.node.id]">{{ edge.node.id }} — {{ edge.node.status }}</a>
+    }
+  </mat-nav-list>
+  <app-connection-paginator
+    [hasNextPage]="myOrderPageInfo().hasNextPage"
+    [totalCount]="myOrderTotalCount()"
+    [loadedCount]="myOrderEdges().length"
+    (loadMore)="loadMoreMyOrders()"
+  />
+}
