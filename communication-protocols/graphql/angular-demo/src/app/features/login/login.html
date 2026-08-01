@@ -1,0 +1,29 @@
+<mat-card>
+  <mat-card-title>Log in</mat-card-title>
+  <mat-card-content>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <mat-form-field appearance="outline">
+        <mat-label>Username</mat-label>
+        <input matInput formControlName="username" data-testid="username-input" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Password</mat-label>
+        <input matInput type="password" formControlName="password" data-testid="password-input" />
+      </mat-form-field>
+      <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || loading()" data-testid="login-submit">
+        Log in
+      </button>
+    </form>
+    <div class="quick-select">
+      <button mat-stroked-button type="button" (click)="quickSelect('user', 'userPassword')" data-testid="quick-select-user">
+        Continue as user
+      </button>
+      <button mat-stroked-button type="button" (click)="quickSelect('admin', 'adminPassword')" data-testid="quick-select-admin">
+        Continue as admin
+      </button>
+    </div>
+    @if (error(); as message) {
+      <p data-testid="login-error">{{ message }}</p>
+    }
+  </mat-card-content>
+</mat-card>
