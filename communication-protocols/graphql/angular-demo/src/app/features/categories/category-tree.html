@@ -1,0 +1,7 @@
+<ul class="category-tree">
+  @for (category of rootCategories(); track category.id) {
+    <li>
+      <app-category-node [category]="category" />
+    </li>
+  }
+</ul>

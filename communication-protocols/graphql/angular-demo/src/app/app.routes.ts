@@ -9,4 +9,9 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadChildren: () => import('./features/catalog/catalog.routes').then((m) => m.CATALOG_ROUTES),
   },
+  {
+    path: 'categories',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/categories/category-tree').then((m) => m.CategoryTree),
+  },
 ];

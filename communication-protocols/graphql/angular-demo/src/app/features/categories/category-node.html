@@ -1,0 +1,24 @@
+<div class="category-node">
+  <button mat-button (click)="toggleExpanded()" [attr.data-testid]="'expand-' + category().id">
+    {{ category().name }}
+  </button>
+  <button mat-button (click)="toggleProducts()" [attr.data-testid]="'products-' + category().id">Products</button>
+
+  @if (showingProducts() && products(); as items) {
+    <mat-nav-list>
+      @for (product of items; track product.id) {
+        <mat-list-item>{{ product.name }} — {{ product.priceCents / 100 | number: '1.2-2' }}</mat-list-item>
+      }
+    </mat-nav-list>
+  }
+
+  @if (expanded() && children(); as items) {
+    <ul class="category-children">
+      @for (child of items; track child.id) {
+        <li>
+          <app-category-node [category]="child" />
+        </li>
+      }
+    </ul>
+  }
+</div>
