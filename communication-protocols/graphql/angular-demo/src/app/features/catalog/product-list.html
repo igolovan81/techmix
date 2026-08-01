@@ -1,0 +1,34 @@
+<form [formGroup]="filterForm" (ngSubmit)="search()">
+  <mat-form-field appearance="outline">
+    <mat-label>Name contains</mat-label>
+    <input matInput formControlName="nameContains" data-testid="filter-name" />
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Min price (cents)</mat-label>
+    <input matInput type="number" formControlName="minPriceCents" data-testid="filter-min-price" />
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Max price (cents)</mat-label>
+    <input matInput type="number" formControlName="maxPriceCents" data-testid="filter-max-price" />
+  </mat-form-field>
+  <button mat-raised-button color="primary" type="submit" data-testid="filter-submit">Filter</button>
+</form>
+
+<div class="product-grid">
+  @for (edge of edges(); track edge.node.id) {
+    <mat-card [routerLink]="[edge.node.id]" data-testid="product-card">
+      <mat-card-title>{{ edge.node.name }}</mat-card-title>
+      <mat-card-content>
+        <p>{{ edge.node.priceCents / 100 | number: '1.2-2' }} — stock: {{ edge.node.stockQty }}</p>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>
+
+<app-connection-paginator
+  [hasNextPage]="pageInfo().hasNextPage"
+  [totalCount]="totalCount()"
+  [loadedCount]="edges().length"
+  [loading]="loading()"
+  (loadMore)="loadMore()"
+/>
