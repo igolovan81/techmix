@@ -1,0 +1,35 @@
+@if (product(); as p) {
+  <mat-card>
+    <mat-card-title>{{ p.name }}</mat-card-title>
+    <mat-card-content>
+      <p>{{ p.priceCents / 100 | number: '1.2-2' }} — stock: {{ p.stockQty }}</p>
+      <mat-chip-set>
+        @for (category of p.categories; track category.id) {
+          <mat-chip>{{ category.name }}</mat-chip>
+        }
+      </mat-chip-set>
+    </mat-card-content>
+  </mat-card>
+}
+
+<button mat-raised-button color="primary" (click)="openAddReviewDialog()" data-testid="add-review-button">Add review</button>
+
+<ul>
+  @for (edge of reviewEdges(); track edge.node.id) {
+    <li>
+      <strong>{{ edge.node.rating }}/5</strong> by {{ edge.node.author.displayName }} — {{ edge.node.comment }}
+      @if (authService.currentUser()?.role === 'ADMIN') {
+        <button mat-button (click)="deleteReview(edge.node.id)" [attr.data-testid]="'delete-review-' + edge.node.id">
+          Delete
+        </button>
+      }
+    </li>
+  }
+</ul>
+
+<app-connection-paginator
+  [hasNextPage]="reviewPageInfo().hasNextPage"
+  [totalCount]="reviewTotalCount()"
+  [loadedCount]="reviewEdges().length"
+  (loadMore)="loadMoreReviews()"
+/>
