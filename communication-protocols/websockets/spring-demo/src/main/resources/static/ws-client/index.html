@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>WebSocket Demo — Order Tracking</title>
+	<script src="/webjars/sockjs-client/1.5.1/sockjs.min.js"></script>
+	<script src="/webjars/stomp-websocket/2.3.4/stomp.min.js"></script>
+	<style>
+		body { font-family: sans-serif; margin: 2rem; }
+		fieldset { margin-bottom: 1rem; }
+		#log { white-space: pre-wrap; background: #111; color: #0f0; padding: 1rem; height: 200px; overflow-y: scroll; }
+		input { width: 4rem; }
+	</style>
+</head>
+<body>
+<h1>WebSocket Demo — Order Tracking</h1>
+
+<fieldset>
+	<legend>Order</legend>
+	<button id="create-order">Create order</button>
+	<span id="current-order">no order yet</span>
+	<button id="advance-order">Advance order</button>
+</fieldset>
+
+<fieldset>
+	<legend>Raw WebSocket (/ws/raw/orders)</legend>
+	<button id="raw-connect">Connect</button>
+	<button id="raw-disconnect">Disconnect</button>
+</fieldset>
+
+<fieldset>
+	<legend>STOMP (/ws-stomp)</legend>
+	<button id="stomp-connect">Connect</button>
+	<button id="stomp-disconnect">Disconnect</button>
+	<br>
+	Order id for per-order topic / request-reply: <input id="topic-order-id">
+	<button id="stomp-subscribe-topic">Subscribe to order topic</button>
+	<button id="stomp-request-status">Request status</button>
+</fieldset>
+
+<div id="log"></div>
+
+<script>
+	const logEl = document.getElementById('log');
+	function log(line) {
+		logEl.textContent += new Date().toISOString() + ' ' + line + '\n';
+		logEl.scrollTop = logEl.scrollHeight;
+	}
+
+	let currentOrderId = null;
+	document.getElementById('create-order').addEventListener('click', () => {
+		fetch('/api/orders', { method: 'POST' }).then(r => r.json()).then(order => {
+			currentOrderId = order.id;
+			document.getElementById('current-order').textContent = order.id + ' (' + order.status + ')';
+			document.getElementById('topic-order-id').value = order.id;
+			log('Created order ' + order.id);
+		});
+	});
+	document.getElementById('advance-order').addEventListener('click', () => {
+		if (!currentOrderId) { log('No order created yet'); return; }
+		fetch('/api/orders/' + currentOrderId + '/advance', { method: 'POST' }).then(r => {
+			if (!r.ok) { log('Advance failed: HTTP ' + r.status); return; }
+			return r.json().then(order => {
+				document.getElementById('current-order').textContent = order.id + ' (' + order.status + ')';
+				log('Advanced order ' + order.id + ' to ' + order.status);
+			});
+		});
+	});
+
+	let rawSocket = null;
+	document.getElementById('raw-connect').addEventListener('click', () => {
+		rawSocket = new WebSocket('ws://' + location.host + '/ws/raw/orders');
+		rawSocket.onopen = () => log('[raw] connected');
+		rawSocket.onmessage = e => log('[raw] received: ' + e.data);
+		rawSocket.onclose = e => log('[raw] closed: code=' + e.code);
+		rawSocket.onerror = () => log('[raw] error — connection may have been rejected by the simulated 5% failure rate');
+	});
+	document.getElementById('raw-disconnect').addEventListener('click', () => {
+		if (rawSocket) rawSocket.close();
+	});
+
+	let stompClient = null;
+	document.getElementById('stomp-connect').addEventListener('click', () => {
+		const socket = new SockJS('/ws-stomp');
+		stompClient = Stomp.over(socket);
+		stompClient.connect({}, () => {
+			log('[stomp] connected');
+			stompClient.subscribe('/topic/orders', message => {
+				log('[stomp] broadcast: ' + message.body);
+			});
+		}, error => {
+			log('[stomp] error: ' + error);
+		});
+	});
+	document.getElementById('stomp-disconnect').addEventListener('click', () => {
+		if (stompClient) stompClient.disconnect(() => log('[stomp] disconnected'));
+	});
+	document.getElementById('stomp-subscribe-topic').addEventListener('click', () => {
+		const orderId = document.getElementById('topic-order-id').value;
+		if (!stompClient || !orderId) { log('Connect STOMP and enter an order id first'); return; }
+		stompClient.subscribe('/topic/orders/' + orderId, message => {
+			log('[stomp] per-order topic (' + orderId + '): ' + message.body);
+		});
+		log('[stomp] subscribed to /topic/orders/' + orderId);
+	});
+	document.getElementById('stomp-request-status').addEventListener('click', () => {
+		const orderId = document.getElementById('topic-order-id').value;
+		if (!stompClient || !orderId) { log('Connect STOMP and enter an order id first'); return; }
+		stompClient.subscribe('/user/queue/orders/' + orderId + '/status', message => {
+			log('[stomp] status reply: ' + message.body);
+		});
+		stompClient.send('/app/orders/' + orderId + '/status-request', {}, '');
+		log('[stomp] sent status request for ' + orderId + ' (may be dropped by the simulated 5% failure rate)');
+	});
+</script>
+</body>
+</html>
