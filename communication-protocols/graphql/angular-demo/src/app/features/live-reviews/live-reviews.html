@@ -1,0 +1,15 @@
+<mat-form-field appearance="outline">
+  <mat-label>Product</mat-label>
+  <mat-select [value]="productFilter.value" (selectionChange)="selectProduct($event.value)" data-testid="product-filter">
+    <mat-option [value]="null">All products</mat-option>
+    @for (product of products(); track product.id) {
+      <mat-option [value]="product.id">{{ product.name }}</mat-option>
+    }
+  </mat-select>
+</mat-form-field>
+
+<mat-nav-list data-testid="live-feed">
+  @for (review of feed(); track review.id) {
+    <mat-list-item>{{ review.rating }}/5 by {{ review.author.displayName }} — {{ review.comment }}</mat-list-item>
+  }
+</mat-nav-list>

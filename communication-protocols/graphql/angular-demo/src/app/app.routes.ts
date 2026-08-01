@@ -14,4 +14,9 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./features/categories/category-tree').then((m) => m.CategoryTree),
   },
+  {
+    path: 'live',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/live-reviews/live-reviews').then((m) => m.LiveReviews),
+  },
 ];
