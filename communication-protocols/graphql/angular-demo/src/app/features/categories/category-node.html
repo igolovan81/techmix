@@ -1,21 +1,41 @@
 <div class="category-node">
-  <button mat-button (click)="toggleExpanded()" [attr.data-testid]="'expand-' + category().id">
-    {{ category().name }}
-  </button>
-  <button mat-button (click)="toggleProducts()" [attr.data-testid]="'products-' + category().id">Products</button>
+  <div class="node-row">
+    <button
+      class="node-toggle"
+      type="button"
+      (click)="toggleExpanded()"
+      [attr.data-testid]="'expand-' + category().id"
+    >
+      <span class="node-dot" [class.is-open]="expanded()"></span>
+      <span class="node-name">{{ category().name }}</span>
+    </button>
+    <button
+      mat-button
+      type="button"
+      class="products-toggle"
+      [class.is-active]="showingProducts()"
+      (click)="toggleProducts()"
+      [attr.data-testid]="'products-' + category().id"
+    >
+      Products
+    </button>
+  </div>
 
   @if (showingProducts() && products(); as items) {
-    <mat-nav-list>
+    <ul class="product-mini-list">
       @for (product of items; track product.id) {
-        <mat-list-item>{{ product.name }} — {{ product.priceCents / 100 | number: '1.2-2' }}</mat-list-item>
+        <li>
+          <span class="mini-name">{{ product.name }}</span>
+          <span class="mini-price">{{ product.priceCents / 100 | number: '1.2-2' }}</span>
+        </li>
       }
-    </mat-nav-list>
+    </ul>
   }
 
   @if (expanded() && children(); as items) {
-    <ul class="category-children">
+    <ul class="edge-list">
       @for (child of items; track child.id) {
-        <li>
+        <li class="edge-item">
           <app-category-node [category]="child" />
         </li>
       }

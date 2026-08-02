@@ -7,6 +7,7 @@ import { CategoryNode } from './category-node';
   selector: 'app-category-tree',
   imports: [CategoryNode],
   templateUrl: './category-tree.html',
+  styleUrl: './category-tree.scss',
 })
 export class CategoryTree {
   private readonly categoryService = inject(CategoryService);

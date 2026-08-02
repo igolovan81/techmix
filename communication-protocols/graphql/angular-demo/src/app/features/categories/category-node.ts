@@ -1,14 +1,14 @@
 import { Component, inject, input, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MatListModule } from '@angular/material/list';
 import { Category, Product } from '../../core/graphql/graphql.models';
 import { CategoryService } from './category.service';
 
 @Component({
   selector: 'app-category-node',
-  imports: [DecimalPipe, MatButtonModule, MatListModule, CategoryNode],
+  imports: [DecimalPipe, MatButtonModule, CategoryNode],
   templateUrl: './category-node.html',
+  styleUrl: './category-node.scss',
 })
 export class CategoryNode {
   private readonly categoryService = inject(CategoryService);

@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
   selector: 'app-connection-paginator',
   imports: [MatButtonModule],
   templateUrl: './connection-paginator.html',
+  styleUrl: './connection-paginator.scss',
 })
 export class ConnectionPaginator {
   readonly hasNextPage = input.required<boolean>();

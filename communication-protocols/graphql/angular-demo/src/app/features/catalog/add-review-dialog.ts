@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
   selector: 'app-add-review-dialog',
   imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatButtonModule],
   templateUrl: './add-review-dialog.html',
+  styleUrl: './add-review-dialog.scss',
 })
 export class AddReviewDialog {
   private readonly dialogRef = inject(MatDialogRef<AddReviewDialog>);

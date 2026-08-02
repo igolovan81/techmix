@@ -1,29 +1,51 @@
-<mat-card>
-  <mat-card-title>Log in</mat-card-title>
-  <mat-card-content>
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <mat-form-field appearance="outline">
-        <mat-label>Username</mat-label>
-        <input matInput formControlName="username" data-testid="username-input" />
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Password</mat-label>
-        <input matInput type="password" formControlName="password" data-testid="password-input" />
-      </mat-form-field>
-      <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid || loading()" data-testid="login-submit">
-        Log in
-      </button>
-    </form>
-    <div class="quick-select">
-      <button mat-stroked-button type="button" (click)="quickSelect('user', 'userPassword')" data-testid="quick-select-user">
-        Continue as user
-      </button>
-      <button mat-stroked-button type="button" (click)="quickSelect('admin', 'adminPassword')" data-testid="quick-select-admin">
-        Continue as admin
-      </button>
-    </div>
-    @if (error(); as message) {
-      <p data-testid="login-error">{{ message }}</p>
-    }
-  </mat-card-content>
-</mat-card>
+<div class="login-screen">
+  <div class="login-intro">
+    <svg class="login-mark" width="40" height="40" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <circle cx="11" cy="4" r="2.4" fill="currentColor" />
+      <circle cx="4" cy="17" r="2.4" fill="currentColor" />
+      <circle cx="18" cy="17" r="2.4" fill="currentColor" />
+      <path d="M11 6.4 L4 14.6 M11 6.4 L18 14.6 M6 17 H16" stroke="currentColor" stroke-width="1.4" />
+    </svg>
+    <h1>GraphQL Angular Demo</h1>
+    <p>Query + nested fetch, DataLoader batching, mutation, subscription, pagination &amp; filtering.</p>
+  </div>
+
+  <mat-card class="login-card">
+    <mat-card-content>
+      <div class="quick-select">
+        <p class="quick-select-label">Jump in as a seeded account</p>
+        <button mat-flat-button type="button" (click)="quickSelect('user', 'userPassword')" data-testid="quick-select-user">
+          Continue as user
+        </button>
+        <button mat-stroked-button type="button" (click)="quickSelect('admin', 'adminPassword')" data-testid="quick-select-admin">
+          Continue as admin
+        </button>
+      </div>
+
+      <div class="divider"><span>or sign in manually</span></div>
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" data-testid="username-input" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Password</mat-label>
+          <input matInput type="password" formControlName="password" data-testid="password-input" />
+        </mat-form-field>
+        <button
+          mat-stroked-button
+          type="submit"
+          [disabled]="form.invalid || loading()"
+          data-testid="login-submit"
+        >
+          Log in
+        </button>
+      </form>
+
+      @if (error(); as message) {
+        <p class="login-error" data-testid="login-error">{{ message }}</p>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

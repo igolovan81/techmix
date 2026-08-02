@@ -2,9 +2,9 @@ import { Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatIconModule } from '@angular/material/icon';
 import { ConnectionPaginator } from '../../shared/connection-paginator/connection-paginator';
 import { Edge, PageInfo, Product, Review, emptyConnection } from '../../core/graphql/graphql.models';
 import { AuthService } from '../../core/auth/auth.service';
@@ -15,8 +15,9 @@ const PAGE_SIZE = 20;
 
 @Component({
   selector: 'app-product-detail',
-  imports: [DecimalPipe, MatCardModule, MatButtonModule, MatChipsModule, ConnectionPaginator],
+  imports: [DecimalPipe, MatButtonModule, MatChipsModule, MatIconModule, ConnectionPaginator],
   templateUrl: './product-detail.html',
+  styleUrl: './product-detail.scss',
 })
 export class ProductDetail {
   private readonly route = inject(ActivatedRoute);

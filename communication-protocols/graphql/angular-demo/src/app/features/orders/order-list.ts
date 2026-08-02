@@ -1,8 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { MatListModule } from '@angular/material/list';
 import { ConnectionPaginator } from '../../shared/connection-paginator/connection-paginator';
 import { AuthService } from '../../core/auth/auth.service';
 import { Edge, Order, OrderStatus, PageInfo, emptyConnection } from '../../core/graphql/graphql.models';
@@ -10,15 +11,18 @@ import { OrderService } from './order.service';
 import { PlaceOrder } from './place-order';
 
 const PAGE_SIZE = 20;
+const ORDER_STATUSES: OrderStatus[] = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
 
 @Component({
   selector: 'app-order-list',
-  imports: [RouterLink, MatTabsModule, MatSelectModule, MatListModule, ConnectionPaginator, PlaceOrder],
+  imports: [DecimalPipe, RouterLink, MatTabsModule, MatFormFieldModule, MatSelectModule, ConnectionPaginator, PlaceOrder],
   templateUrl: './order-list.html',
+  styleUrl: './order-list.scss',
 })
 export class OrderList {
   private readonly orderService = inject(OrderService);
   protected readonly authService = inject(AuthService);
+  protected readonly statuses = ORDER_STATUSES;
 
   readonly myOrderEdges = signal<Edge<Order>[]>([]);
   readonly myOrderPageInfo = signal<PageInfo>(emptyConnection<Order>().pageInfo);

@@ -41,4 +41,15 @@ describe('PlaceOrder', () => {
     expect(orderService.placeOrder).toHaveBeenCalledWith({ items: [{ productId: '1', quantity: 2 }] });
     expect(cartService.lines()).toEqual([]);
   });
+
+  it('clicking the remove button on a line removes it from the cart', () => {
+    cartService.add(widget, 2);
+
+    const fixture = TestBed.createComponent(PlaceOrder);
+    fixture.detectChanges();
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="remove-line-1"]');
+    button.click();
+
+    expect(cartService.lines()).toEqual([]);
+  });
 });

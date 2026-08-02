@@ -1,8 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { MatListModule } from '@angular/material/list';
 import { AuthService } from '../../core/auth/auth.service';
 import { Order, OrderStatus } from '../../core/graphql/graphql.models';
 import { OrderService } from './order.service';
@@ -11,8 +11,9 @@ const ORDER_STATUSES: OrderStatus[] = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED'
 
 @Component({
   selector: 'app-order-detail',
-  imports: [DecimalPipe, MatSelectModule, MatListModule],
+  imports: [DatePipe, DecimalPipe, MatFormFieldModule, MatSelectModule],
   templateUrl: './order-detail.html',
+  styleUrl: './order-detail.scss',
 })
 export class OrderDetail {
   private readonly route = inject(ActivatedRoute);

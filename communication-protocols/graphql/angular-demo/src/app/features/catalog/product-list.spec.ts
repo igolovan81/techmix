@@ -3,6 +3,7 @@ import { RouterModule, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { ProductList } from './product-list';
 import { ProductCatalogService } from './product-catalog.service';
+import { CartService } from '../orders/cart.service';
 import { Connection, Product } from '../../core/graphql/graphql.models';
 
 describe('ProductList', () => {
@@ -60,5 +61,16 @@ describe('ProductList', () => {
     expect(service.listProducts).toHaveBeenCalledWith({ nameContains: 'Gadget' }, 20, null);
     expect(fixture.componentInstance.edges().length).toBe(1);
     expect(fixture.componentInstance.edges()[0].node.name).toBe('Gadget');
+  });
+
+  it('clicking "Add to cart" adds the product without navigating', () => {
+    const fixture = TestBed.createComponent(ProductList);
+    fixture.detectChanges();
+    const cartService = TestBed.inject(CartService);
+
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="add-to-cart-1"]');
+    button.click();
+
+    expect(cartService.lines()).toEqual([{ product: page1.edges[0].node, quantity: 1 }]);
   });
 });

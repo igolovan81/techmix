@@ -1,21 +1,37 @@
 @if (order(); as o) {
-  <h2>Order {{ o.id }} — {{ o.status }}</h2>
-  <p>Placed by {{ o.user.displayName }} on {{ o.placedAt }}</p>
+  <header class="order-header">
+    <div class="order-header-main">
+      <span class="order-id">Order #{{ o.id }}</span>
+      <h1>
+        <span class="status-chip" [attr.data-status]="o.status">{{ o.status }}</span>
+      </h1>
+      <p class="order-meta">Placed by {{ o.user.displayName }} on {{ o.placedAt | date: 'medium' }}</p>
+    </div>
 
-  <mat-nav-list>
-    @for (item of o.items; track item.id) {
-      <mat-list-item>
-        {{ item.product.name }} × {{ item.quantity }} — {{ item.lineTotalCents / 100 | number: '1.2-2' }}
-      </mat-list-item>
+    @if (authService.currentUser()?.role === 'ADMIN') {
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="status-field">
+        <mat-label>Update status</mat-label>
+        <mat-select [value]="o.status" (selectionChange)="updateStatus($event.value)" data-testid="status-select">
+          @for (status of statuses; track status) {
+            <mat-option [value]="status">{{ status }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
     }
-  </mat-nav-list>
-  <p>Total: {{ o.totalCents / 100 | number: '1.2-2' }}</p>
+  </header>
 
-  @if (authService.currentUser()?.role === 'ADMIN') {
-    <mat-select [value]="o.status" (selectionChange)="updateStatus($event.value)" data-testid="status-select">
-      @for (status of statuses; track status) {
-        <mat-option [value]="status">{{ status }}</mat-option>
-      }
-    </mat-select>
-  }
+  <ul class="item-list">
+    @for (item of o.items; track item.id) {
+      <li class="item-row">
+        <span class="item-name">{{ item.product.name }}</span>
+        <span class="item-qty">× {{ item.quantity }}</span>
+        <span class="item-total">{{ item.lineTotalCents / 100 | number: '1.2-2' }}</span>
+      </li>
+    }
+  </ul>
+
+  <div class="order-total-row">
+    <span>Total</span>
+    <span class="order-total">{{ o.totalCents / 100 | number: '1.2-2' }}</span>
+  </div>
 }

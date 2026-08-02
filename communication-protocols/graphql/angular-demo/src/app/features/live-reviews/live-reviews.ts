@@ -2,7 +2,6 @@ import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
-import { MatListModule } from '@angular/material/list';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Subscription } from 'rxjs';
 import { Product, Review } from '../../core/graphql/graphql.models';
@@ -11,8 +10,9 @@ import { LiveReviewsService } from './live-reviews.service';
 
 @Component({
   selector: 'app-live-reviews',
-  imports: [ReactiveFormsModule, MatFormFieldModule, MatSelectModule, MatListModule],
+  imports: [ReactiveFormsModule, MatFormFieldModule, MatSelectModule],
   templateUrl: './live-reviews.html',
+  styleUrl: './live-reviews.scss',
 })
 export class LiveReviews implements OnDestroy {
   private readonly liveReviewsService = inject(LiveReviewsService);

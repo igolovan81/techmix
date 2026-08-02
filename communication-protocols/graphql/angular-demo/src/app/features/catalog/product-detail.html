@@ -1,35 +1,61 @@
 @if (product(); as p) {
-  <mat-card>
-    <mat-card-title>{{ p.name }}</mat-card-title>
-    <mat-card-content>
-      <p>{{ p.priceCents / 100 | number: '1.2-2' }} — stock: {{ p.stockQty }}</p>
+  <header class="product-header">
+    <div class="product-header-main">
+      <span class="product-id">#{{ p.id }}</span>
+      <h1>{{ p.name }}</h1>
       <mat-chip-set>
         @for (category of p.categories; track category.id) {
           <mat-chip>{{ category.name }}</mat-chip>
         }
       </mat-chip-set>
-    </mat-card-content>
-  </mat-card>
+    </div>
+    <div class="product-header-stats">
+      <span class="stat-price">{{ p.priceCents / 100 | number: '1.2-2' }}</span>
+      <span class="stat-stock">{{ p.stockQty }} in stock</span>
+    </div>
+  </header>
 }
 
-<button mat-raised-button color="primary" (click)="openAddReviewDialog()" data-testid="add-review-button">Add review</button>
+<section class="reviews-section">
+  <div class="reviews-heading">
+    <h2>Reviews</h2>
+    <button mat-flat-button type="button" (click)="openAddReviewDialog()" data-testid="add-review-button">
+      <mat-icon>rate_review</mat-icon>
+      Add review
+    </button>
+  </div>
 
-<ul>
-  @for (edge of reviewEdges(); track edge.node.id) {
-    <li>
-      <strong>{{ edge.node.rating }}/5</strong> by {{ edge.node.author.displayName }} — {{ edge.node.comment }}
-      @if (authService.currentUser()?.role === 'ADMIN') {
-        <button mat-button (click)="deleteReview(edge.node.id)" [attr.data-testid]="'delete-review-' + edge.node.id">
-          Delete
-        </button>
-      }
-    </li>
-  }
-</ul>
+  <ul class="review-list">
+    @for (edge of reviewEdges(); track edge.node.id) {
+      <li class="review-row">
+        <div class="review-rating" [attr.aria-label]="edge.node.rating + ' out of 5'">
+          @for (star of [1, 2, 3, 4, 5]; track star) {
+            <span class="star" [class.filled]="star <= edge.node.rating">●</span>
+          }
+        </div>
+        <div class="review-body">
+          <span class="review-author">{{ edge.node.author.displayName }}</span>
+          <span class="review-comment">{{ edge.node.comment }}</span>
+        </div>
+        @if (authService.currentUser()?.role === 'ADMIN') {
+          <button
+            mat-icon-button
+            type="button"
+            (click)="deleteReview(edge.node.id)"
+            [attr.data-testid]="'delete-review-' + edge.node.id"
+            aria-label="Delete review"
+          >
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+        }
+      </li>
+    }
+  </ul>
 
-<app-connection-paginator
-  [hasNextPage]="reviewPageInfo().hasNextPage"
-  [totalCount]="reviewTotalCount()"
-  [loadedCount]="reviewEdges().length"
-  (loadMore)="loadMoreReviews()"
-/>
+  <app-connection-paginator
+    [hasNextPage]="reviewPageInfo().hasNextPage"
+    [totalCount]="reviewTotalCount()"
+    [loadedCount]="reviewEdges().length"
+    (loadMore)="loadMoreReviews()"
+  />
+</section>

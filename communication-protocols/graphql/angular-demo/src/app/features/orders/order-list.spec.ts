@@ -11,8 +11,11 @@ describe('OrderList', () => {
   let orderService: jasmine.SpyObj<OrderService>;
   let authService: AuthService;
 
-  const myOrders: Connection<Order> = { ...emptyConnection<Order>(), edges: [{ cursor: 'o1', node: { id: '1' } as Order }], totalCount: 1 };
-  const allOrders: Connection<Order> = { ...emptyConnection<Order>(), edges: [{ cursor: 'o2', node: { id: '2' } as Order }], totalCount: 1 };
+  const customer = { id: '1', username: 'user', displayName: 'Demo User', role: 'CUSTOMER' as const };
+  const order1: Order = { id: '1', user: customer, status: 'PENDING', placedAt: '2026-08-01T00:00:00Z', items: [], totalCents: 1000 };
+  const order2: Order = { id: '2', user: customer, status: 'SHIPPED', placedAt: '2026-08-01T00:00:00Z', items: [], totalCents: 2000 };
+  const myOrders: Connection<Order> = { ...emptyConnection<Order>(), edges: [{ cursor: 'o1', node: order1 }], totalCount: 1 };
+  const allOrders: Connection<Order> = { ...emptyConnection<Order>(), edges: [{ cursor: 'o2', node: order2 }], totalCount: 1 };
 
   beforeEach(() => {
     sessionStorage.clear();
