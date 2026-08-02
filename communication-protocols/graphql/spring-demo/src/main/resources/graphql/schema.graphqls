@@ -5,6 +5,7 @@ type Product {
     stockQty: Int!
     categories: [Category!]!
     reviews(filter: ReviewFilter, first: Int, after: String): ReviewConnection!
+    imageUrl: String
 }
 
 type Category {

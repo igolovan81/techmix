@@ -11,6 +11,7 @@ import com.testingai.graphql.domain.PlaceOrderInput;
 import com.testingai.graphql.domain.Product;
 import com.testingai.graphql.domain.ProductCatalogService;
 import com.testingai.graphql.domain.ProductFilter;
+import com.testingai.graphql.domain.ProductImageService;
 import com.testingai.graphql.domain.Review;
 import com.testingai.graphql.domain.ReviewFilter;
 import com.testingai.graphql.domain.ReviewService;
@@ -44,6 +45,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -57,6 +59,7 @@ import java.util.concurrent.CompletableFuture;
 public class DemoController {
 
 	private final ProductCatalogService productCatalogService;
+	private final ProductImageService productImageService;
 	private final ReviewService reviewService;
 	private final UserService userService;
 	private final CategoryService categoryService;
@@ -160,6 +163,26 @@ public class DemoController {
 		Map<Product, List<Category>> result = new LinkedHashMap<>();
 		for (Product product : products) {
 			result.put(product, byProductId.getOrDefault(product.id(), List.of()));
+		}
+		return result;
+	}
+
+	/**
+	 * Batch mapping for {@code Product.imageUrl} — no {@code @Argument} needed, so this uses {@code @BatchMapping}
+	 * directly, same idiom as {@link #productCategories}. Resolves to the REST download path for products that have an
+	 * uploaded image ({@link com.testingai.graphql.controller.ProductImageController}), null otherwise — GraphQL itself
+	 * never carries the image bytes.
+	 */
+	@BatchMapping(typeName = "Product", field = "imageUrl")
+	public Map<Product, String> productImageUrl(List<Product> products) {
+		List<Long> ids = products.stream().map(product -> Long.parseLong(product.id())).toList();
+		Set<Long> withImage = productImageService.findProductIdsWithImage(ids);
+		Map<Product, String> result = new LinkedHashMap<>();
+		for (Product product : products) {
+			result.put(product,
+					withImage.contains(Long.parseLong(product.id()))
+							? "/api/products/" + product.id() + "/image"
+							: null);
 		}
 		return result;
 	}

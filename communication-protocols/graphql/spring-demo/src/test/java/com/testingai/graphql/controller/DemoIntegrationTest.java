@@ -5,8 +5,10 @@ import com.testingai.graphql.domain.ReviewService;
 import com.testingai.graphql.domain.Role;
 import com.testingai.graphql.entity.CategoryEntity;
 import com.testingai.graphql.entity.ProductEntity;
+import com.testingai.graphql.entity.ProductImageEntity;
 import com.testingai.graphql.entity.UserEntity;
 import com.testingai.graphql.repository.CategoryRepository;
+import com.testingai.graphql.repository.ProductImageRepository;
 import com.testingai.graphql.repository.ProductRepository;
 import com.testingai.graphql.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -28,6 +30,7 @@ import reactor.test.StepVerifier;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -49,6 +52,8 @@ class DemoIntegrationTest {
 	private UserRepository userRepository;
 	@Autowired
 	private CategoryRepository categoryRepository;
+	@Autowired
+	private ProductImageRepository productImageRepository;
 
 	private HttpGraphQlTester graphQlTester;
 	private WebSocketGraphQlTester webSocketGraphQlTester;
@@ -198,6 +203,46 @@ class DemoIntegrationTest {
 			}
 		}
 
+		fail("product query kept simulating failure across 20 attempts (5% failure rate)");
+	}
+
+	@Test
+	void query_productImageUrl_isNull_whenNoImageUploaded() {
+		for (int attempt = 0; attempt < 20; attempt++) {
+			List<ResponseError> errors = new ArrayList<>();
+			GraphQlTester.Traversable afterErrors = graphQlTester.document("""
+					query {
+					  product(id: "%s") { imageUrl }
+					}
+					""".formatted(productId1)).execute().errors().satisfy(errors::addAll);
+
+			if (errors.isEmpty()) {
+				afterErrors.path("product.imageUrl").valueIsNull();
+				return;
+			}
+		}
+		fail("product query kept simulating failure across 20 attempts (5% failure rate)");
+	}
+
+	@Test
+	void query_productImageUrl_resolvesToRestDownloadPath_whenImageUploaded() {
+		productImageRepository
+				.save(new ProductImageEntity(productId1, "image/png", new byte[]{1, 2, 3}, Instant.now()));
+
+		for (int attempt = 0; attempt < 20; attempt++) {
+			List<ResponseError> errors = new ArrayList<>();
+			GraphQlTester.Traversable afterErrors = graphQlTester.document("""
+					query {
+					  product(id: "%s") { imageUrl }
+					}
+					""".formatted(productId1)).execute().errors().satisfy(errors::addAll);
+
+			if (errors.isEmpty()) {
+				afterErrors.path("product.imageUrl").entity(String.class)
+						.isEqualTo("/api/products/" + productId1 + "/image");
+				return;
+			}
+		}
 		fail("product query kept simulating failure across 20 attempts (5% failure rate)");
 	}
 
