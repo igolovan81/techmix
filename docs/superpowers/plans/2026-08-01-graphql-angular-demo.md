@@ -815,7 +815,17 @@ export const appConfig: ApplicationConfig = {
 
 - [ ] **Step 6: Create the routes skeleton**
 
+`tsconfig.spec.json` includes `src/**/*.ts`, so `ng test` type-checks the entire project as one program regardless of which spec file is filtered in — a broken import anywhere in `app.routes.ts` fails every test run, not just ones that touch it. So `app.routes.ts` must stay valid (only reference modules that already exist) at every step from here on, rather than being written in full now and left broken until Task 20. Start it empty:
+
 `src/app/app.routes.ts`:
+
+```ts
+import { Routes } from '@angular/router';
+
+export const routes: Routes = [];
+```
+
+Each later task that adds a route target (`Login` in Task 8, `catalog.routes.ts` in Task 11/12, `CategoryTree` in Task 14, `LiveReviews` in Task 16, `orders.routes.ts` in Task 19/20) must also add its entry (and, for `authGuard`-protected ones, `canActivate: [authGuard]`) to this file in that same task, immediately after creating the target — not deferred to the end. The final shape is the one shown below (for reference — build it up incrementally, don't paste this now):
 
 ```ts
 import { Routes } from '@angular/router';
@@ -847,7 +857,7 @@ export const routes: Routes = [
 ];
 ```
 
-This won't compile yet — the imported feature modules don't exist. That's expected; Steps 7-8 add the shell (which doesn't reference these routes directly), and Tasks 8-20 add each feature in turn. Confirm with `npx tsc -p tsconfig.app.json --noEmit` only after Task 8 (login) makes `/login` resolvable; for now, proceed to the shell.
+Proceed to the shell — it doesn't reference `routes` content directly (its own tests use `provideRouter([])`), so an empty `routes` array doesn't block it.
 
 - [ ] **Step 7: Write the failing test for the app shell**
 
@@ -1172,15 +1182,26 @@ export class Login {
 Run: `npm test -- --watch=false --browsers=ChromeHeadless --include='**/login.spec.ts'`
 Expected: PASS (2 specs).
 
-- [ ] **Step 6: Verify the app still compiles**
+- [ ] **Step 6: Wire the route and verify the app compiles**
+
+`src/app/app.routes.ts`:
+
+```ts
+import { Routes } from '@angular/router';
+
+export const routes: Routes = [
+  { path: '', pathMatch: 'full', redirectTo: 'login' },
+  { path: 'login', loadComponent: () => import('./features/login/login').then((m) => m.Login) },
+];
+```
 
 Run: `npx tsc -p tsconfig.app.json --noEmit`
-Expected: still fails only on the not-yet-created `catalog.routes`/`category-tree`/`live-reviews`/`orders.routes` imports in `app.routes.ts` — that's expected until Tasks 11-20 add them.
+Expected: no errors.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/app/features/login
+git add src/app/features/login src/app/app.routes.ts
 git commit -m "feat(communication-protocols): add the login feature to the GraphQL angular-demo"
 ```
 
