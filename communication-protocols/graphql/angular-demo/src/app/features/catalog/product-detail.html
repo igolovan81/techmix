@@ -1,5 +1,20 @@
 @if (product(); as p) {
   <header class="product-header">
+    <div class="product-image-block">
+      @if (imageUrl(); as src) {
+        <img class="product-image" [src]="src" [alt]="p.name" />
+      } @else {
+        <div class="product-image product-image-placeholder" aria-hidden="true">
+          <mat-icon>image</mat-icon>
+        </div>
+      }
+      @if (authService.currentUser()?.role === 'ADMIN') {
+        <label class="product-image-upload">
+          <input type="file" accept="image/*" (change)="onImageSelected($event)" data-testid="product-image-input" />
+          Upload image
+        </label>
+      }
+    </div>
     <div class="product-header-main">
       <span class="product-id">#{{ p.id }}</span>
       <h1>{{ p.name }}</h1>

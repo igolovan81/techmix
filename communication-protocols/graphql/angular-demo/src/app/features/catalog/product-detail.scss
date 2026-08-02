@@ -30,6 +30,39 @@
   align-items: flex-end;
 }
 
+.product-image-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.product-image {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--app-radius);
+  object-fit: cover;
+  background: var(--mat-sys-surface-container-highest);
+}
+
+.product-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mat-sys-outline);
+}
+
+.product-image-upload {
+  font-size: 0.7rem;
+  color: var(--mat-sys-primary);
+  cursor: pointer;
+
+  input[type='file'] {
+    display: none;
+  }
+}
+
 .stat-price {
   font-family: var(--app-font-mono);
   font-size: 1.5rem;

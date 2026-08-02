@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -32,6 +32,15 @@ export class ProductDetail {
   readonly reviewPageInfo = signal<PageInfo>(emptyConnection<Review>().pageInfo);
   readonly reviewTotalCount = signal(0);
 
+  private readonly imageCacheBuster = signal(0);
+  readonly imageUrl = computed(() => {
+    const url = this.product()?.imageUrl;
+    if (!url) {
+      return null;
+    }
+    return this.imageCacheBuster() ? `${url}?v=${this.imageCacheBuster()}` : url;
+  });
+
   constructor() {
     this.catalog.getProduct(this.productId).subscribe((product) => this.product.set(product));
     this.loadReviews(null);
@@ -60,6 +69,18 @@ export class ProductDetail {
     this.catalog.deleteReview(id).subscribe(() => {
       this.reviewEdges.set(this.reviewEdges().filter((edge) => edge.node.id !== id));
       this.reviewTotalCount.set(this.reviewTotalCount() - 1);
+    });
+  }
+
+  onImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+    this.catalog.uploadProductImage(this.productId, file).subscribe(() => {
+      this.imageCacheBuster.set(Date.now());
+      input.value = '';
     });
   }
 
