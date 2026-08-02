@@ -1,6 +1,6 @@
 # GraphQL Spring Demo
 
-Single Spring Boot app exposing a GraphQL schema over a small Postgres-backed e-commerce domain (Product, Category, Review, User, Order, OrderItem), covering query + nested fetch, DataLoader batching (both `@BatchMapping` and manual registration), mutation, subscription, Relay-style cursor pagination (both DB-pushed-down and in-memory), field-level security including row-level authorization, and a transactional multi-row mutation.
+Single Spring Boot app exposing a GraphQL schema over a small Postgres-backed e-commerce domain (Product, Category, Review, User, Order, OrderItem), covering query + nested fetch, DataLoader batching (both `@BatchMapping` and manual registration), mutation, subscription, Relay-style cursor pagination (both DB-pushed-down and in-memory), field-level security including row-level authorization, a transactional multi-row mutation, and a REST-sidecar pattern for binary file upload/download.
 
 ## Prerequisites
 
@@ -118,6 +118,28 @@ curl -s http://localhost:8092/graphql \
 ```
 
 **Caveat:** a cursor encodes a position in the filtered, ordered list it was issued from — reusing a cursor from one `filter` against a different `filter` (or against no filter at all) returns whatever that position happens to be in the new list, not the same logical page.
+
+## File upload/download
+
+`Product.imageUrl` (nullable) points at a REST endpoint, not a GraphQL field — GraphQL has no way to carry binary payloads, so the schema only ever exposes the pointer:
+
+```bash
+# upload (ADMIN only) — replace <path-to-image> with a real image file
+curl -s -u admin:adminPassword -F "file=@<path-to-image>;type=image/png" \
+  http://localhost:8092/api/products/1/image
+# 204 No Content on success
+
+# the schema field now resolves to the download path:
+curl -s http://localhost:8092/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ product(id: \"1\") { imageUrl } }"}'
+# {"data":{"product":{"imageUrl":"/api/products/1/image"}}}
+
+# download (public, no auth needed)
+curl -s http://localhost:8092/api/products/1/image -o downloaded-image.png
+```
+
+Uploading again for the same product replaces the previous image (one image per product, no gallery). Uploads are capped at 5MB and must have an `image/*` content type; both are rejected with `400`/`413` respectively, and uploading to an unknown product id returns `404`.
 
 ## Security
 

@@ -1,6 +1,6 @@
 # GraphQL Angular Demo
 
-A standalone Angular 20 app that exercises every GraphQL pattern demonstrated by [`../spring-demo`](../spring-demo): query + nested fetch, DataLoader batching, mutation, subscription, and pagination & filtering — plus the role-based and row-level authorization built into that app's schema.
+A standalone Angular 20 app that exercises every GraphQL pattern demonstrated by [`../spring-demo`](../spring-demo): query + nested fetch, DataLoader batching, mutation, subscription, pagination & filtering, and file upload/download — plus the role-based and row-level authorization built into that app's schema.
 
 ## Running
 
@@ -22,7 +22,7 @@ Open http://localhost:4202 and log in with the "Continue as user" or "Continue a
 
 ## Why a dev proxy
 
-The Spring app has no CORS configuration. `proxy.conf.json` makes `ng serve` proxy `/graphql` (both HTTP and the WebSocket upgrade) to `http://localhost:8092`, so the browser sees everything as same-origin — no backend changes needed for this part. This is dev-only; there's no production deployment story here (same scope limit as the rest of `communication-protocols`).
+The Spring app has no CORS configuration. `proxy.conf.json` makes `ng serve` proxy `/graphql` (both HTTP and the WebSocket upgrade) and `/api` (the REST image upload/download endpoints) to `http://localhost:8092`, so the browser sees everything as same-origin — no backend changes needed for this part. This is dev-only; there's no production deployment story here (same scope limit as the rest of `communication-protocols`).
 
 ## Why login establishes a session, not just a header
 
@@ -38,7 +38,7 @@ This is also why the whole app sits behind `/login`, even though `products`/`cat
 |---|---|
 | `/login` | HTTP Basic auth, session establishment |
 | `/catalog` | `products(filter, first, after)` |
-| `/catalog/:id` | nested `reviews`, `addReview`, `deleteReview` (ADMIN) |
+| `/catalog/:id` | nested `reviews`, `addReview`, `deleteReview` (ADMIN), `imageUrl` display and (ADMIN) upload via a plain REST call — not Apollo, since GraphQL carries no binary payloads |
 | `/categories` | `categories` → `children` (DataLoader-batched), `category.products` |
 | `/live` | `reviewAdded(productId?)` subscription |
 | `/orders` | `me.orders`, `orders(status)` (ADMIN), `placeOrder` |

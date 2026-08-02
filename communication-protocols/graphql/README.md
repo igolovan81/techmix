@@ -4,9 +4,9 @@ Demonstrates GraphQL — a schema-first query language for APIs, served over a s
 
 Unlike the [gRPC demo](../grpc/), GraphQL doesn't need a client/server split: any HTTP (or WebSocket, for subscriptions) client can talk to the schema directly, so this module is a single app.
 
-Beyond the five patterns below, the domain also demonstrates: DB-pushed-down keyset pagination at 10,000-product scale (alongside the original in-memory cursor pagination, used where a parent's list is always small); `@BatchMapping` used directly wherever no argument is needed, side by side with the manual `DataLoader` registration required when one is; and row-level (not just role-level) authorization on `order(id)`. See [spring-demo/README.md](spring-demo/README.md#domain-model) for the full write-up.
+Beyond the six patterns below, the domain also demonstrates: DB-pushed-down keyset pagination at 10,000-product scale (alongside the original in-memory cursor pagination, used where a parent's list is always small); `@BatchMapping` used directly wherever no argument is needed, side by side with the manual `DataLoader` registration required when one is; and row-level (not just role-level) authorization on `order(id)`. See [spring-demo/README.md](spring-demo/README.md#domain-model) for the full write-up.
 
-## The five patterns
+## The six patterns
 
 | Pattern | Field/operation | What it demonstrates |
 |---|---|---|
@@ -15,6 +15,7 @@ Beyond the five patterns below, the domain also demonstrates: DB-pushed-down key
 | Mutation | `addReview` | A write that returns the created object and publishes it to the subscription stream |
 | Subscription | `reviewAdded(productId)` | Real-time push over a GraphQL-over-WebSocket session, optionally filtered server-side by `productId` |
 | Pagination & filtering | `products(filter, first, after)`, `Product.reviews(filter, first, after)` | Relay-style cursor connections (`edges`/`node`/`cursor`/`pageInfo`) plus input-object filtering, at both the root-query and nested level |
+| File upload/download | `Product.imageUrl` + REST sidecar (`POST`/`GET /api/products/{id}/image`) | GraphQL carries no binary payloads — the schema exposes only a pointer field, and the bytes move over a plain REST endpoint next to `/graphql` |
 
 ### Query + nested fetch
 
@@ -94,6 +95,22 @@ Beyond the five patterns below, the domain also demonstrates: DB-pushed-down key
 - Any list endpoint large enough that returning everything in one response is wasteful (product catalogs, comment threads, activity feeds)
 - APIs where clients need to narrow a large collection by one or more criteria before paging through it
 
+### File upload/download
+
+**Pros**
+- Keeps large binary payloads off the GraphQL execution engine entirely — no query-cost or streaming complications for the schema to deal with
+- The REST endpoint can be fronted by ordinary HTTP caching/CDN infrastructure, unlike a POST-only GraphQL response
+- `Product.imageUrl` still fits normal field-selection ergonomics: a client that doesn't ask for it never gets an extra round trip, and the field is resolved batched (no N+1) exactly like `Product.categories`
+
+**Cons**
+- Two request lifecycles for one logical resource (schema pointer + REST fetch) instead of one
+- Authorization has to be enforced twice, independently — once for the GraphQL field (implicitly, via whatever gates a `Product` query) and once for the REST endpoint (`@PreAuthorize` on `ProductImageController`) — nothing ties them together automatically
+- Not part of the GraphQL spec at all, so this pattern (unlike the other five) has no schema-level standardization; every API does it slightly differently
+
+**Typical use cases**
+- Any binary attachment on a GraphQL-modeled entity: avatars, product images, PDF exports, generated reports
+- APIs that want to keep binary transfer cacheable/CDN-friendly while still describing the rest of the domain in GraphQL
+
 ## Running the demo
 
 Docker is needed to run the app (Postgres) — but not for `mvn test`, which runs against an embedded H2 database.
@@ -107,10 +124,10 @@ mvn -pl graphql/spring-demo spring-boot:run
 
 GraphiQL (interactive schema explorer): http://localhost:8092/graphiql
 
-See [spring-demo/README.md](spring-demo/README.md) for `curl` and subscription walkthroughs of all five patterns, plus the [domain model](spring-demo/README.md#domain-model) write-up.
+See [spring-demo/README.md](spring-demo/README.md) for `curl` and subscription walkthroughs of all six patterns, plus the [domain model](spring-demo/README.md#domain-model) write-up.
 
-An Angular browser client tours the same five patterns interactively — see [angular-demo/README.md](angular-demo/README.md).
+An Angular browser client tours the same six patterns interactively — see [angular-demo/README.md](angular-demo/README.md).
 
 ## Scope
 
-No query depth/complexity limiting, no persisted queries, no GraphQL federation — this is a protocol-pattern demo, not a production-hardening guide (same spirit as the gRPC demo's "no TLS" scope limit). Subscriptions are backed by a single in-process `Sinks.Many`, so this is a single-instance demo only. Authentication is HTTP Basic against in-memory demo credentials, not a production auth story — see [spring-demo/README.md#security](spring-demo/README.md#security).
+No query depth/complexity limiting, no persisted queries, no GraphQL federation — this is a protocol-pattern demo, not a production-hardening guide (same spirit as the gRPC demo's "no TLS" scope limit). Subscriptions are backed by a single in-process `Sinks.Many`, so this is a single-instance demo only. Authentication is HTTP Basic against in-memory demo credentials, not a production auth story — see [spring-demo/README.md#security](spring-demo/README.md#security). File transfer is intentionally a REST sidecar (`Product.imageUrl` + `/api/products/{id}/image`), not the `graphql-multipart-request-spec` extension — GraphQL has no native binary support, and this keeps the schema's "single endpoint for everything" story honest about where it does and doesn't apply.
