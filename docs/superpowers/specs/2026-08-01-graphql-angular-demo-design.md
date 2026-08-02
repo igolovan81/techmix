@@ -5,7 +5,9 @@
 
 ## Overview
 
-A new standalone Angular application at `communication-protocols/graphql/angular-demo/`, sibling to `graphql/spring-demo`. It is a browser client exercising all five GraphQL patterns the server demonstrates (query + nested fetch, DataLoader batching, mutation, subscription, pagination & filtering) against the existing e-commerce domain (Product, Category, Review, User, Order, OrderItem). The Spring app (`graphql/spring-demo`) is not modified.
+A new standalone Angular application at `communication-protocols/graphql/angular-demo/`, sibling to `graphql/spring-demo`. It is a browser client exercising all five GraphQL patterns the server demonstrates (query + nested fetch, DataLoader batching, mutation, subscription, pagination & filtering) against the existing e-commerce domain (Product, Category, Review, User, Order, OrderItem).
+
+**Correction (post-implementation):** this doc originally claimed zero changes to `graphql/spring-demo`. That assumption was wrong and was caught by testing the WebSocket flow directly during implementation, not by inspection: `httpBasic()`'s `BasicAuthenticationFilter` defaults to its own `RequestAttributeSecurityContextRepository`, which never touches the `HttpSession` — so `SecurityConfig` as written never actually issued a `JSESSIONID`, and the subscription had no way to authenticate. The fix is a one-line addition to `SecurityConfig` (`httpBasic(basic -> basic.securityContextRepository(new HttpSessionSecurityContextRepository()))`), verified end-to-end afterward (HTTP login → `Set-Cookie` → WS handshake using only that cookie → subscription opens and receives events). See the corresponding note in `SecurityConfig.java`.
 
 ## Goals
 
