@@ -12,5 +12,6 @@
     <include file="db/changelog/db.changelog-5-create-reviews-table.xml"/>
     <include file="db/changelog/db.changelog-6-create-orders-table.xml"/>
     <include file="db/changelog/db.changelog-7-create-order-items-table.xml"/>
+    <include file="db/changelog/db.changelog-8-create-product-images-table.xml"/>
 
 </databaseChangeLog>

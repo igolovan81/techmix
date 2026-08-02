@@ -159,7 +159,7 @@ Expected: FAIL to compile — `ProductImageEntity`/`ProductImageRepository` don'
             <column name="content_type" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="data" type="BLOB">
+            <column name="data" type="BYTEA">
                 <constraints nullable="false"/>
             </column>
             <column name="updated_at" type="TIMESTAMP">
@@ -170,6 +170,8 @@ Expected: FAIL to compile — `ProductImageEntity`/`ProductImageRepository` don'
 
 </databaseChangeLog>
 ```
+
+**Amended during implementation:** Liquibase's generic `BLOB` type doesn't resolve on H2 under `MODE=PostgreSQL` (used by `src/test/resources/application.yml`) — it raises `Unknown data type: "BLOB"` at migration time. `BYTEA` (Postgres's real column type, and one H2 recognizes directly in PostgreSQL-compatibility mode) works on both.
 
 Add the include to `db.changelog-master.xml`, right after the existing `db.changelog-7-create-order-items-table.xml` line:
 
