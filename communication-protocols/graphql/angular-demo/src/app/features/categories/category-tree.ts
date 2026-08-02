@@ -15,7 +15,8 @@ export class CategoryTree {
 
   constructor() {
     this.categoryService.listCategories(50, null).subscribe((connection) => {
-      this.rootCategories.set(connection.edges.map((edge) => edge.node));
+      const roots = connection.edges.filter((edge) => edge.node.parent == null).map((edge) => edge.node);
+      this.rootCategories.set(roots);
     });
   }
 }

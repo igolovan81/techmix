@@ -13,6 +13,9 @@ export const CATEGORIES_QUERY = gql`
         node {
           id
           name
+          parent {
+            id
+          }
         }
       }
     }

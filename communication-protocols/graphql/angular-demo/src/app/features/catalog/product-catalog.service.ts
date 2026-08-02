@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Apollo } from 'apollo-angular';
-import { Observable, map } from 'rxjs';
+import { Observable, filter as rxFilter, map } from 'rxjs';
 import { AddReviewInput, Connection, Product, ProductFilter, Review, ReviewFilter, emptyConnection } from '../../core/graphql/graphql.models';
 import { ADD_REVIEW_MUTATION, DELETE_REVIEW_MUTATION, PRODUCT_QUERY, PRODUCT_REVIEWS_QUERY, PRODUCTS_QUERY } from './catalog.gql';
 
@@ -15,13 +15,19 @@ export class ProductCatalogService {
         variables: { filter, first, after },
         fetchPolicy: 'network-only',
       })
-      .valueChanges.pipe(map((result) => result.data!.products as Connection<Product>));
+      .valueChanges.pipe(
+        rxFilter((result) => result.data !== undefined),
+        map((result) => result.data!.products as Connection<Product>),
+      );
   }
 
   getProduct(id: string): Observable<Product | null> {
     return this.apollo
       .watchQuery<{ product: Product | null }>({ query: PRODUCT_QUERY, variables: { id }, fetchPolicy: 'network-only' })
-      .valueChanges.pipe(map((result) => (result.data!.product ?? null) as Product | null));
+      .valueChanges.pipe(
+        rxFilter((result) => result.data !== undefined),
+        map((result) => (result.data!.product ?? null) as Product | null),
+      );
   }
 
   listReviews(
@@ -36,7 +42,10 @@ export class ProductCatalogService {
         variables: { id: productId, filter, first, after },
         fetchPolicy: 'network-only',
       })
-      .valueChanges.pipe(map((result) => (result.data!.product?.reviews ?? emptyConnection<Review>()) as Connection<Review>));
+      .valueChanges.pipe(
+        rxFilter((result) => result.data !== undefined),
+        map((result) => (result.data!.product?.reviews ?? emptyConnection<Review>()) as Connection<Review>),
+      );
   }
 
   addReview(input: AddReviewInput): Observable<Review> {

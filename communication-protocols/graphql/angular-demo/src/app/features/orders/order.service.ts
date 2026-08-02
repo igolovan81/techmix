@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Apollo } from 'apollo-angular';
-import { Observable, map } from 'rxjs';
+import { Observable, filter, map } from 'rxjs';
 import { Connection, Order, OrderStatus, PlaceOrderInput } from '../../core/graphql/graphql.models';
 import { ALL_ORDERS_QUERY, MY_ORDERS_QUERY, ORDER_QUERY, PLACE_ORDER_MUTATION, UPDATE_ORDER_STATUS_MUTATION } from './orders.gql';
 
@@ -15,7 +15,10 @@ export class OrderService {
         variables: { first, after },
         fetchPolicy: 'network-only',
       })
-      .valueChanges.pipe(map((result) => result.data!.me!.orders as Connection<Order>));
+      .valueChanges.pipe(
+        filter((result) => result.data !== undefined),
+        map((result) => result.data!.me!.orders as Connection<Order>),
+      );
   }
 
   listAllOrders(status: OrderStatus | null, first: number, after: string | null): Observable<Connection<Order>> {
@@ -25,13 +28,19 @@ export class OrderService {
         variables: { status, first, after },
         fetchPolicy: 'network-only',
       })
-      .valueChanges.pipe(map((result) => result.data!.orders as Connection<Order>));
+      .valueChanges.pipe(
+        filter((result) => result.data !== undefined),
+        map((result) => result.data!.orders as Connection<Order>),
+      );
   }
 
   getOrder(id: string): Observable<Order | null> {
     return this.apollo
       .watchQuery<{ order: Order | null }>({ query: ORDER_QUERY, variables: { id }, fetchPolicy: 'network-only' })
-      .valueChanges.pipe(map((result) => (result.data!.order ?? null) as Order | null));
+      .valueChanges.pipe(
+        filter((result) => result.data !== undefined),
+        map((result) => (result.data!.order ?? null) as Order | null),
+      );
   }
 
   placeOrder(input: PlaceOrderInput): Observable<Order> {

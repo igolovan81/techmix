@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Apollo } from 'apollo-angular';
-import { Observable, map } from 'rxjs';
+import { Observable, filter, map } from 'rxjs';
 import { Category, Connection, Product, emptyConnection } from '../../core/graphql/graphql.models';
 import { CATEGORIES_QUERY, CATEGORY_CHILDREN_QUERY, CATEGORY_PRODUCTS_QUERY } from './categories.gql';
 
@@ -15,7 +15,10 @@ export class CategoryService {
         variables: { first, after },
         fetchPolicy: 'network-only',
       })
-      .valueChanges.pipe(map((result) => result.data!.categories as Connection<Category>));
+      .valueChanges.pipe(
+        filter((result) => result.data !== undefined),
+        map((result) => result.data!.categories as Connection<Category>),
+      );
   }
 
   listChildren(categoryId: string, first: number, after: string | null): Observable<Connection<Category>> {
@@ -26,6 +29,7 @@ export class CategoryService {
         fetchPolicy: 'network-only',
       })
       .valueChanges.pipe(
+        filter((result) => result.data !== undefined),
         map((result) => (result.data!.category?.children ?? emptyConnection<Category>()) as Connection<Category>),
       );
   }
@@ -38,6 +42,7 @@ export class CategoryService {
         fetchPolicy: 'network-only',
       })
       .valueChanges.pipe(
+        filter((result) => result.data !== undefined),
         map((result) => (result.data!.category?.products ?? emptyConnection<Product>()) as Connection<Product>),
       );
   }
