@@ -87,6 +87,17 @@ mvn gatling:test -pl graphql/spring-demo                 # Gatling load test —
 mvn verify -Pjmeter-load-test -pl graphql/spring-demo    # JMeter load test — requires the app running first
 ```
 
+### GraphQL Angular demo (run from the app root, requires `graphql/spring-demo` running first)
+
+```bash
+cd communication-protocols/graphql/angular-demo
+
+npm install
+npm start              # dev server on :4202, proxies /graphql (HTTP + WS) to :8092
+npm test                # Jasmine/Karma unit tests
+npm run build           # production build
+```
+
 ### Webhooks communication protocol demo (run from the reactor root, no docker infrastructure required)
 
 ```bash
@@ -218,6 +229,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
 | `communication-protocols/grpc/{server-demo,client-demo}/` | gRPC demo — two independent Spring Boot apps covering all four RPC patterns (unary, server/client/bidi streaming); `server-demo` must be started before `client-demo` — no external infrastructure required |
 | `communication-protocols/graphql/spring-demo/` | GraphQL demo — single Spring Boot app covering query/nested-fetch, DataLoader batching, mutation, subscription, cursor-pagination, and an e-commerce domain (Category/User/Order) against Postgres; `mvn test` needs no external infrastructure (H2), but running the app needs `docker compose -f communication-protocols/graphql/docker/docker-compose.yml up -d` first |
+| `communication-protocols/graphql/angular-demo/` | Angular 20 client for the GraphQL demo — Apollo Angular over a dev-proxy to `spring-demo`, touring all five patterns with role/row-level authorization; `npm start` requires `spring-demo` running first |
 | `communication-protocols/webhooks/producer-demo/` | Webhooks demo — subscription registry, HMAC-signed dispatch, retry/backoff, dead-lettering — no external infrastructure required |
 | `communication-protocols/webhooks/consumer-demo/` | Webhooks demo — signature verification, delivery-id idempotency/dedup, on-demand failure simulation — no external infrastructure required |
 | `communication-protocols/websockets/spring-demo/` | WebSocket demo — raw `WebSocketHandler` broadcast, STOMP broadcast/per-order-topic/request-reply patterns, disconnect handling, and a static browser test client over an order-tracking domain — no external infrastructure required |

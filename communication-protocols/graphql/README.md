@@ -109,6 +109,8 @@ GraphiQL (interactive schema explorer): http://localhost:8092/graphiql
 
 See [spring-demo/README.md](spring-demo/README.md) for `curl` and subscription walkthroughs of all five patterns, plus the [domain model](spring-demo/README.md#domain-model) write-up.
 
+An Angular browser client tours the same five patterns interactively — see [angular-demo/README.md](angular-demo/README.md).
+
 ## Scope
 
 No query depth/complexity limiting, no persisted queries, no GraphQL federation — this is a protocol-pattern demo, not a production-hardening guide (same spirit as the gRPC demo's "no TLS" scope limit). Subscriptions are backed by a single in-process `Sinks.Many`, so this is a single-instance demo only. Authentication is HTTP Basic against in-memory demo credentials, not a production auth story — see [spring-demo/README.md#security](spring-demo/README.md#security).
