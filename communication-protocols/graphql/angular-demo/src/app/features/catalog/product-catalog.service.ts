@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Apollo } from 'apollo-angular';
+import { HttpClient } from '@angular/common/http';
 import { Observable, filter as rxFilter, map } from 'rxjs';
 import { AddReviewInput, Connection, Product, ProductFilter, Review, ReviewFilter, emptyConnection } from '../../core/graphql/graphql.models';
 import { ADD_REVIEW_MUTATION, DELETE_REVIEW_MUTATION, PRODUCT_QUERY, PRODUCT_REVIEWS_QUERY, PRODUCTS_QUERY } from './catalog.gql';
@@ -7,6 +8,7 @@ import { ADD_REVIEW_MUTATION, DELETE_REVIEW_MUTATION, PRODUCT_QUERY, PRODUCT_REV
 @Injectable({ providedIn: 'root' })
 export class ProductCatalogService {
   private readonly apollo = inject(Apollo);
+  private readonly http = inject(HttpClient);
 
   listProducts(filter: ProductFilter | null, first: number, after: string | null): Observable<Connection<Product>> {
     return this.apollo
@@ -58,5 +60,11 @@ export class ProductCatalogService {
     return this.apollo
       .mutate<{ deleteReview: boolean }>({ mutation: DELETE_REVIEW_MUTATION, variables: { id } })
       .pipe(map((result) => result.data!.deleteReview));
+  }
+
+  uploadProductImage(id: string, file: File): Observable<void> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<void>(`/api/products/${id}/image`, formData);
   }
 }

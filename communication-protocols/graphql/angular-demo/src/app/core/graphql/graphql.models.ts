@@ -35,6 +35,7 @@ export interface Product {
   priceCents: number;
   stockQty: number;
   categories?: Category[];
+  imageUrl?: string | null;
 }
 
 export interface User {

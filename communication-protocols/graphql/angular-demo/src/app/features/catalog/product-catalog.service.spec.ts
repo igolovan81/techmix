@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Apollo } from 'apollo-angular';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { ProductCatalogService } from './product-catalog.service';
 import { Connection, Product, Review, emptyConnection } from '../../core/graphql/graphql.models';
@@ -7,11 +9,19 @@ import { Connection, Product, Review, emptyConnection } from '../../core/graphql
 describe('ProductCatalogService', () => {
   let apollo: jasmine.SpyObj<Apollo>;
   let service: ProductCatalogService;
+  let httpMock: HttpTestingController;
 
   beforeEach(() => {
     apollo = jasmine.createSpyObj<Apollo>(['watchQuery', 'mutate']);
-    TestBed.configureTestingModule({ providers: [{ provide: Apollo, useValue: apollo }] });
+    TestBed.configureTestingModule({
+      providers: [{ provide: Apollo, useValue: apollo }, provideHttpClient(), provideHttpClientTesting()],
+    });
     service = TestBed.inject(ProductCatalogService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpMock.verify();
   });
 
   it('listProducts maps the products connection', (done) => {
@@ -60,5 +70,16 @@ describe('ProductCatalogService', () => {
       expect(result).toBe(true);
       done();
     });
+  });
+
+  it('uploadProductImage posts multipart form data to the REST endpoint', (done) => {
+    const file = new File(['abc'], 'image.png', { type: 'image/png' });
+
+    service.uploadProductImage('1', file).subscribe(() => done());
+
+    const req = httpMock.expectOne('/api/products/1/image');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body instanceof FormData).toBe(true);
+    req.flush(null);
   });
 });

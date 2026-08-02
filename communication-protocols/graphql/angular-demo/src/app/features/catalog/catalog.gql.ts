@@ -32,6 +32,7 @@ export const PRODUCT_QUERY = gql`
       name
       priceCents
       stockQty
+      imageUrl
       categories {
         id
         name
