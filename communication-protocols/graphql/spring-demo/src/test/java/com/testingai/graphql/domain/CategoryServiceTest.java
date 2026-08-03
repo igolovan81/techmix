@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.cache.caffeine.CaffeineCacheManager;
 
 import java.util.List;
 import java.util.Map;
@@ -27,7 +28,8 @@ class CategoryServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new CategoryService(categoryRepository);
+		service = new CategoryService(categoryRepository,
+				new CaffeineCacheManager("categoriesById", "categoryChildren"));
 
 		root = new CategoryEntity();
 		root.setName("Electronics");

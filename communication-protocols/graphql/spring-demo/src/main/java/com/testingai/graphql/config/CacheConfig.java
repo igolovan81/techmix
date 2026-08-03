@@ -17,8 +17,8 @@ import org.springframework.context.annotation.Configuration;
 @EnableCaching
 public class CacheConfig {
 
-	static final String CATEGORIES_BY_ID = "categoriesById";
-	static final String CATEGORY_CHILDREN = "categoryChildren";
+	public static final String CATEGORIES_BY_ID = "categoriesById";
+	public static final String CATEGORY_CHILDREN = "categoryChildren";
 
 	@Bean
 	public CacheManager cacheManager() {
