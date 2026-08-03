@@ -1,5 +1,6 @@
 package com.testingai.graphql.controller;
 
+import com.testingai.graphql.domain.CategoryService;
 import com.testingai.graphql.domain.Review;
 import com.testingai.graphql.domain.ReviewService;
 import com.testingai.graphql.domain.Role;
@@ -52,6 +53,8 @@ class DemoIntegrationTest {
 	private UserRepository userRepository;
 	@Autowired
 	private CategoryRepository categoryRepository;
+	@Autowired
+	private CategoryService categoryService;
 	@Autowired
 	private ProductImageRepository productImageRepository;
 
@@ -294,6 +297,27 @@ class DemoIntegrationTest {
 				}
 				""".formatted(child.getId())).execute().path("category.parent.name").entity(String.class)
 				.isEqualTo(root.getName());
+	}
+
+	@Test
+	void query_categoryTree_hitsDatabaseOnlyOnce_forRepeatedRequests() {
+		CategoryEntity root = saveCategory("Electronics-" + uniqueTag(), null);
+		saveCategory("Audio-" + uniqueTag(), root);
+
+		String query = """
+				{
+				  category(id: "%s") {
+				    children { edges { node { name } } }
+				  }
+				}
+				""".formatted(root.getId());
+
+		graphQlTester.document(query).execute();
+		int afterFirstRequest = categoryService.getDbLoadCount();
+
+		graphQlTester.document(query).execute();
+
+		assertThat(categoryService.getDbLoadCount()).isEqualTo(afterFirstRequest);
 	}
 
 	@Test
