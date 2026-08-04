@@ -59,6 +59,18 @@ mvn test -Dtest=ClassName            # single test class
 mvn gatling:test                     # load test — requires the app to be running first
 ```
 
+### DDD banking ledger demo (run from the reactor root, no docker infrastructure required)
+
+```bash
+cd domain-driven-design
+
+mvn clean package                                            # build (reactor build)
+mvn test -pl banking/spring-demo                              # unit tests (Gatling excluded automatically)
+mvn test -pl banking/spring-demo -Dtest=ClassName              # single test class
+mvn -pl banking/spring-demo spring-boot:run                    # run the app (:8099)
+mvn gatling:test -pl banking/spring-demo                       # Gatling load test — requires the app running first
+```
+
 ### gRPC communication protocol demo (run from the reactor root, no docker infrastructure required)
 
 ```bash
@@ -227,6 +239,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `cqrs-event-sourcing/<framework>/spring-demo/` | CQRS/event-sourcing framework demo apps, same conventions as `message-brokers/` (currently: Axon Framework) |
 | `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
+| `domain-driven-design/banking/spring-demo/` | Tactical DDD demo — banking ledger with aggregate invariants, value objects, domain events, a repository port, a cross-aggregate domain service, and a second bounded context (`statements`) wired to the first only through an anti-corruption layer; no external infrastructure required (H2 only) |
 | `communication-protocols/grpc/{server-demo,client-demo}/` | gRPC demo — two independent Spring Boot apps covering all four RPC patterns (unary, server/client/bidi streaming); `server-demo` must be started before `client-demo` — no external infrastructure required |
 | `communication-protocols/graphql/spring-demo/` | GraphQL demo — single Spring Boot app covering query/nested-fetch, DataLoader batching, mutation, subscription, cursor-pagination, and an e-commerce domain (Category/User/Order) against Postgres; `mvn test` needs no external infrastructure (H2), but running the app needs `docker compose -f communication-protocols/graphql/docker/docker-compose.yml up -d` first |
 | `communication-protocols/graphql/angular-demo/` | Angular 20 client for the GraphQL demo — Apollo Angular over a dev-proxy to `spring-demo`, touring all five patterns with role/row-level authorization; `npm start` requires `spring-demo` running first |
