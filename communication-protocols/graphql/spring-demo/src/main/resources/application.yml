@@ -35,3 +35,6 @@ app:
     min-reviews-per-product: 3
     max-reviews-per-product: 10
     order-count: 3000
+  graphql:
+    max-query-depth: 15
+    max-query-complexity: 10000
