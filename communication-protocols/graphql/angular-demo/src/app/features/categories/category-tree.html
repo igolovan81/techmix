@@ -1,0 +1,12 @@
+<header class="page-header">
+  <h1>Categories</h1>
+  <p class="page-subtitle">categories → children (DataLoader-batched) → products</p>
+</header>
+
+<ul class="category-tree">
+  @for (category of rootCategories(); track category.id) {
+    <li>
+      <app-category-node [category]="category" />
+    </li>
+  }
+</ul>

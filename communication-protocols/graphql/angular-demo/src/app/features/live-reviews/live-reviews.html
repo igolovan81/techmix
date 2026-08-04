@@ -1,0 +1,36 @@
+<header class="page-header">
+  <div class="title-row">
+    <h1>Live Reviews</h1>
+    <span class="live-badge"><span class="live-dot"></span>Live</span>
+  </div>
+  <p class="page-subtitle">reviewAdded(productId) — GraphQL subscription over WebSocket</p>
+</header>
+
+<mat-form-field appearance="outline" subscriptSizing="dynamic" class="product-filter-field">
+  <mat-label>Filter by product</mat-label>
+  <mat-select [value]="productFilter.value" (selectionChange)="selectProduct($event.value)" data-testid="product-filter">
+    <mat-option [value]="null">All products</mat-option>
+    @for (product of products(); track product.id) {
+      <mat-option [value]="product.id">{{ product.name }}</mat-option>
+    }
+  </mat-select>
+</mat-form-field>
+
+<ul class="feed" data-testid="live-feed">
+  @if (feed().length === 0) {
+    <li class="feed-empty">Waiting for the next review to come in…</li>
+  }
+  @for (review of feed(); track review.id) {
+    <li class="feed-item">
+      <div class="feed-rating">
+        @for (star of [1, 2, 3, 4, 5]; track star) {
+          <span class="star" [class.filled]="star <= review.rating">●</span>
+        }
+      </div>
+      <div class="feed-body">
+        <span class="feed-author">{{ review.author.displayName }}</span>
+        <span class="feed-comment">{{ review.comment }}</span>
+      </div>
+    </li>
+  }
+</ul>

@@ -1,0 +1,131 @@
+// Theme tokens for the GraphQL Angular Demo.
+//
+// The palette is anchored on GraphQL's own brand pink (#E10098) rather than a
+// generic Material blue, since this app is a tour of a GraphQL API. Material's
+// M3 palette generator doesn't take an arbitrary hex directly, so we start
+// from the closest built-in palettes (magenta/violet) and then pin the exact
+// brand hex on top via CSS custom-property overrides.
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme((
+    color: (
+      primary: mat.$magenta-palette,
+      tertiary: mat.$violet-palette,
+    ),
+    typography: (
+      plain-family: Inter,
+      brand-family: 'Space Grotesk',
+      bold-weight: 600,
+      medium-weight: 500,
+      regular-weight: 400,
+    ),
+    density: 0,
+  ));
+
+  // Pin the exact brand colors on top of the generated magenta/violet tones.
+  --mat-sys-primary: #E10098;
+  --mat-sys-on-primary: #FFFFFF;
+  --mat-sys-primary-container: #FCE3F1;
+  --mat-sys-on-primary-container: #5C0040;
+  --mat-sys-tertiary: #1B1035;
+  --mat-sys-on-tertiary: #FFFFFF;
+  --mat-sys-surface: #F7F5FA;
+  --mat-sys-surface-container: #FFFFFF;
+  --mat-sys-surface-container-low: #FBFAFC;
+  --mat-sys-surface-container-high: #F0ECF5;
+  --mat-sys-on-surface: #1B1035;
+  --mat-sys-on-surface-variant: #6E6B7A;
+  --mat-sys-outline: #D8D3E0;
+  --mat-sys-outline-variant: #E8E4EE;
+
+  // App-specific tokens (not part of Material's system) used across component
+  // stylesheets: the "graph edge" line color for the category tree, the
+  // monospace face for ids/prices/cursors, and the order-status chip colors.
+  --app-edge-color: #E10098;
+  --app-node-color: #1B1035;
+  --app-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --app-radius: 12px;
+  --app-status-pending: #8B8794;
+  --app-status-paid: #3D5AFE;
+  --app-status-shipped: #1B1035;
+  --app-status-delivered: #00B37E;
+  --app-status-cancelled: #E5484D;
+}
+
+body {
+  color-scheme: light;
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+  margin: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+a {
+  color: var(--mat-sys-primary);
+}
+
+// Order status chip — shared by the orders list and order detail views.
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &[data-status='PENDING'] {
+    color: var(--app-status-pending);
+    background: color-mix(in srgb, var(--app-status-pending) 14%, transparent);
+  }
+  &[data-status='PAID'] {
+    color: var(--app-status-paid);
+    background: color-mix(in srgb, var(--app-status-paid) 14%, transparent);
+  }
+  &[data-status='SHIPPED'] {
+    color: var(--app-status-shipped);
+    background: color-mix(in srgb, var(--app-status-shipped) 14%, transparent);
+  }
+  &[data-status='DELIVERED'] {
+    color: var(--app-status-delivered);
+    background: color-mix(in srgb, var(--app-status-delivered) 14%, transparent);
+  }
+  &[data-status='CANCELLED'] {
+    color: var(--app-status-cancelled);
+    background: color-mix(in srgb, var(--app-status-cancelled) 14%, transparent);
+  }
+}
+
+// Buttons/tabs/etc. use the brand display face; body text stays on Inter.
+.mat-toolbar,
+.mat-mdc-tab .mdc-tab__text-label,
+h1, h2, h3 {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+// Shared page padding so every routed view aligns without each component
+// having to repeat it — the routed component renders as a child of .app-main.
+.app-main {
+  display: block;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}

@@ -5,13 +5,22 @@ import com.testingai.graphql.entity.OrderItemEntity;
 import com.testingai.graphql.entity.ProductEntity;
 import com.testingai.graphql.entity.UserEntity;
 import com.testingai.graphql.exception.InsufficientStockException;
+import com.testingai.graphql.pagination.Connection;
+import com.testingai.graphql.pagination.KeysetPagination;
 import com.testingai.graphql.repository.OrderItemRepository;
 import com.testingai.graphql.repository.OrderRepository;
+import com.testingai.graphql.repository.OrderSpecifications;
 import com.testingai.graphql.repository.ProductRepository;
 import com.testingai.graphql.repository.UserRepository;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -70,6 +79,54 @@ public class OrderService {
 				.orElseThrow(() -> new NoSuchElementException("Unknown order: " + orderId));
 		order.setStatus(status);
 		return toOrder(order);
+	}
+
+	// readOnly: toOrder() below reads the lazy `items` collection to compute totalCents — unlike placeOrder, where
+	// the OrderEntity is a brand-new in-memory object with items already added to a plain list, these entities are
+	// freshly loaded from the DB, so items really is an uninitialized Hibernate proxy that needs an open session.
+	@Transactional(readOnly = true)
+	public Map<Long, List<Order>> findByUserIds(List<Long> userIds) {
+		Map<Long, List<Order>> byUserId = orderRepository
+				.findAll((root, query, cb) -> root.get("user").get("id").in(userIds)).stream()
+				.collect(Collectors.groupingBy(o -> o.getUser().getId(),
+						Collectors.mapping(OrderService::toOrder, Collectors.toList())));
+		Map<Long, List<Order>> result = new LinkedHashMap<>();
+		for (Long userId : userIds) {
+			result.put(userId, byUserId.getOrDefault(userId, List.of()));
+		}
+		return result;
+	}
+
+	public Map<Long, List<OrderItem>> findItemsByOrderIds(List<Long> orderIds) {
+		Map<Long, List<OrderItem>> byOrderId = orderItemRepository.findByOrderIdIn(orderIds).stream()
+				.map(OrderService::toOrderItem).collect(Collectors.groupingBy(OrderItem::orderId));
+		Map<Long, List<OrderItem>> result = new LinkedHashMap<>();
+		for (Long orderId : orderIds) {
+			result.put(orderId, byOrderId.getOrDefault(orderId, List.of()));
+		}
+		return result;
+	}
+
+	@Transactional(readOnly = true)
+	public Connection<Order> listOrders(OrderStatus status, Integer first, String after) {
+		Long cursorId = KeysetPagination.decodeCursor(after);
+		int limit = KeysetPagination.normalizeFirst(first);
+		var spec = OrderSpecifications.matchingStatus(status).and(OrderSpecifications.idAfter(cursorId));
+
+		List<OrderEntity> rows = orderRepository.findAll(spec, PageRequest.of(0, limit + 1, Sort.by("id")))
+				.getContent();
+		return KeysetPagination.paginate(rows, limit, OrderEntity::getId, OrderService::toOrder,
+				orderRepository.count(OrderSpecifications.matchingStatus(status)));
+	}
+
+	@Transactional(readOnly = true)
+	public Optional<Order> findById(Long id) {
+		return orderRepository.findById(id).map(OrderService::toOrder);
+	}
+
+	static OrderItem toOrderItem(OrderItemEntity entity) {
+		return new OrderItem(entity.getId(), entity.getOrder().getId(), entity.getProduct().getId(),
+				entity.getQuantity(), entity.getUnitPriceCents());
 	}
 
 	static Order toOrder(OrderEntity entity) {

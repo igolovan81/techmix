@@ -1,10 +1,15 @@
 package com.testingai.graphql.controller;
 
+import com.testingai.graphql.domain.CategoryService;
 import com.testingai.graphql.domain.Review;
 import com.testingai.graphql.domain.ReviewService;
 import com.testingai.graphql.domain.Role;
+import com.testingai.graphql.entity.CategoryEntity;
 import com.testingai.graphql.entity.ProductEntity;
+import com.testingai.graphql.entity.ProductImageEntity;
 import com.testingai.graphql.entity.UserEntity;
+import com.testingai.graphql.repository.CategoryRepository;
+import com.testingai.graphql.repository.ProductImageRepository;
 import com.testingai.graphql.repository.ProductRepository;
 import com.testingai.graphql.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -26,6 +31,7 @@ import reactor.test.StepVerifier;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -45,6 +51,12 @@ class DemoIntegrationTest {
 	private ProductRepository productRepository;
 	@Autowired
 	private UserRepository userRepository;
+	@Autowired
+	private CategoryRepository categoryRepository;
+	@Autowired
+	private CategoryService categoryService;
+	@Autowired
+	private ProductImageRepository productImageRepository;
 
 	private HttpGraphQlTester graphQlTester;
 	private WebSocketGraphQlTester webSocketGraphQlTester;
@@ -90,6 +102,13 @@ class DemoIntegrationTest {
 		entity.setPriceCents(priceCents);
 		entity.setStockQty(stockQty);
 		return productRepository.save(entity).getId();
+	}
+
+	private CategoryEntity saveCategory(String name, CategoryEntity parent) {
+		CategoryEntity entity = new CategoryEntity();
+		entity.setName(name);
+		entity.setParent(parent);
+		return categoryRepository.save(entity);
 	}
 
 	// A per-test-method unique tag so filtered count/pagination assertions aren't polluted by fixture rows other
@@ -191,6 +210,46 @@ class DemoIntegrationTest {
 	}
 
 	@Test
+	void query_productImageUrl_isNull_whenNoImageUploaded() {
+		for (int attempt = 0; attempt < 20; attempt++) {
+			List<ResponseError> errors = new ArrayList<>();
+			GraphQlTester.Traversable afterErrors = graphQlTester.document("""
+					query {
+					  product(id: "%s") { imageUrl }
+					}
+					""".formatted(productId1)).execute().errors().satisfy(errors::addAll);
+
+			if (errors.isEmpty()) {
+				afterErrors.path("product.imageUrl").valueIsNull();
+				return;
+			}
+		}
+		fail("product query kept simulating failure across 20 attempts (5% failure rate)");
+	}
+
+	@Test
+	void query_productImageUrl_resolvesToRestDownloadPath_whenImageUploaded() {
+		productImageRepository
+				.save(new ProductImageEntity(productId1, "image/png", new byte[]{1, 2, 3}, Instant.now()));
+
+		for (int attempt = 0; attempt < 20; attempt++) {
+			List<ResponseError> errors = new ArrayList<>();
+			GraphQlTester.Traversable afterErrors = graphQlTester.document("""
+					query {
+					  product(id: "%s") { imageUrl }
+					}
+					""".formatted(productId1)).execute().errors().satisfy(errors::addAll);
+
+			if (errors.isEmpty()) {
+				afterErrors.path("product.imageUrl").entity(String.class)
+						.isEqualTo("/api/products/" + productId1 + "/image");
+				return;
+			}
+		}
+		fail("product query kept simulating failure across 20 attempts (5% failure rate)");
+	}
+
+	@Test
 	void query_returnsProductsWithNestedReviews_batchedInOneCall() {
 		String tag = uniqueTag();
 		for (int i = 0; i < 5; i++) {
@@ -213,6 +272,115 @@ class DemoIntegrationTest {
 				""".formatted(tag)).execute().path("products.edges").entityList(Object.class).hasSize(5);
 
 		assertThat(reviewService.getBatchCallCount()).isEqualTo(batchCallsBefore + 1);
+	}
+
+	@Test
+	void query_categoryTree_resolvesParentAndChildren() {
+		CategoryEntity root = saveCategory("Electronics-" + uniqueTag(), null);
+		CategoryEntity child = saveCategory("Audio-" + uniqueTag(), root);
+
+		graphQlTester.document("""
+				query {
+				  category(id: "%s") {
+				    name
+				    parent { id }
+				    children(first: 10) { edges { node { id name } } totalCount }
+				  }
+				}
+				""".formatted(root.getId())).execute().path("category.parent").valueIsNull()
+				.path("category.children.totalCount").entity(Integer.class).isEqualTo(1)
+				.path("category.children.edges[0].node.name").entity(String.class).isEqualTo(child.getName());
+
+		graphQlTester.document("""
+				query {
+				  category(id: "%s") { parent { name } }
+				}
+				""".formatted(child.getId())).execute().path("category.parent.name").entity(String.class)
+				.isEqualTo(root.getName());
+	}
+
+	@Test
+	void query_categoryTree_hitsDatabaseOnlyOnce_forRepeatedRequests() {
+		CategoryEntity root = saveCategory("Electronics-" + uniqueTag(), null);
+		saveCategory("Audio-" + uniqueTag(), root);
+
+		String query = """
+				{
+				  category(id: "%s") {
+				    children { edges { node { name } } }
+				  }
+				}
+				""".formatted(root.getId());
+
+		graphQlTester.document(query).execute();
+		int afterFirstRequest = categoryService.getDbLoadCount();
+
+		graphQlTester.document(query).execute();
+
+		assertThat(categoryService.getDbLoadCount()).isEqualTo(afterFirstRequest);
+	}
+
+	@Test
+	void query_categoryProducts_returnsOnlyProductsInThatCategory() {
+		CategoryEntity category = saveCategory("Category-" + uniqueTag(), null);
+		String tag = uniqueTag();
+
+		ProductEntity inCategory = new ProductEntity();
+		inCategory.setName(tag + "-in-category");
+		inCategory.setPriceCents(1000);
+		inCategory.setStockQty(10);
+		inCategory.getCategories().add(category);
+		productRepository.save(inCategory);
+
+		saveProduct(tag + "-outside-category", 1000, 10);
+
+		graphQlTester.document("""
+				query {
+				  category(id: "%s") {
+				    products(first: 50) { totalCount edges { node { name } } }
+				  }
+				}
+				""".formatted(category.getId())).execute().path("category.products.totalCount").entity(Integer.class)
+				.isEqualTo(1).path("category.products.edges[0].node.name").entity(String.class)
+				.isEqualTo(inCategory.getName());
+	}
+
+	@Test
+	void query_productCategories_resolvesViaBatchMapping() {
+		CategoryEntity categoryA = saveCategory("CategoryA-" + uniqueTag(), null);
+		CategoryEntity categoryB = saveCategory("CategoryB-" + uniqueTag(), null);
+		String tag = uniqueTag();
+
+		ProductEntity product = new ProductEntity();
+		product.setName(tag + "-multi-category-product");
+		product.setPriceCents(1000);
+		product.setStockQty(10);
+		product.getCategories().add(categoryA);
+		product.getCategories().add(categoryB);
+		productRepository.save(product);
+
+		graphQlTester.document("""
+				query {
+				  products(filter: { nameContains: "%s" }, first: 10) {
+				    edges { node { categories { name } } }
+				  }
+				}
+				""".formatted(tag)).execute().path("products.edges[0].node.categories").entityList(java.util.Map.class)
+				.satisfies(categories -> assertThat(categories).extracting(c -> c.get("name"))
+						.containsExactlyInAnyOrder(categoryA.getName(), categoryB.getName()));
+	}
+
+	@Test
+	void query_categories_respectsFirstArgument() {
+		graphQlTester.document("""
+				query {
+				  categories(first: 1) {
+				    edges { node { id } }
+				    pageInfo { hasNextPage }
+				  }
+				}
+				""").execute().path("categories.edges").entityList(Object.class).hasSize(1)
+				.path("categories.pageInfo.hasNextPage").entity(Boolean.class).isEqualTo(true);
 	}
 
 	@Test
@@ -347,6 +515,129 @@ class DemoIntegrationTest {
 
 		assertThat(errors).hasSize(1);
 		assertThat(errors.get(0).getErrorType()).isEqualTo(ErrorType.FORBIDDEN);
+	}
+
+	@Test
+	void query_me_returnsAuthenticatedPrincipalsRoleAndUsername() {
+		asUser().document("""
+				query { me { username role } }
+				""").execute().path("me.username").entity(String.class).isEqualTo("user").path("me.role")
+				.entity(String.class).isEqualTo("CUSTOMER");
+
+		asAdmin().document("""
+				query { me { username role } }
+				""").execute().path("me.username").entity(String.class).isEqualTo("admin").path("me.role")
+				.entity(String.class).isEqualTo("ADMIN");
+	}
+
+	@Test
+	void mutation_placeOrder_succeeds_andComputesTotal() {
+		asUser().document("""
+				mutation {
+				  placeOrder(input: { items: [{ productId: "%s", quantity: 2 }] }) {
+				    status
+				    totalCents
+				    items { quantity product { id } }
+				  }
+				}
+				""".formatted(productId1)).execute().path("placeOrder.status").entity(String.class).isEqualTo("PENDING")
+				.path("placeOrder.totalCents").entity(Integer.class).isEqualTo(1272)
+				.path("placeOrder.items[0].quantity").entity(Integer.class).isEqualTo(2);
+	}
+
+	@Test
+	void mutation_placeOrder_isRejected_whenQuantityExceedsStock() {
+		asUser().document("""
+				mutation {
+				  placeOrder(input: { items: [{ productId: "%s", quantity: 9999 }] }) { id }
+				}
+				""".formatted(productId1)).execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.BAD_REQUEST)));
+	}
+
+	@Test
+	void mutation_placeOrder_isRejected_whenAnonymous() {
+		graphQlTester.document("""
+				mutation {
+				  placeOrder(input: { items: [{ productId: "%s", quantity: 1 }] }) { id }
+				}
+				""".formatted(productId1)).execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.UNAUTHORIZED)));
+	}
+
+	@Test
+	void query_order_rowLevelAuthorization_ownerAndAdminSucceed_otherUserForbidden() {
+		Long ownedByUser = placeOrderAs("user", productId1, 1);
+		Long ownedByAdmin = placeOrderAs("admin", productId1, 1);
+
+		// owner viewing their own order succeeds
+		asUser().document("""
+				query { order(id: "%s") { id } }
+				""".formatted(ownedByUser)).execute().path("order.id").entity(String.class)
+				.isEqualTo(ownedByUser.toString());
+
+		// admin viewing someone else's order succeeds regardless of ownership
+		asAdmin().document("""
+				query { order(id: "%s") { id } }
+				""".formatted(ownedByUser)).execute().path("order.id").entity(String.class)
+				.isEqualTo(ownedByUser.toString());
+
+		// a non-owner, non-admin user viewing someone else's order is forbidden
+		asUser().document("""
+				query { order(id: "%s") { id } }
+				""".formatted(ownedByAdmin)).execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.FORBIDDEN)));
+	}
+
+	@Test
+	void query_orders_isAdminOnly() {
+		asUser().document("""
+				query { orders(first: 10) { totalCount } }
+				""").execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.FORBIDDEN)));
+
+		Long orderId = placeOrderAs("admin", productId1, 1);
+
+		asAdmin().document("""
+				query { orders(status: PENDING, first: 50) { edges { node { id } } } }
+				""").execute().path("orders.edges").entityList(java.util.Map.class)
+				.satisfies(edges -> assertThat(edges)
+						.anySatisfy(edge -> assertThat(((java.util.Map<?, ?>) edge.get("node")).get("id"))
+								.isEqualTo(orderId.toString())));
+	}
+
+	@Test
+	void mutation_updateOrderStatus_isAdminOnly() {
+		Long orderId = placeOrderAs("user", productId1, 1);
+
+		asUser().document("""
+				mutation { updateOrderStatus(id: "%s", status: SHIPPED) { id } }
+				""".formatted(orderId)).execute().errors().satisfy(errors -> assertThat(errors)
+				.anySatisfy(error -> assertThat(error.getErrorType()).isEqualTo(ErrorType.FORBIDDEN)));
+
+		asAdmin().document("""
+				mutation { updateOrderStatus(id: "%s", status: SHIPPED) { status } }
+				""".formatted(orderId)).execute().path("updateOrderStatus.status").entity(String.class)
+				.isEqualTo("SHIPPED");
+	}
+
+	@Test
+	void query_meOrders_traversesToPlacedOrders() {
+		placeOrderAs("user", productId1, 1);
+
+		asUser().document("""
+				query { me { orders(first: 5) { totalCount } } }
+				""").execute().path("me.orders.totalCount").entity(Integer.class)
+				.satisfies(totalCount -> assertThat(totalCount).isGreaterThanOrEqualTo(1));
+	}
+
+	private Long placeOrderAs(String username, Long productId, int quantity) {
+		HttpGraphQlTester tester = "admin".equals(username) ? asAdmin() : asUser();
+		return Long.valueOf(tester.document("""
+				mutation {
+				  placeOrder(input: { items: [{ productId: "%s", quantity: %d }] }) { id }
+				}
+				""".formatted(productId, quantity)).execute().path("placeOrder.id").entity(String.class).get());
 	}
 
 	@Test

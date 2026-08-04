@@ -1,0 +1,44 @@
+<div class="category-node">
+  <div class="node-row">
+    <button
+      class="node-toggle"
+      type="button"
+      (click)="toggleExpanded()"
+      [attr.data-testid]="'expand-' + category().id"
+    >
+      <span class="node-dot" [class.is-open]="expanded()"></span>
+      <span class="node-name">{{ category().name }}</span>
+    </button>
+    <button
+      mat-button
+      type="button"
+      class="products-toggle"
+      [class.is-active]="showingProducts()"
+      (click)="toggleProducts()"
+      [attr.data-testid]="'products-' + category().id"
+    >
+      Products
+    </button>
+  </div>
+
+  @if (showingProducts() && products(); as items) {
+    <ul class="product-mini-list">
+      @for (product of items; track product.id) {
+        <li>
+          <span class="mini-name">{{ product.name }}</span>
+          <span class="mini-price">{{ product.priceCents / 100 | number: '1.2-2' }}</span>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (expanded() && children(); as items) {
+    <ul class="edge-list">
+      @for (child of items; track child.id) {
+        <li class="edge-item">
+          <app-category-node [category]="child" />
+        </li>
+      }
+    </ul>
+  }
+</div>

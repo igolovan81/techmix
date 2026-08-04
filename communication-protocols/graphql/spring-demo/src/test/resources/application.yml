@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
   graphql:
     graphiql:
       enabled: true
@@ -25,3 +29,6 @@ app:
     min-reviews-per-product: 1
     max-reviews-per-product: 3
     order-count: 20
+  graphql:
+    max-query-depth: 15
+    max-query-complexity: 10000

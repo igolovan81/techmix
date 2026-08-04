@@ -1,0 +1,42 @@
+<section class="cart-panel">
+  <div class="cart-heading">
+    <mat-icon>shopping_cart</mat-icon>
+    <h2>Cart</h2>
+  </div>
+
+  @if (cartService.lines().length === 0) {
+    <p class="cart-empty">Your cart is empty — add products from the Catalog.</p>
+  } @else {
+    <ul class="cart-lines">
+      @for (line of cartService.lines(); track line.product.id) {
+        <li class="cart-line">
+          <span class="line-name">{{ line.product.name }}</span>
+          <span class="line-qty">× {{ line.quantity }}</span>
+          <span class="line-total">{{ (line.product.priceCents * line.quantity) / 100 | number: '1.2-2' }}</span>
+          <button
+            mat-icon-button
+            type="button"
+            (click)="removeLine(line.product.id)"
+            [attr.data-testid]="'remove-line-' + line.product.id"
+            aria-label="Remove from cart"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+
+  <div class="cart-footer">
+    <span class="cart-total">Total: {{ cartService.totalCents() / 100 | number: '1.2-2' }}</span>
+    <button
+      mat-flat-button
+      type="button"
+      [disabled]="cartService.lines().length === 0"
+      (click)="submit()"
+      data-testid="place-order-button"
+    >
+      Place order
+    </button>
+  </div>
+</section>

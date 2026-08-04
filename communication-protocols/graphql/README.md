@@ -1,10 +1,12 @@
 # GraphQL Demo
 
-Demonstrates GraphQL — a schema-first query language for APIs, served over a single endpoint (`/graphql`), where the client specifies exactly which fields it wants — via one Spring Boot app (`spring-demo`) built on `spring-boot-starter-graphql`, against a Products↔Reviews domain.
+Demonstrates GraphQL — a schema-first query language for APIs, served over a single endpoint (`/graphql`), where the client specifies exactly which fields it wants — via one Spring Boot app (`spring-demo`) built on `spring-boot-starter-graphql`, against a small Postgres-backed e-commerce domain (Product, Category, Review, User, Order, OrderItem).
 
 Unlike the [gRPC demo](../grpc/), GraphQL doesn't need a client/server split: any HTTP (or WebSocket, for subscriptions) client can talk to the schema directly, so this module is a single app.
 
-## The five patterns
+Beyond the six patterns below, the domain also demonstrates: DB-pushed-down keyset pagination at 10,000-product scale (alongside the original in-memory cursor pagination, used where a parent's list is always small); `@BatchMapping` used directly wherever no argument is needed, side by side with the manual `DataLoader` registration required when one is; and row-level (not just role-level) authorization on `order(id)`. See [spring-demo/README.md](spring-demo/README.md#domain-model) for the full write-up.
+
+## The six patterns
 
 | Pattern | Field/operation | What it demonstrates |
 |---|---|---|
@@ -13,6 +15,7 @@ Unlike the [gRPC demo](../grpc/), GraphQL doesn't need a client/server split: an
 | Mutation | `addReview` | A write that returns the created object and publishes it to the subscription stream |
 | Subscription | `reviewAdded(productId)` | Real-time push over a GraphQL-over-WebSocket session, optionally filtered server-side by `productId` |
 | Pagination & filtering | `products(filter, first, after)`, `Product.reviews(filter, first, after)` | Relay-style cursor connections (`edges`/`node`/`cursor`/`pageInfo`) plus input-object filtering, at both the root-query and nested level |
+| File upload/download | `Product.imageUrl` + REST sidecar (`POST`/`GET /api/products/{id}/image`) | GraphQL carries no binary payloads — the schema exposes only a pointer field, and the bytes move over a plain REST endpoint next to `/graphql` |
 
 ### Query + nested fetch
 
@@ -92,19 +95,75 @@ Unlike the [gRPC demo](../grpc/), GraphQL doesn't need a client/server split: an
 - Any list endpoint large enough that returning everything in one response is wasteful (product catalogs, comment threads, activity feeds)
 - APIs where clients need to narrow a large collection by one or more criteria before paging through it
 
+### File upload/download
+
+**Pros**
+- Keeps large binary payloads off the GraphQL execution engine entirely — no query-cost or streaming complications for the schema to deal with
+- The REST endpoint can be fronted by ordinary HTTP caching/CDN infrastructure, unlike a POST-only GraphQL response
+- `Product.imageUrl` still fits normal field-selection ergonomics: a client that doesn't ask for it never gets an extra round trip, and the field is resolved batched (no N+1) exactly like `Product.categories`
+
+**Cons**
+- Two request lifecycles for one logical resource (schema pointer + REST fetch) instead of one
+- Authorization has to be enforced twice, independently — once for the GraphQL field (implicitly, via whatever gates a `Product` query) and once for the REST endpoint (`@PreAuthorize` on `ProductImageController`) — nothing ties them together automatically
+- Not part of the GraphQL spec at all, so this pattern (unlike the other five) has no schema-level standardization; every API does it slightly differently
+
+**Typical use cases**
+- Any binary attachment on a GraphQL-modeled entity: avatars, product images, PDF exports, generated reports
+- APIs that want to keep binary transfer cacheable/CDN-friendly while still describing the rest of the domain in GraphQL
+
+## Caching
+
+`Category` reads are cached — the only entity in this schema no resolver ever mutates (no `addCategory`/`updateCategory`/`deleteCategory` mutation exists), which makes it a clean cache-aside example with no invalidation logic. Caffeine, in-process, 500-entry cap, 5-minute TTL (a safety net for out-of-band data changes, not a response to any write path in this app).
+
+**Pros**
+- Repeated reads of the same category (or its children) skip the database entirely after the first load
+- No invalidation complexity to get wrong, because nothing in the schema writes to this entity
+- Demonstrates two idioms side by side: plain `@Cacheable` for the single-key `category(id)` lookup, and manual cache-aside for the two batch methods behind `Category.children`'s `DataLoader` and `Category.parent`'s `@BatchMapping` — annotating a batch method with `@Cacheable` would cache by the whole incoming id list as one key, which almost never repeats across requests
+
+**Cons**
+- Only safe because this entity happens to be read-only from the app's perspective; caching a mutated entity (`Product.stockQty`, `Review`) would need `@CacheEvict` wired into the write path, a different (and harder) lesson not covered here
+- Single-process cache (Caffeine, not Redis) — a multi-instance deployment would see cache misses diverge per instance, same single-instance caveat as this demo's in-memory subscription stream
+- The 5-minute TTL is a fixed constant, not exercised by an automated test — verified instead by watching the `cache miss` log lines (`com.testingai.graphql.domain.CategoryService`) appear once per id, then stop
+
+**Typical use cases**
+- Reference/lookup data that changes rarely or never from the application's own perspective (category trees, country/currency lists, feature flags)
+- Any read hot path where the mutation surface is well understood and provably absent, so "no eviction needed" is a fact, not an assumption
+
+## Query depth & complexity limiting
+
+This schema has a real cycle — `Product.reviews → Review.author → User.orders → Order.items → OrderItem.product → Product.reviews → ...` — that nothing in the type system stops a client from walking indefinitely in one query. Two `graphql-java` instrumentations guard against this: `MaxQueryDepthInstrumentation` caps how deeply a query can nest, and `MaxQueryComplexityInstrumentation` caps a computed cost using a custom `FieldComplexityCalculator` that weights each connection field (`products`, `Category.children`, `Category.products`, `Product.reviews`, `User.orders`, `orders`) by its `first` argument — a `products(first: 500)` query costs proportionally more than `first: 5`, instead of graphql-java's default flat per-field count. Both limits are configurable (`app.graphql.max-query-depth`, `app.graphql.max-query-complexity`) and reject with the same `BAD_REQUEST` classification as this schema's other validation errors (e.g. `addReview` against an unknown product) — even though the rejection happens at a different point in the pipeline (before any resolver runs, rather than inside one).
+
+**Pros**
+- Bounds the cost of a single request regardless of how a client nests fields — protects against both accidental (a client recursing too eagerly) and adversarial queries
+- Complexity weighting scales with the same `first` argument clients already use for pagination, so the cost model lines up with what the schema already exposes rather than introducing a separate, hidden budget
+- Rejection happens before any resolver runs — a too-deep or too-wide query never reaches the database
+
+**Cons**
+- The `first`-based weighting only accounts for genuinely paginated fields; a flat, unpaginated list field (e.g. `Product.categories`) isn't weighted specially
+- Fixed `application.yml` constants, not tuned per-client or per-role — a legitimate power-user query and a hostile one are judged by the same budget
+- Doesn't replace rate limiting or query allow-listing — a client can still send many separate, individually-legal queries in quick succession
+
+**Typical use cases**
+- Any public or third-party-facing GraphQL endpoint, where a client's query shape isn't fully trusted
+- Schemas with cyclic type graphs (common in social/e-commerce domains: user → orders → items → product → reviews → user...) where naive nesting has no natural ceiling
+
 ## Running the demo
 
-No Docker required — everything is in-memory.
+Docker is needed to run the app (Postgres) — but not for `mvn test`, which runs against an embedded H2 database.
 
 ```bash
+docker compose -f docker/docker-compose.yml up -d   # Postgres :5433
+
 cd communication-protocols
 mvn -pl graphql/spring-demo spring-boot:run
 ```
 
 GraphiQL (interactive schema explorer): http://localhost:8092/graphiql
 
-See [spring-demo/README.md](spring-demo/README.md) for `curl` and subscription walkthroughs of all five patterns.
+See [spring-demo/README.md](spring-demo/README.md) for `curl` and subscription walkthroughs of all six patterns, plus the [domain model](spring-demo/README.md#domain-model) write-up.
+
+An Angular browser client tours the same six patterns interactively — see [angular-demo/README.md](angular-demo/README.md).
 
 ## Scope
 
-In-memory data only, no persistence, no authentication/authorization, no query depth/complexity limiting, no persisted queries, no GraphQL federation — this is a protocol-pattern demo, not a production-hardening guide (same spirit as the gRPC demo's "no TLS" scope limit). Subscriptions are backed by a single in-process `Sinks.Many`, so this is a single-instance demo only.
+No persisted queries, no GraphQL federation — this is a protocol-pattern demo, not a production-hardening guide (same spirit as the gRPC demo's "no TLS" scope limit). Query depth and complexity limiting is implemented (see below), but the configured limits are demo-scale starting values verified against this app's own queries, not a rigorously tuned production budget. Subscriptions are backed by a single in-process `Sinks.Many`, so this is a single-instance demo only. Authentication is HTTP Basic against in-memory demo credentials, not a production auth story — see [spring-demo/README.md#security](spring-demo/README.md#security). File transfer is intentionally a REST sidecar (`Product.imageUrl` + `/api/products/{id}/image`), not the `graphql-multipart-request-spec` extension — GraphQL has no native binary support, and this keeps the schema's "single endpoint for everything" story honest about where it does and doesn't apply.

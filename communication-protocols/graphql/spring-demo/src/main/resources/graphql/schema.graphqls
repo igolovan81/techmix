@@ -3,7 +3,26 @@ type Product {
     name: String!
     priceCents: Int!
     stockQty: Int!
+    categories: [Category!]!
     reviews(filter: ReviewFilter, first: Int, after: String): ReviewConnection!
+    imageUrl: String
+}
+
+type Category {
+    id: ID!
+    name: String!
+    parent: Category
+    children(first: Int, after: String): CategoryConnection!
+    products(filter: ProductFilter, first: Int, after: String): ProductConnection!
+}
+type CategoryConnection {
+    edges: [CategoryEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+}
+type CategoryEdge {
+    node: Category!
+    cursor: String!
 }
 
 type Review {
@@ -19,8 +38,43 @@ type User {
     username: String!
     displayName: String!
     role: Role!
+    orders(first: Int, after: String): OrderConnection!
 }
 enum Role { CUSTOMER ADMIN }
+
+type Order {
+    id: ID!
+    user: User!
+    status: OrderStatus!
+    placedAt: String!
+    items: [OrderItem!]!
+    totalCents: Int!
+}
+enum OrderStatus { PENDING PAID SHIPPED DELIVERED CANCELLED }
+type OrderItem {
+    id: ID!
+    product: Product!
+    quantity: Int!
+    unitPriceCents: Int!
+    lineTotalCents: Int!
+}
+type OrderConnection {
+    edges: [OrderEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int!
+}
+type OrderEdge {
+    node: Order!
+    cursor: String!
+}
+
+input PlaceOrderInput {
+    items: [OrderItemInput!]!
+}
+input OrderItemInput {
+    productId: ID!
+    quantity: Int!
+}
 
 type PageInfo {
     hasNextPage: Boolean!
@@ -59,11 +113,18 @@ input ReviewFilter {
 type Query {
     products(filter: ProductFilter, first: Int, after: String): ProductConnection!
     product(id: ID!): Product
+    categories(first: Int, after: String): CategoryConnection!
+    category(id: ID!): Category
+    me: User!
+    order(id: ID!): Order
+    orders(status: OrderStatus, first: Int, after: String): OrderConnection!
 }
 
 type Mutation {
     addReview(input: AddReviewInput!): Review!
     deleteReview(id: ID!): Boolean
+    placeOrder(input: PlaceOrderInput!): Order!
+    updateOrderStatus(id: ID!, status: OrderStatus!): Order!
 }
 
 type Subscription {

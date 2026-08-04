@@ -23,6 +23,7 @@
         <module>graphql/spring-demo</module>
         <module>webhooks/producer-demo</module>
         <module>webhooks/consumer-demo</module>
+        <module>websockets/spring-demo</module>
     </modules>
 
     <properties>

@@ -1,0 +1,55 @@
+<header class="page-header">
+  <h1>Catalog</h1>
+  <p class="page-subtitle">products(filter, first, after) — cursor pagination &amp; filtering</p>
+</header>
+
+<form class="filter-bar" [formGroup]="filterForm" (ngSubmit)="search()">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Name contains</mat-label>
+    <input matInput formControlName="nameContains" data-testid="filter-name" />
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Min price (cents)</mat-label>
+    <input matInput type="number" formControlName="minPriceCents" data-testid="filter-min-price" />
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Max price (cents)</mat-label>
+    <input matInput type="number" formControlName="maxPriceCents" data-testid="filter-max-price" />
+  </mat-form-field>
+  <button mat-flat-button type="submit" data-testid="filter-submit">Filter</button>
+</form>
+
+<div class="product-grid">
+  @for (edge of edges(); track edge.node.id) {
+    <mat-card class="product-card" [routerLink]="[edge.node.id]" data-testid="product-card">
+      <mat-card-content>
+        <span class="product-id">#{{ edge.node.id }}</span>
+        <h3 class="product-name">{{ edge.node.name }}</h3>
+        <div class="product-meta">
+          <span class="product-price">{{ edge.node.priceCents / 100 | number: '1.2-2' }}</span>
+          <span class="product-stock">{{ edge.node.stockQty }} in stock</span>
+        </div>
+      </mat-card-content>
+      <mat-card-actions>
+        <button
+          mat-stroked-button
+          type="button"
+          class="add-to-cart"
+          (click)="addToCart(edge.node, $event)"
+          [attr.data-testid]="'add-to-cart-' + edge.node.id"
+        >
+          <mat-icon>add_shopping_cart</mat-icon>
+          Add to cart
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  }
+</div>
+
+<app-connection-paginator
+  [hasNextPage]="pageInfo().hasNextPage"
+  [totalCount]="totalCount()"
+  [loadedCount]="edges().length"
+  [loading]="loading()"
+  (loadMore)="loadMore()"
+/>

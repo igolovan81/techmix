@@ -1,0 +1,12 @@
+<div class="connection-paginator">
+  <span data-testid="paginator-summary">Showing {{ loadedCount() }} of {{ totalCount() }}</span>
+  <button
+    mat-stroked-button
+    type="button"
+    data-testid="load-more-button"
+    [disabled]="!hasNextPage() || loading()"
+    (click)="loadMore.emit()"
+  >
+    Load more
+  </button>
+</div>

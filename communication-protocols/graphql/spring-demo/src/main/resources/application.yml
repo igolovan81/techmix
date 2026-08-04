@@ -2,6 +2,10 @@ server:
   port: 8092
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
   graphql:
     graphiql:
       enabled: true
@@ -31,3 +35,6 @@ app:
     min-reviews-per-product: 3
     max-reviews-per-product: 10
     order-count: 3000
+  graphql:
+    max-query-depth: 15
+    max-query-complexity: 10000
