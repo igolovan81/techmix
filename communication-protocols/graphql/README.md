@@ -129,6 +129,24 @@ Beyond the six patterns below, the domain also demonstrates: DB-pushed-down keys
 - Reference/lookup data that changes rarely or never from the application's own perspective (category trees, country/currency lists, feature flags)
 - Any read hot path where the mutation surface is well understood and provably absent, so "no eviction needed" is a fact, not an assumption
 
+## Query depth & complexity limiting
+
+This schema has a real cycle — `Product.reviews → Review.author → User.orders → Order.items → OrderItem.product → Product.reviews → ...` — that nothing in the type system stops a client from walking indefinitely in one query. Two `graphql-java` instrumentations guard against this: `MaxQueryDepthInstrumentation` caps how deeply a query can nest, and `MaxQueryComplexityInstrumentation` caps a computed cost using a custom `FieldComplexityCalculator` that weights each connection field (`products`, `Category.children`, `Category.products`, `Product.reviews`, `User.orders`, `orders`) by its `first` argument — a `products(first: 500)` query costs proportionally more than `first: 5`, instead of graphql-java's default flat per-field count. Both limits are configurable (`app.graphql.max-query-depth`, `app.graphql.max-query-complexity`) and reject with the same `BAD_REQUEST` classification as this schema's other validation errors (e.g. `addReview` against an unknown product) — even though the rejection happens at a different point in the pipeline (before any resolver runs, rather than inside one).
+
+**Pros**
+- Bounds the cost of a single request regardless of how a client nests fields — protects against both accidental (a client recursing too eagerly) and adversarial queries
+- Complexity weighting scales with the same `first` argument clients already use for pagination, so the cost model lines up with what the schema already exposes rather than introducing a separate, hidden budget
+- Rejection happens before any resolver runs — a too-deep or too-wide query never reaches the database
+
+**Cons**
+- The `first`-based weighting only accounts for genuinely paginated fields; a flat, unpaginated list field (e.g. `Product.categories`) isn't weighted specially
+- Fixed `application.yml` constants, not tuned per-client or per-role — a legitimate power-user query and a hostile one are judged by the same budget
+- Doesn't replace rate limiting or query allow-listing — a client can still send many separate, individually-legal queries in quick succession
+
+**Typical use cases**
+- Any public or third-party-facing GraphQL endpoint, where a client's query shape isn't fully trusted
+- Schemas with cyclic type graphs (common in social/e-commerce domains: user → orders → items → product → reviews → user...) where naive nesting has no natural ceiling
+
 ## Running the demo
 
 Docker is needed to run the app (Postgres) — but not for `mvn test`, which runs against an embedded H2 database.
@@ -148,4 +166,4 @@ An Angular browser client tours the same six patterns interactively — see [ang
 
 ## Scope
 
-No query depth/complexity limiting, no persisted queries, no GraphQL federation — this is a protocol-pattern demo, not a production-hardening guide (same spirit as the gRPC demo's "no TLS" scope limit). Subscriptions are backed by a single in-process `Sinks.Many`, so this is a single-instance demo only. Authentication is HTTP Basic against in-memory demo credentials, not a production auth story — see [spring-demo/README.md#security](spring-demo/README.md#security). File transfer is intentionally a REST sidecar (`Product.imageUrl` + `/api/products/{id}/image`), not the `graphql-multipart-request-spec` extension — GraphQL has no native binary support, and this keeps the schema's "single endpoint for everything" story honest about where it does and doesn't apply.
+No persisted queries, no GraphQL federation — this is a protocol-pattern demo, not a production-hardening guide (same spirit as the gRPC demo's "no TLS" scope limit). Query depth and complexity limiting is implemented (see below), but the configured limits are demo-scale starting values verified against this app's own queries, not a rigorously tuned production budget. Subscriptions are backed by a single in-process `Sinks.Many`, so this is a single-instance demo only. Authentication is HTTP Basic against in-memory demo credentials, not a production auth story — see [spring-demo/README.md#security](spring-demo/README.md#security). File transfer is intentionally a REST sidecar (`Product.imageUrl` + `/api/products/{id}/image`), not the `graphql-multipart-request-spec` extension — GraphQL has no native binary support, and this keeps the schema's "single endpoint for everything" story honest about where it does and doesn't apply.
