@@ -17,6 +17,7 @@ For AI-assistant build/run commands and detailed architecture notes, see [CLAUDE
 | `cqrs-event-sourcing/` | CQRS/event sourcing with Axon Framework |
 | `template-engines/` | Server-side template engines (Handlebars, FreeMarker) |
 | `distributed-transactions/` | Saga pattern (choreography and orchestration) |
+| `domain-driven-design/` | Tactical DDD patterns — banking ledger with aggregates, value objects, domain events, bounded contexts, and an anti-corruption layer |
 | `communication-protocols/` | gRPC, GraphQL (+ Angular client), Webhooks, WebSockets |
 | `workflow-engines/` | Camunda 8 (Zeebe) BPMN workflow demo |
 | `reactive-programming/` | Project Reactor (Mono/Flux, backpressure, schedulers, SSE/WebClient streaming) |

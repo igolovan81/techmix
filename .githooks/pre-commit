@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT=$(git rev-parse --show-toplevel)
 
 # Collect staged Java files and the Maven reactor root each one belongs to
-STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(message-brokers|noSQL|cqrs-event-sourcing|template-engines|distributed-transactions|spring-boot-starters|communication-protocols|reactive-programming|workflow-engines)/.*\.java$' || true)
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(message-brokers|noSQL|cqrs-event-sourcing|template-engines|distributed-transactions|spring-boot-starters|communication-protocols|reactive-programming|workflow-engines|domain-driven-design)/.*\.java$' || true)
 
 if [ -z "$STAGED_JAVA" ]; then
     exit 0
@@ -53,6 +53,11 @@ fi
 if echo "$STAGED_JAVA" | grep -q '^workflow-engines/'; then
     echo "[pre-commit] Applying Spotless formatting to staged workflow-engines Java files..."
     (cd "$ROOT/workflow-engines" && mvn spotless:apply --quiet)
+fi
+
+if echo "$STAGED_JAVA" | grep -q '^domain-driven-design/'; then
+    echo "[pre-commit] Applying Spotless formatting to staged domain-driven-design Java files..."
+    (cd "$ROOT/domain-driven-design" && mvn spotless:apply --quiet)
 fi
 
 # Re-stage the originally staged files (now formatted)
