@@ -141,6 +141,29 @@ curl -s http://localhost:8092/api/products/1/image -o downloaded-image.png
 
 Uploading again for the same product replaces the previous image (one image per product, no gallery). Uploads are capped at 5MB and must have an `image/*` content type; both are rejected with `400`/`413` respectively, and uploading to an unknown product id returns `404`.
 
+## Caching
+
+`category(id)`, `Category.parent`, and `Category.children` are all cached (Caffeine, in-process, 5-minute TTL) — nothing in this schema mutates a category, so there's no eviction logic anywhere.
+
+**Watch the cache in action** (run the app with logging enabled, then repeat the same query):
+
+```bash
+curl -s http://localhost:8092/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ category(id: \"1\") { name children { edges { node { name } } } } }"}'
+
+# repeat the exact same request:
+curl -s http://localhost:8092/graphql \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"{ category(id: \"1\") { name children { edges { node { name } } } } }"}'
+
+# the app log shows "loading category 1 from the database (cache miss)" and
+# "loading children for 1 categories from the database (cache miss): [1]" after the FIRST request only —
+# the second request produces no such log line, because both fields were served entirely from cache.
+```
+
+`category(id)` uses Spring's `@Cacheable` — the textbook single-key case. `Category.children` (behind a `DataLoader`) and `Category.parent` (behind a `@BatchMapping`) both take a *list* of ids per call, so they use manual cache-aside instead: each id is checked individually, only the misses are batched to the database, and the cache is populated per id — annotating either method directly with `@Cacheable` would cache by the whole incoming id list as one key, which almost never repeats across requests. `category(id)` and `Category.parent` share one cache (`categoriesById`), since both cache the same shape — a single category by id — so warming one warms the other.
+
 ## Security
 
 Several operations are gated by HTTP Basic auth and Spring Security method security (`@PreAuthorize` on `DemoController`), demonstrating that GraphQL authorization is field-level, not URL-level — there's only one endpoint (`/graphql`) for every operation:

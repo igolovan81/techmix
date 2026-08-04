@@ -111,6 +111,24 @@ Beyond the six patterns below, the domain also demonstrates: DB-pushed-down keys
 - Any binary attachment on a GraphQL-modeled entity: avatars, product images, PDF exports, generated reports
 - APIs that want to keep binary transfer cacheable/CDN-friendly while still describing the rest of the domain in GraphQL
 
+## Caching
+
+`Category` reads are cached — the only entity in this schema no resolver ever mutates (no `addCategory`/`updateCategory`/`deleteCategory` mutation exists), which makes it a clean cache-aside example with no invalidation logic. Caffeine, in-process, 500-entry cap, 5-minute TTL (a safety net for out-of-band data changes, not a response to any write path in this app).
+
+**Pros**
+- Repeated reads of the same category (or its children) skip the database entirely after the first load
+- No invalidation complexity to get wrong, because nothing in the schema writes to this entity
+- Demonstrates two idioms side by side: plain `@Cacheable` for the single-key `category(id)` lookup, and manual cache-aside for the two batch methods behind `Category.children`'s `DataLoader` and `Category.parent`'s `@BatchMapping` — annotating a batch method with `@Cacheable` would cache by the whole incoming id list as one key, which almost never repeats across requests
+
+**Cons**
+- Only safe because this entity happens to be read-only from the app's perspective; caching a mutated entity (`Product.stockQty`, `Review`) would need `@CacheEvict` wired into the write path, a different (and harder) lesson not covered here
+- Single-process cache (Caffeine, not Redis) — a multi-instance deployment would see cache misses diverge per instance, same single-instance caveat as this demo's in-memory subscription stream
+- The 5-minute TTL is a fixed constant, not exercised by an automated test — verified instead by watching the `cache miss` log lines (`com.testingai.graphql.domain.CategoryService`) appear once per id, then stop
+
+**Typical use cases**
+- Reference/lookup data that changes rarely or never from the application's own perspective (category trees, country/currency lists, feature flags)
+- Any read hot path where the mutation surface is well understood and provably absent, so "no eviction needed" is a fact, not an assumption
+
 ## Running the demo
 
 Docker is needed to run the app (Postgres) — but not for `mvn test`, which runs against an embedded H2 database.
