@@ -8,9 +8,11 @@ import com.testingai.banking.statements.domain.StatementLine;
 import com.testingai.banking.statements.domain.StatementLineType;
 import com.testingai.banking.statements.domain.StatementRepository;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class LedgerEventTranslator {
 
@@ -22,7 +24,11 @@ public class LedgerEventTranslator {
 
 	@EventListener
 	public void onLedgerEvent(LedgerEvent event) {
-		statementRepository.save(translate(event));
+		log.info("[LedgerEventTranslator] Translating ledger event {}", event.getClass().getSimpleName());
+		StatementLine statementLine = translate(event);
+		statementRepository.save(statementLine);
+		log.info("[LedgerEventTranslator] Statement line recorded accountId={} type={} amount={}",
+				statementLine.accountId(), statementLine.type(), statementLine.amount());
 	}
 
 	StatementLine translate(LedgerEvent event) {
