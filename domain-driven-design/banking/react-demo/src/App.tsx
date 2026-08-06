@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { AccountsTab } from './accounts/AccountsTab';
+import { TransferForm } from './transfer/TransferForm';
+import { StatementView } from './statement/StatementView';
 
 type Tab = 'accounts' | 'transfer' | 'statement';
 
@@ -27,9 +30,9 @@ export default function App() {
         ))}
       </nav>
       <main className="tab-panel">
-        {activeTab === 'accounts' && <p>Accounts tab coming soon.</p>}
-        {activeTab === 'transfer' && <p>Transfer tab coming soon.</p>}
-        {activeTab === 'statement' && <p>Statement tab coming soon.</p>}
+        {activeTab === 'accounts' && <AccountsTab />}
+        {activeTab === 'transfer' && <TransferForm />}
+        {activeTab === 'statement' && <StatementView />}
       </main>
     </div>
   );

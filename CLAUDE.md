@@ -71,6 +71,17 @@ mvn -pl banking/spring-demo spring-boot:run                    # run the app (:8
 mvn gatling:test -pl banking/spring-demo                       # Gatling load test — requires the app running first
 ```
 
+### DDD banking React demo (run from the app root, requires `banking/spring-demo` running first)
+
+```bash
+cd domain-driven-design/banking/react-demo
+
+npm install
+npm run dev             # dev server on :4203, proxies /accounts and /transfers to :8099
+npm test                 # Vitest unit/component tests
+npm run build             # production build
+```
+
 ### gRPC communication protocol demo (run from the reactor root, no docker infrastructure required)
 
 ```bash
@@ -240,6 +251,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
 | `domain-driven-design/banking/spring-demo/` | Tactical DDD demo — banking ledger with aggregate invariants, value objects, domain events, a repository port, a cross-aggregate domain service, and a second bounded context (`statements`) wired to the first only through an anti-corruption layer; no external infrastructure required (H2 only) |
+| `domain-driven-design/banking/react-demo/` | React + TypeScript client for the banking ledger demo — open/deposit/withdraw/transfer/statement against `banking/spring-demo`'s REST API via a Vite dev proxy; `npm run dev` requires `banking/spring-demo` running first |
 | `communication-protocols/grpc/{server-demo,client-demo}/` | gRPC demo — two independent Spring Boot apps covering all four RPC patterns (unary, server/client/bidi streaming); `server-demo` must be started before `client-demo` — no external infrastructure required |
 | `communication-protocols/graphql/spring-demo/` | GraphQL demo — single Spring Boot app covering query/nested-fetch, DataLoader batching, mutation, subscription, cursor-pagination, and an e-commerce domain (Category/User/Order) against Postgres; `mvn test` needs no external infrastructure (H2), but running the app needs `docker compose -f communication-protocols/graphql/docker/docker-compose.yml up -d` first |
 | `communication-protocols/graphql/angular-demo/` | Angular 20 client for the GraphQL demo — Apollo Angular over a dev-proxy to `spring-demo`, touring all five patterns with role/row-level authorization; `npm start` requires `spring-demo` running first |
