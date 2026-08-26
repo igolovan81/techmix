@@ -27,6 +27,8 @@ resilience4j:
         wait-duration: 500ms
         exponential-backoff-multiplier: 2
         randomized-wait-factor: 0.5
+        retry-exceptions:
+          - com.testingai.surveyimporter.client.RetryableSyncException
   circuitbreaker:
     instances:
       surveyMonkey:
