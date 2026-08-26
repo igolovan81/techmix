@@ -403,8 +403,6 @@ resilience4j:
         wait-duration: 500ms
         exponential-backoff-multiplier: 2
         randomized-wait-factor: 0.5
-        retry-exceptions:
-          - com.testingai.surveyimporter.client.RetryableSyncException
   circuitbreaker:
     instances:
       surveyMonkey:
@@ -425,6 +423,8 @@ management:
       exposure:
         include: health,metrics,prometheus
 ```
+
+Note: the `retry-exceptions` list under `resilience4j.retry.instances.surveyMonkey` is deliberately **not** included yet — Resilience4j resolves that class reference eagerly at context startup (`Class.forName`), and `RetryableSyncException` doesn't exist until Task 9. Adding it now would fail every context-loads test between here and Task 9. Task 9 adds it back once the class exists.
 
 - [ ] **Step 9: Create `importer-demo`'s application class**
 
@@ -2147,11 +2147,39 @@ mvn test -Dtest=SurveyMonkeyClientClassifyTest
 
 Expected: `BUILD SUCCESS`, 3 tests passed.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Restore the `retry-exceptions` config now that the class exists**
+
+Modify `.../importer-demo/src/main/resources/application.yml` — `RetryableSyncException` now exists, so add back the `retry-exceptions` list Task 1 deliberately omitted:
+
+```yaml
+# old
+        exponential-backoff-multiplier: 2
+        randomized-wait-factor: 0.5
+  circuitbreaker:
+```
+```yaml
+# new
+        exponential-backoff-multiplier: 2
+        randomized-wait-factor: 0.5
+        retry-exceptions:
+          - com.testingai.surveyimporter.client.RetryableSyncException
+  circuitbreaker:
+```
+
+- [ ] **Step 6: Run the full importer-demo unit test suite to confirm the context still loads**
+
+```bash
+mvn test
+```
+
+Expected: `BUILD SUCCESS` — confirms `SurveyImporterApplicationTest`'s context-loads test now succeeds with the `retry-exceptions` class reference resolvable.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add data-integration/survey-monkey-import/importer-demo/src/main/java/com/testingai/surveyimporter/client \
-        data-integration/survey-monkey-import/importer-demo/src/test/java/com/testingai/surveyimporter/client
+        data-integration/survey-monkey-import/importer-demo/src/test/java/com/testingai/surveyimporter/client \
+        data-integration/survey-monkey-import/importer-demo/src/main/resources/application.yml
 git commit -m "feat(survey-importer-demo): add SurveyMonkey client with retry/circuit-breaker/rate-limiter"
 ```
 

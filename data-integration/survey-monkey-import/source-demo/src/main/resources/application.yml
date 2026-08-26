@@ -1,0 +1,10 @@
+server:
+  port: 8101
+
+spring:
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+importer:
+  webhook-url: http://localhost:8102/webhooks/surveymonkey
+  webhook-secret: demo-shared-secret-please-rotate
