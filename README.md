@@ -18,6 +18,7 @@ For AI-assistant build/run commands and detailed architecture notes, see [CLAUDE
 | `template-engines/` | Server-side template engines (Handlebars, FreeMarker) |
 | `distributed-transactions/` | Saga pattern (choreography and orchestration) |
 | `concurrency-patterns/` | LMAX Disruptor ring-buffer concurrency library (single handler, parallel handlers, diamond dependency graph, producer/wait-strategy comparisons, exception handling) |
+| `data-integration/` | Reliable external-API ingestion pipeline (SurveyMonkey survey-response import) — pagination, idempotency, rate limiting, retries, monitoring, dead-letter queues |
 | `domain-driven-design/` | Tactical DDD patterns — banking ledger with aggregates, value objects, domain events, bounded contexts, and an anti-corruption layer |
 | `communication-protocols/` | gRPC, GraphQL (+ Angular client), Webhooks, WebSockets |
 | `workflow-engines/` | Camunda 8 (Zeebe) BPMN workflow demo |
