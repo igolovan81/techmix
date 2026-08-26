@@ -6,6 +6,8 @@ import com.testingai.surveyimporter.domain.TriggerType;
 import com.testingai.surveyimporter.entity.DeadLetterJobEntity;
 import com.testingai.surveyimporter.queue.JobQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,8 @@ import java.util.UUID;
 
 @Service
 public class DeadLetterService {
+
+	private static final Logger log = LoggerFactory.getLogger(DeadLetterService.class);
 
 	private final DeadLetterJobRepository repository;
 	private final JobQueue jobQueue;
@@ -39,6 +43,8 @@ public class DeadLetterService {
 		entity.setCreatedAt(now);
 		entity.setLastAttemptAt(now);
 		repository.save(entity);
+		log.warn("Dead-lettered job survey={} kind={} cursor={} responseId={} after {} attempts: {}", job.surveyId(),
+				job.kind(), job.cursor(), job.responseId(), job.attemptCount(), cause.getMessage());
 	}
 
 	public List<DeadLetterJobEntity> list() {
@@ -54,5 +60,6 @@ public class DeadLetterService {
 				Instant.now());
 		jobQueue.enqueue(job);
 		repository.delete(entity);
+		log.info("Redrove DLQ entry {} for survey {} — re-enqueued as a fresh job", id, entity.getSurveyId());
 	}
 }

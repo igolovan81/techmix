@@ -15,6 +15,8 @@ import com.testingai.surveyimporter.storage.SurveyResponseUpsert;
 import com.testingai.surveyimporter.storage.SyncWatermarkRepository;
 import com.testingai.surveyimporter.storage.UpsertService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -23,6 +25,7 @@ import java.util.UUID;
 @Service
 public class ConnectorService {
 
+	private static final Logger log = LoggerFactory.getLogger(ConnectorService.class);
 	private static final int PAGE_SIZE = 25;
 
 	private final SurveyMonkeyClient client;
@@ -52,6 +55,8 @@ public class ConnectorService {
 		Instant startModifiedAt = job.cursor() == null
 				? watermarkRepository.findById(job.surveyId()).map(SyncWatermarkEntity::getLastSyncedAt).orElse(null)
 				: null;
+		log.info("Fetching survey {} page (cursor={}, startModifiedAt={})", job.surveyId(), job.cursor(),
+				startModifiedAt);
 		ResponsesPage page = client.fetchResponsesPage(job.surveyId(), job.cursor(), PAGE_SIZE, startModifiedAt);
 
 		for (SourceSurveyResponseView response : page.data()) {
@@ -64,15 +69,20 @@ public class ConnectorService {
 					toPayload(response)));
 		}
 
-		if (page.links() != null && page.links().next() != null) {
+		boolean hasNext = page.links() != null && page.links().next() != null;
+		log.info("Fetched survey {} page (cursor={}): {} responses, hasNext={}", job.surveyId(), job.cursor(),
+				page.data().size(), hasNext);
+		if (hasNext) {
 			jobQueue.enqueue(new SyncJob(UUID.randomUUID(), job.surveyId(), JobKind.PAGE_SYNC, page.links().next(),
 					null, job.triggerType(), 0, Instant.now()));
 		} else {
+			log.info("Survey {} sync pass complete — updating watermark", job.surveyId());
 			watermarkRepository.save(new SyncWatermarkEntity(job.surveyId(), Instant.now()));
 		}
 	}
 
 	private void processSingleResponse(SyncJob job) {
+		log.info("Fetching single response {} for survey {}", job.responseId(), job.surveyId());
 		SourceSurveyResponseView response = client.fetchSingleResponse(job.surveyId(), job.responseId());
 		if (response.id() == null || response.dateModified() == null) {
 			throw new PermanentSyncException("Malformed single response");

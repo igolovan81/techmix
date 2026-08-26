@@ -7,6 +7,8 @@ import com.testingai.surveysource.domain.SourceSurveyResponse;
 import com.testingai.surveysource.failure.FailureInjector;
 import com.testingai.surveysource.seed.SeedDataService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +25,7 @@ import java.util.List;
 @RequestMapping("/v3/surveys/{surveyId}/responses")
 public class ResponsesController {
 
+	private static final Logger log = LoggerFactory.getLogger(ResponsesController.class);
 	private static final int MAX_PAGE_SIZE = 100;
 
 	private final SeedDataService seedDataService;
@@ -39,9 +42,11 @@ public class ResponsesController {
 			@RequestParam(name = "start_modified_at", required = false) String startModifiedAt) {
 
 		if (failureInjector.shouldInject(FailureMode.RATE_LIMIT)) {
+			log.warn("Injecting RATE_LIMIT failure for survey {} page {}", surveyId, page);
 			return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", "2").build();
 		}
 		if (failureInjector.shouldInject(FailureMode.SERVER_ERROR)) {
+			log.warn("Injecting SERVER_ERROR failure for survey {} page {}", surveyId, page);
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 		}
 
@@ -54,12 +59,14 @@ public class ResponsesController {
 
 		if (failureInjector.shouldInject(FailureMode.MALFORMED) && !pageData.isEmpty()) {
 			SourceSurveyResponse original = pageData.get(0);
+			log.warn("Injecting MALFORMED response for survey {} page {} (response id nulled)", surveyId, page);
 			pageData.set(0,
 					new SourceSurveyResponse(null, original.surveyId(), original.dateModified(), original.answers()));
 		}
 
 		boolean hasNext = toIndex < total;
 		Links links = new Links(hasNext ? String.valueOf(page + 1) : null);
+		log.info("Served survey {} page {} ({} responses, hasNext={})", surveyId, page, pageData.size(), hasNext);
 		return ResponseEntity.ok(new ResponsesPage(pageData, page, size, total, links));
 	}
 

@@ -3,10 +3,13 @@ package com.testingai.surveysource.webhook;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -18,6 +21,8 @@ import java.util.HexFormat;
 
 @Component
 public class WebhookDispatcher {
+
+	private static final Logger log = LoggerFactory.getLogger(WebhookDispatcher.class);
 
 	private final RestClient restClient;
 	private final String webhookUrl;
@@ -35,8 +40,15 @@ public class WebhookDispatcher {
 	public void dispatch(String surveyId, String responseId) {
 		String body = writeValue(new WebhookEvent(surveyId, responseId, "response_completed"));
 		String signature = "sha256=" + hmacSha256Hex(body, secret);
-		restClient.post().uri(webhookUrl).header("X-SurveyMonkey-Signature", signature)
-				.contentType(MediaType.APPLICATION_JSON).body(body).retrieve().toBodilessEntity();
+		log.info("Dispatching webhook to {} for survey {} response {}", webhookUrl, surveyId, responseId);
+		try {
+			restClient.post().uri(webhookUrl).header("X-SurveyMonkey-Signature", signature)
+					.contentType(MediaType.APPLICATION_JSON).body(body).retrieve().toBodilessEntity();
+			log.info("Webhook delivered for survey {} response {}", surveyId, responseId);
+		} catch (RestClientException e) {
+			log.warn("Webhook delivery failed for survey {} response {}: {}", surveyId, responseId, e.getMessage());
+			throw e;
+		}
 	}
 
 	private String writeValue(WebhookEvent event) {

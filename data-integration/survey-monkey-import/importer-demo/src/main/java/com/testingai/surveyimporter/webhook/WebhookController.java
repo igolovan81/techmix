@@ -8,6 +8,8 @@ import com.testingai.surveyimporter.domain.SyncJob;
 import com.testingai.surveyimporter.domain.TriggerType;
 import com.testingai.surveyimporter.queue.JobQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +22,8 @@ import java.util.UUID;
 
 @RestController
 public class WebhookController {
+
+	private static final Logger log = LoggerFactory.getLogger(WebhookController.class);
 
 	private final WebhookSignatureVerifier signatureVerifier;
 	private final JobQueue jobQueue;
@@ -35,9 +39,12 @@ public class WebhookController {
 	public ResponseEntity<Void> receive(@RequestBody String rawBody,
 			@RequestHeader("X-SurveyMonkey-Signature") String signatureHeader) {
 		if (!signatureVerifier.isValid(rawBody, signatureHeader)) {
+			log.warn("Rejected webhook: invalid signature");
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 		}
 		WebhookEvent event = parse(rawBody);
+		log.info("Accepted webhook for survey {} response {} (type={})", event.surveyId(), event.responseId(),
+				event.eventType());
 		jobQueue.enqueue(new SyncJob(UUID.randomUUID(), event.surveyId(), JobKind.SINGLE_RESPONSE_SYNC, null,
 				event.responseId(), TriggerType.WEBHOOK, 0, Instant.now()));
 		return ResponseEntity.ok().build();
