@@ -1692,7 +1692,7 @@ public interface SurveyResponseRepository extends JpaRepository<SurveyResponseEn
 
     List<SurveyResponseEntity> findBySurveyId(String surveyId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query(value = "UPDATE survey_response SET date_modified = :dateModified, payload = :payload, "
             + "imported_at = :importedAt WHERE survey_id = :surveyId AND response_id = :responseId "
             + "AND date_modified < :dateModified", nativeQuery = true)
@@ -1734,7 +1734,7 @@ public interface DeadLetterJobRepository extends JpaRepository<DeadLetterJobEnti
 mvn test -Dtest=SurveyResponseRepositoryTest
 ```
 
-Expected: `BUILD SUCCESS`, 3 tests passed. `@Modifying` native queries require the surrounding call to be transactional — `@DataJpaTest` wraps each test method in a transaction automatically, so no extra annotation is needed here.
+Expected: `BUILD SUCCESS`, 3 tests passed. `@Modifying` native queries require the surrounding call to be transactional — `@DataJpaTest` wraps each test method in a transaction automatically, so no extra annotation is needed here. `clearAutomatically = true` is required: without it, Hibernate's first-level cache returns the stale in-memory entity on a subsequent `findBySurveyIdAndResponseId` even though the native UPDATE succeeded at the database level — a real failure caught by `updateIfNewerUpdatesWhenIncomingIsNewer` (it asserts the value read back, not just the update count).
 
 - [ ] **Step 5: Commit**
 
