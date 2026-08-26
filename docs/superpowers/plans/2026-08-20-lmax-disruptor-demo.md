@@ -801,8 +801,8 @@ public class OrderMatchingEngine {
 
     private TreeMap<BigDecimal, Deque<RestingOrder>> bookFor(Map<String, TreeMap<BigDecimal, Deque<RestingOrder>>> books,
             String symbol, boolean lowestFirst) {
-        return books.computeIfAbsent(symbol,
-                s -> new TreeMap<>(lowestFirst ? Comparator.naturalOrder() : Comparator.reverseOrder()));
+        Comparator<BigDecimal> priceOrder = lowestFirst ? Comparator.naturalOrder() : Comparator.reverseOrder();
+        return books.computeIfAbsent(symbol, s -> new TreeMap<>(priceOrder));
     }
 
     private int countAll(Map<String, TreeMap<BigDecimal, Deque<RestingOrder>>> books) {
