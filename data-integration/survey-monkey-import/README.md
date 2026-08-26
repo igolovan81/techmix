@@ -9,6 +9,50 @@ A two-app demonstration of a reliable external-API ingestion pipeline: importing
 | [`source-demo`](source-demo/) | `8101` | A fake SurveyMonkey — seeded survey data, a paginated responses API, on-demand failure injection, HMAC-signed webhook dispatch |
 | [`importer-demo`](importer-demo/) | `8102` | The actual subject of the design — connector, Resilience4j retry/circuit-breaker/rate-limiter, in-process job queue, idempotent storage, dead-letter queue, webhook receiver, scheduler, monitoring |
 
+## Architecture
+
+The two apps talk over plain HTTP — `source-demo` is polled for pages/single responses and pushes webhooks; `importer-demo` never talks to anything else:
+
+```
+source-demo (:8101) — "fake SurveyMonkey"          importer-demo (:8102) — "the pipeline"
+
+GET /v3/surveys/{id}/responses/bulk        ◀── polled by ── SurveyMonkeyClient
+GET /v3/surveys/{id}/responses/{id}                          (Resilience4j: retry,
+                                                                circuit breaker, rate limiter)
+
+POST /admin/webhooks/trigger  ── HMAC-signed webhook ──▶  POST /webhooks/surveymonkey
+
+POST /admin/failure-mode  (injects 429 / 5xx / malformed data into the polled responses above)
+```
+
+Inside `importer-demo`, both trigger paths feed one queue, and one worker pool drives every job through the same connector — the "one job = one page" model that makes pagination resumable and retries safe:
+
+```
+SyncScheduler (cron)              WebhookController (HMAC-verified)
+        │                                   │
+        ▼                                   ▼
+              JobQueue  (DelayQueue — redelivery with backoff)
+                        │
+                        ▼  take()
+               SyncWorkerPool (3 worker threads)
+                        │  process(job)
+                        ▼
+               ConnectorService ──▶ SurveyMonkeyClient ──▶ source-demo
+                        │
+                        ▼  idempotent upsert (survey_id + response_id,
+                        │   only applied if incoming date_modified is newer)
+               UpsertService ──▶ H2 survey_response table
+                        │
+        ┌───────────────┴────────────────┐
+        ▼ retryable                       ▼ permanent, or attempts exhausted
+re-enqueue with backoff             DeadLetterService ──▶ dead_letter_job table
+   (back into JobQueue)                     │
+                                             ▼  POST /demo/dlq/{id}/redrive
+                                    re-enqueued into JobQueue (attempts reset to 0)
+```
+
+A page with a `next` link enqueues a continuation job with that cursor instead of looping in-process — the same queue and worker pool that handle a fresh backfill also handle "the next page of this survey," which is what makes a crash mid-pagination merely resume later rather than lose progress. `SyncMetrics` and `DemoStatusController` observe the same `JobQueue`/DLQ/circuit-breaker state shown above and expose it via `GET /demo/status` and `/actuator/prometheus`.
+
 ## Prerequisites
 
 - Java 21
