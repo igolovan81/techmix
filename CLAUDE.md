@@ -59,6 +59,17 @@ mvn test -Dtest=ClassName            # single test class
 mvn gatling:test                     # load test — requires the app to be running first
 ```
 
+### LMAX Disruptor demo (run from the module root, no docker infrastructure required)
+
+```bash
+cd concurrency-patterns/lmax-disruptor/spring-demo
+
+mvn clean package                    # build
+mvn test                             # unit tests (Gatling excluded automatically)
+mvn test -Dtest=ClassName            # single test class
+mvn gatling:test                     # load test — requires the app to be running first
+```
+
 ### DDD banking ledger demo (run from the reactor root, no docker infrastructure required)
 
 ```bash
@@ -250,6 +261,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `cqrs-event-sourcing/<framework>/spring-demo/` | CQRS/event-sourcing framework demo apps, same conventions as `message-brokers/` (currently: Axon Framework) |
 | `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
+| `concurrency-patterns/lmax-disruptor/spring-demo/` | LMAX Disruptor ring-buffer library demo — single handler, parallel handlers, diamond dependency graph (the classic journal+replicate-then-business-logic pattern), producer-type and wait-strategy comparisons, and exception handling, over a trading order-matching domain; no external infrastructure required |
 | `domain-driven-design/banking/spring-demo/` | Tactical DDD demo — banking ledger with aggregate invariants, value objects, domain events, a repository port, a cross-aggregate domain service, and a second bounded context (`statements`) wired to the first only through an anti-corruption layer; no external infrastructure required (H2 only) |
 | `domain-driven-design/banking/react-demo/` | React + TypeScript client for the banking ledger demo — open/deposit/withdraw/transfer/statement against `banking/spring-demo`'s REST API via a Vite dev proxy; `npm run dev` requires `banking/spring-demo` running first |
 | `communication-protocols/grpc/{server-demo,client-demo}/` | gRPC demo — two independent Spring Boot apps covering all four RPC patterns (unary, server/client/bidi streaming); `server-demo` must be started before `client-demo` — no external infrastructure required |
