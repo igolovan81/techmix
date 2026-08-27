@@ -70,6 +70,18 @@ mvn test -Dtest=ClassName            # single test class
 mvn gatling:test                     # load test — requires the app to be running first
 ```
 
+### Spring Batch demo (run from the module root, no docker infrastructure required)
+
+```bash
+cd batch-processing/spring-batch/spring-demo
+
+mvn clean package                    # build
+mvn test                             # unit + integration tests (Gatling excluded automatically)
+mvn test -Dtest=ClassName            # single test class
+mvn spring-boot:run                  # run the app (:8103)
+mvn gatling:test                     # load test — requires the app to be running first
+```
+
 ### Survey Monkey import demo (two apps — run from each app's root, no docker infrastructure required)
 
 ```bash
@@ -278,6 +290,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
 | `concurrency-patterns/lmax-disruptor/spring-demo/` | LMAX Disruptor ring-buffer library demo — single handler, parallel handlers, diamond dependency graph (the classic journal+replicate-then-business-logic pattern), producer-type and wait-strategy comparisons, and exception handling, over a trading order-matching domain; no external infrastructure required |
+| `batch-processing/spring-batch/spring-demo/` | Spring Batch demo — chunk-oriented ETL, lifecycle listeners, tasklet steps, skip/retry fault tolerance, job restart, and partitioned steps, over an order-invoicing domain; H2 only, no Docker required |
 | `data-integration/survey-monkey-import/{source-demo,importer-demo}/` | Reliable external-API ingestion pipeline demo — a fake SurveyMonkey (`source-demo`) plus a webhook+polling hybrid importer (`importer-demo`) demonstrating pagination, idempotency, rate limiting, retries, monitoring, and dead-letter queues; `source-demo` must be started before `importer-demo` — no external infrastructure required (H2 only) |
 | `domain-driven-design/banking/spring-demo/` | Tactical DDD demo — banking ledger with aggregate invariants, value objects, domain events, a repository port, a cross-aggregate domain service, and a second bounded context (`statements`) wired to the first only through an anti-corruption layer; no external infrastructure required (H2 only) |
 | `domain-driven-design/banking/react-demo/` | React + TypeScript client for the banking ledger demo — open/deposit/withdraw/transfer/statement against `banking/spring-demo`'s REST API via a Vite dev proxy; `npm run dev` requires `banking/spring-demo` running first |
