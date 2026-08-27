@@ -5,5 +5,6 @@ This directory contains runnable demos for NoSQL database technologies, structur
 | Database | Demo | Best fit |
 |---|---|---|
 | [MongoDB](mongodb/) | 3-node replica set | Document storage, flexible schema, multi-document transactions, real-time change streams |
+| [Cassandra](cassandra/) | 3-node ring, RF=3 | Wide-column, write-heavy workloads, tunable consistency, linear scalability |
 
 More NoSQL databases may be added here over time, at which point this README will grow into a comparison guide like `../message-brokers/README.md`.

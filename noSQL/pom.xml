@@ -19,6 +19,7 @@
 
     <modules>
         <module>mongodb/spring-demo</module>
+        <module>cassandra/spring-demo</module>
     </modules>
 
     <properties>

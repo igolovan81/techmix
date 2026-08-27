@@ -1,0 +1,9 @@
+spring:
+  cassandra:
+    contact-points: cassandra1:9042,cassandra2:9042,cassandra3:9042
+    local-datacenter: datacenter1
+    keyspace-name: ecommerce
+    schema-action: none
+
+server:
+  port: 8085
