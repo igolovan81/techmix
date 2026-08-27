@@ -1,6 +1,6 @@
 # Spring Batch Demo Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a `batch-processing/spring-batch/` module — a single Spring Boot app, H2-only, no Docker — covering six Spring Batch patterns (chunk-oriented ETL, lifecycle listeners, tasklet steps, skip/retry fault tolerance, job restart, partitioned steps) over an order-invoicing domain.
 
@@ -42,7 +42,7 @@
 **Interfaces:**
 - Produces: a buildable, empty Spring Boot module (Maven reactor `batch-processing`), port `8103`, H2 datasource `jdbc:h2:mem:batchdb;DB_CLOSE_DELAY=-1` with `orders`/`invoices` tables created on startup via `schema.sql`, Spring Batch's own metadata schema initialized (`spring.batch.jdbc.initialize-schema=always`), no job auto-run (`spring.batch.job.enabled=false`).
 
-- [ ] **Step 1: Write the category parent POM**
+- [x] **Step 1: Write the category parent POM**
 
 `batch-processing/pom.xml`:
 
@@ -178,7 +178,7 @@
 </project>
 ```
 
-- [ ] **Step 2: Copy the eclipse formatter**
+- [x] **Step 2: Copy the eclipse formatter**
 
 `batch-processing/eclipse-formatter.xml`:
 
@@ -197,7 +197,7 @@
 </profiles>
 ```
 
-- [ ] **Step 3: Write the module POM**
+- [x] **Step 3: Write the module POM**
 
 `batch-processing/spring-batch/spring-demo/pom.xml`:
 
@@ -267,7 +267,7 @@
 </project>
 ```
 
-- [ ] **Step 4: Write the application class, config, and schema**
+- [x] **Step 4: Write the application class, config, and schema**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/BatchDemoApplication.java`:
 
@@ -330,7 +330,7 @@ CREATE TABLE IF NOT EXISTS invoices (
 );
 ```
 
-- [ ] **Step 5: Write the trivial application test**
+- [x] **Step 5: Write the trivial application test**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/BatchDemoApplicationTest.java`:
 
@@ -348,12 +348,12 @@ class BatchDemoApplicationTest {
 }
 ```
 
-- [ ] **Step 6: Run the build to verify the module compiles and the test passes**
+- [x] **Step 6: Run the build to verify the module compiles and the test passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test`
 Expected: `BUILD SUCCESS`, one test run, 0 failures.
 
-- [ ] **Step 7: Write the category README**
+- [x] **Step 7: Write the category README**
 
 `batch-processing/README.md`:
 
@@ -369,7 +369,7 @@ This directory contains runnable demos for batch-processing frameworks, structur
 More batch-processing frameworks may be added here over time.
 ```
 
-- [ ] **Step 8: Register the category in `.githooks/pre-commit`**
+- [x] **Step 8: Register the category in `.githooks/pre-commit`**
 
 Add `batch-processing` to the staged-file grep pattern on line 7 (change `^(message-brokers|noSQL|...` to include `batch-processing`):
 
@@ -386,7 +386,7 @@ if echo "$STAGED_JAVA" | grep -q '^batch-processing/'; then
 fi
 ```
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -410,7 +410,7 @@ git commit -m "feat(spring-batch): scaffold batch-processing category and spring
 **Interfaces:**
 - Produces: `Order` (fields: `Long id`, `BatchType batchType`, `String customerId`, `BigDecimal amount`, `OrderStatus status`, `LocalDateTime createdAt`), `Invoice` (fields: `Long id`, `Long orderId`, `String customerId`, `BigDecimal amount`, `BigDecimal tax`, `BigDecimal total`, `LocalDateTime createdAt`), `InvoiceCalculator.toInvoice(Order) -> Invoice` — used by `chunk.InvoiceProcessor` (Task 6), `faulttolerant.FaultTolerantProcessor` (Task 9), `restart.RestartProcessor` (Task 10). `OrderRowMapper implements RowMapper<Order>` — used by every `JdbcCursorItemReader<Order>` bean (Tasks 6, 9, 10, 11).
 
-- [ ] **Step 1: Write the enums and POJOs**
+- [x] **Step 1: Write the enums and POJOs**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/domain/BatchType.java`:
 
@@ -485,7 +485,7 @@ public class Invoice {
 }
 ```
 
-- [ ] **Step 2: Write the row mapper**
+- [x] **Step 2: Write the row mapper**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/domain/OrderRowMapper.java`:
 
@@ -513,7 +513,7 @@ public class OrderRowMapper implements RowMapper<Order> {
 }
 ```
 
-- [ ] **Step 3: Write the failing test for InvoiceCalculator**
+- [x] **Step 3: Write the failing test for InvoiceCalculator**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/domain/InvoiceCalculatorTest.java`:
 
@@ -543,12 +543,12 @@ class InvoiceCalculatorTest {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it fails**
+- [x] **Step 4: Run the test to verify it fails**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=InvoiceCalculatorTest`
 Expected: FAIL — `InvoiceCalculator` does not exist (compile error).
 
-- [ ] **Step 5: Write the implementation**
+- [x] **Step 5: Write the implementation**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/domain/InvoiceCalculator.java`:
 
@@ -580,12 +580,12 @@ public final class InvoiceCalculator {
 }
 ```
 
-- [ ] **Step 6: Run the test to verify it passes**
+- [x] **Step 6: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=InvoiceCalculatorTest`
 Expected: PASS, 1 test.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -605,7 +605,7 @@ git commit -m "feat(spring-batch): add domain model (Order/Invoice/InvoiceCalcul
 **Interfaces:**
 - Produces: `FailureSimulator.maybeThrow(String context)` (static, void, throws `RuntimeException` ~5% of the time) — used by `faulttolerant.FaultTolerantProcessor` (Task 9).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/util/FailureSimulatorTest.java` (matches the `concurrency-patterns/lmax-disruptor` module's convention exactly):
 
@@ -635,12 +635,12 @@ class FailureSimulatorTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=FailureSimulatorTest`
 Expected: FAIL — `FailureSimulator` does not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/util/FailureSimulator.java`:
 
@@ -662,12 +662,12 @@ public class FailureSimulator {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=FailureSimulatorTest`
 Expected: PASS, 1 test.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -688,7 +688,7 @@ git commit -m "feat(spring-batch): add FailureSimulator util (Kafka-module conve
 - Consumes: `com.testingai.batch.domain.BatchType` (Task 2).
 - Produces: `OrderSeedService.seed(BatchType batchType, int count) -> int` (returns the number of rows inserted) — used by `controller.DemoController` (Task 12).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/seed/OrderSeedServiceTest.java`:
 
@@ -737,12 +737,12 @@ class OrderSeedServiceTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=OrderSeedServiceTest`
 Expected: FAIL — `OrderSeedService` does not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/seed/OrderSeedService.java`:
 
@@ -783,12 +783,12 @@ public class OrderSeedService {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=OrderSeedServiceTest`
 Expected: PASS, 1 test.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -811,7 +811,7 @@ git commit -m "feat(spring-batch): add order seeding endpoint support"
 **Interfaces:**
 - Produces: `ListenerStats` (record: `jobName`, `status`, `startTime`, `endTime`, `durationMillis`, `readCount`, `writeCount`, `skipCount`), `ListenerStatsService.record(ListenerStats)` / `.getLatest() -> ListenerStats` (null before any record) — used by `controller.DemoController` (Task 12). `InvoiceJobListener` (`JobExecutionListener`) and `InvoiceStepListener` (`StepExecutionListener`) — attached to the chunk job in `chunk.ChunkJobConfig` (Task 6); `InvoiceJobListener` is the one that calls `ListenerStatsService.record(...)`, `InvoiceStepListener` logs per-step lifecycle events and passes through the step's `ExitStatus` unchanged.
 
-- [ ] **Step 1: Write the record and the failing test for ListenerStatsService**
+- [x] **Step 1: Write the record and the failing test for ListenerStatsService**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/listener/ListenerStats.java`:
 
@@ -860,12 +860,12 @@ class ListenerStatsServiceTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=ListenerStatsServiceTest`
 Expected: FAIL — `ListenerStatsService` does not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/listener/ListenerStatsService.java`:
 
@@ -891,12 +891,12 @@ public class ListenerStatsService {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=ListenerStatsServiceTest`
 Expected: PASS, 2 tests.
 
-- [ ] **Step 5: Write the job and step listeners (no dedicated test — exercised by `ChunkJobConfigTest` in Task 6)**
+- [x] **Step 5: Write the job and step listeners (no dedicated test — exercised by `ChunkJobConfigTest` in Task 6)**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/listener/InvoiceJobListener.java`:
 
@@ -976,12 +976,12 @@ public class InvoiceStepListener implements StepExecutionListener {
 }
 ```
 
-- [ ] **Step 6: Verify the module still compiles**
+- [x] **Step 6: Verify the module still compiles**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test-compile`
 Expected: `BUILD SUCCESS`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -1005,7 +1005,7 @@ git commit -m "feat(spring-batch): add listener pattern (job/step lifecycle stat
 - Consumes: `domain.Order`, `domain.Invoice`, `domain.OrderRowMapper`, `domain.InvoiceCalculator` (Task 2); `listener.InvoiceJobListener`, `listener.InvoiceStepListener`, `listener.ListenerStatsService` (Task 5).
 - Produces: `InvoiceProcessor` (`ItemProcessor<Order,Invoice>`), `InvoiceItemWriter` (`ItemWriter<Invoice>`) — both reused by `faulttolerant/` (Task 9) and `partition/` (Task 11). `Job invoiceChunkJob` bean — used by `controller.DemoController` (Task 12).
 
-- [ ] **Step 1: Write the processor and writer**
+- [x] **Step 1: Write the processor and writer**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/chunk/InvoiceProcessor.java`:
 
@@ -1069,7 +1069,7 @@ public class InvoiceItemWriter implements ItemWriter<Invoice> {
 }
 ```
 
-- [ ] **Step 2: Write the shared test bootstrap config and the failing integration test**
+- [x] **Step 2: Write the shared test bootstrap config and the failing integration test**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/testsupport/BatchTestConfig.java` — a minimal bootstrap for job-config integration tests: `@SpringBootConfiguration` + `@EnableAutoConfiguration` (DataSource, Batch infrastructure, schema init) without `@ComponentScan`, so including it alongside one job's own beans in `@SpringBootTest(classes = ...)` gives full Spring Boot auto-configuration without dragging in the other four `Job` beans. It lives in its own `testsupport` package rather than `com.testingai.batch` directly — sitting alongside `BatchDemoApplication` there would break `@WebMvcTest`'s config auto-detection for other test classes (e.g. `DemoControllerTest` in Task 11), which walks up from the test's own package looking for exactly one `@SpringBootConfiguration` class:
 
@@ -1189,12 +1189,12 @@ class ChunkJobConfigTest {
 }
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=ChunkJobConfigTest`
 Expected: FAIL — `ChunkJobConfig`, `BatchLaunchService`, `JobRunResult` do not exist yet (compile errors).
 
-- [ ] **Step 4: Write `JobRunResult`, `BatchLaunchService`, and `ChunkJobConfig`**
+- [x] **Step 4: Write `JobRunResult`, `BatchLaunchService`, and `ChunkJobConfig`**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/launch/JobRunResult.java`:
 
@@ -1318,12 +1318,12 @@ public class ChunkJobConfig {
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=ChunkJobConfigTest`
 Expected: PASS, 2 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -1345,7 +1345,7 @@ git commit -m "feat(spring-batch): add chunk pattern (core ETL job) and BatchLau
 **Interfaces:**
 - Produces: `Job archiveSummaryJob` bean — used by `controller.DemoController` (Task 12).
 
-- [ ] **Step 1: Write the failing integration test**
+- [x] **Step 1: Write the failing integration test**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/tasklet/TaskletJobConfigTest.java`:
 
@@ -1397,12 +1397,12 @@ class TaskletJobConfigTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=TaskletJobConfigTest`
 Expected: FAIL — `TaskletJobConfig`/`ArchiveSummaryTasklet` do not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/tasklet/ArchiveSummaryTasklet.java`:
 
@@ -1468,12 +1468,12 @@ public class TaskletJobConfig {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=TaskletJobConfigTest`
 Expected: PASS, 1 test.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -1495,7 +1495,7 @@ git commit -m "feat(spring-batch): add tasklet pattern (archive summary step)"
 - Consumes: `util.FailureSimulator` (Task 3), `domain.InvoiceCalculator` (Task 2), `chunk.InvoiceItemWriter` (Task 6, reused).
 - Produces: `Job faultTolerantJob` bean — used by `controller.DemoController` (Task 12).
 
-- [ ] **Step 1: Write the failing integration test**
+- [x] **Step 1: Write the failing integration test**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/faulttolerant/FaultTolerantJobConfigTest.java`:
 
@@ -1564,12 +1564,12 @@ class FaultTolerantJobConfigTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=FaultTolerantJobConfigTest`
 Expected: FAIL — `FaultTolerantJobConfig`/`FaultTolerantProcessor` do not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/faulttolerant/FaultTolerantProcessor.java`:
 
@@ -1647,12 +1647,12 @@ public class FaultTolerantJobConfig {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=FaultTolerantJobConfigTest`
 Expected: PASS, 1 test. Note: with `retryLimit(3)`, an item only ends up skipped if `FailureSimulator` fails it on all 3 attempts (≈0.0125% per item at a 5% independent rate) — this test intentionally asserts `write+skip == 100` (always true) rather than `skipCount > 0` (rare enough at N=100 to make the test flaky). The README (Task 13) explains this rarity and how to actually observe a skip.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -1675,7 +1675,7 @@ git commit -m "feat(spring-batch): add faulttolerant pattern (skip/retry)"
 - Consumes: `domain.InvoiceCalculator` (Task 2), `chunk.InvoiceItemWriter` (Task 6, reused).
 - Produces: `Job restartDemoJob` bean — used by `controller.DemoController` (Task 12).
 
-- [ ] **Step 1: Write the failing integration test**
+- [x] **Step 1: Write the failing integration test**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/restart/RestartJobConfigTest.java`:
 
@@ -1748,12 +1748,12 @@ class RestartJobConfigTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=RestartJobConfigTest`
 Expected: FAIL — `RestartJobConfig`/`RestartProcessor`/`RestartFailureTracker` do not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/restart/RestartFailureTracker.java`:
 
@@ -1880,12 +1880,12 @@ public class RestartJobConfig {
 
 Chunk size 3 with a failure on the 5th processed item means chunk 1 (orders 1-3) commits successfully, and the failure happens partway through chunk 2 (orders 4-5), rolling that chunk back entirely — so order 4 is reprocessed on restart too, not just order 5. That's why the test asserts exactly 3 invoices after the first (failed) execution, and 6 after the second (completed) one.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=RestartJobConfigTest`
 Expected: PASS, 1 test.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -1907,7 +1907,7 @@ git commit -m "feat(spring-batch): add restart pattern (deterministic one-time f
 - Consumes: `chunk.InvoiceProcessor`, `chunk.InvoiceItemWriter`, `launch.BatchLaunchService` (Task 6, reused).
 - Produces: `Job partitionedInvoiceJob` bean — used by `controller.DemoController` (Task 12).
 
-- [ ] **Step 1: Write the failing integration test**
+- [x] **Step 1: Write the failing integration test**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/partition/PartitionJobConfigTest.java`:
 
@@ -1981,12 +1981,12 @@ class PartitionJobConfigTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=PartitionJobConfigTest`
 Expected: FAIL — `PartitionJobConfig`/`OrderRangePartitioner` do not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/partition/OrderRangePartitioner.java`:
 
@@ -2117,12 +2117,12 @@ public class PartitionJobConfig {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=PartitionJobConfigTest`
 Expected: PASS, 1 test.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -2143,7 +2143,7 @@ git commit -m "feat(spring-batch): add partition pattern (id-range partitioned s
 - Consumes: `OrderSeedService` (Task 4), `BatchLaunchService`, `JobRunResult` (Task 6), `ListenerStatsService`, `ListenerStats` (Task 5), the five `Job` beans (`invoiceChunkJob` Task 6, `archiveSummaryJob` Task 7, `faultTolerantJob` Task 8, `restartDemoJob` Task 9, `partitionedInvoiceJob` Task 10), `Invoice` (Task 2).
 - Produces: the eight HTTP endpoints from the spec's API surface table.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/controller/DemoControllerTest.java`:
 
@@ -2283,12 +2283,12 @@ class DemoControllerTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=DemoControllerTest`
 Expected: FAIL — `DemoController` does not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/controller/DemoController.java`:
 
@@ -2391,17 +2391,17 @@ public class DemoController {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=DemoControllerTest`
 Expected: PASS, 7 tests.
 
-- [ ] **Step 5: Run the full module test suite**
+- [x] **Step 5: Run the full module test suite**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test`
 Expected: `BUILD SUCCESS`, all tests across every package pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -2420,7 +2420,7 @@ git commit -m "feat(spring-batch): add DemoController wiring all five jobs"
 **Interfaces:**
 - Produces: a Gatling `Simulation` runnable via `mvn gatling:test`, excluded from `mvn test` by the inherited `batch-processing/pom.xml` surefire `**/performance/**` exclude.
 
-- [ ] **Step 1: Write the simulation**
+- [x] **Step 1: Write the simulation**
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/performance/DemoSimulation.java`:
 
@@ -2464,12 +2464,12 @@ public class DemoSimulation extends Simulation {
 
 Restart is deliberately excluded from the Gatling scenario: it needs the same `runId` across two sequential calls with no unique parameter, which doesn't fit Gatling's concurrent-user injection model and is already covered by `RestartJobConfigTest`.
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test-compile`
 Expected: `BUILD SUCCESS`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -2488,7 +2488,7 @@ git commit -m "feat(spring-batch): add Gatling performance simulation"
 
 **Interfaces:** none — documentation only.
 
-- [ ] **Step 1: Write `batch-processing/spring-batch/spring-demo/README.md`**
+- [x] **Step 1: Write `batch-processing/spring-batch/spring-demo/README.md`**
 
 ```markdown
 # Spring Batch Demo
@@ -2628,7 +2628,7 @@ flowchart LR
 `Ctrl+C` in the terminal running `mvn spring-boot:run` — H2 is in-memory, so all data (orders, invoices, and Spring Batch's own job history) resets on restart.
 ```
 
-- [ ] **Step 2: Add the batch-processing row to `CLAUDE.md`**
+- [x] **Step 2: Add the batch-processing row to `CLAUDE.md`**
 
 Add a new command section (after the "LMAX Disruptor demo" section, matching the existing per-category style):
 
@@ -2652,7 +2652,7 @@ Add a row to the repository layout table:
 | `batch-processing/spring-batch/spring-demo/` | Spring Batch demo — chunk-oriented ETL, lifecycle listeners, tasklet steps, skip/retry fault tolerance, job restart, and partitioned steps, over an order-invoicing domain; H2 only, no Docker required |
 ```
 
-- [ ] **Step 3: Update the repo-root `README.md`**
+- [x] **Step 3: Update the repo-root `README.md`**
 
 Add a `batch-processing/` row to the module table (near the `concurrency-patterns/`/`distributed-transactions/` rows):
 
@@ -2660,7 +2660,7 @@ Add a `batch-processing/` row to the module table (near the `concurrency-pattern
 | `batch-processing/` | Spring Batch demos (chunk ETL, listeners, tasklet, skip/retry, restart, partitioning) |
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -2676,18 +2676,18 @@ git commit -m "docs(spring-batch): add module README and CLAUDE.md command secti
 
 **Interfaces:** none.
 
-- [ ] **Step 1: Full clean build**
+- [x] **Step 1: Full clean build**
 
 Run: `cd batch-processing && mvn clean package`
 Expected: `BUILD SUCCESS` for `spring-batch-demo`.
 
-- [ ] **Step 2: Run the app**
+- [x] **Step 2: Run the app**
 
 ```bash
 cd batch-processing/spring-batch/spring-demo && mvn spring-boot:run
 ```
 
-- [ ] **Step 3: Walk every endpoint from the README and confirm expected behavior**
+- [x] **Step 3: Walk every endpoint from the README and confirm expected behavior**
 
 Run each `curl` command from `batch-processing/spring-batch/spring-demo/README.md`'s "Trigger endpoints" section in order. Confirm:
 - Seeding returns `{"seeded": N}` matching the requested count.
@@ -2699,16 +2699,16 @@ Run each `curl` command from `batch-processing/spring-batch/spring-demo/README.m
 - `POST /demo/batch/partition` (after seeding 40 `PARTITION` orders) returns `status: "COMPLETED"`, `writeCount: 40`.
 - `GET /demo/invoices` reflects the cumulative total across every job launched so far.
 
-- [ ] **Step 4: Run the Gatling load test**
+- [x] **Step 4: Run the Gatling load test**
 
 Run: `cd batch-processing/spring-batch/spring-demo && mvn gatling:test`
 Expected: `BUILD SUCCESS`, an HTML report generated under `target/gatling/`, all Gatling checks (`status().is(200)`) passing.
 
-- [ ] **Step 5: Stop the app**
+- [x] **Step 5: Stop the app**
 
 `Ctrl+C` in the terminal running `mvn spring-boot:run`.
 
-- [ ] **Step 6: Final commit (if any fixes were needed during verification)**
+- [x] **Step 6: Final commit (if any fixes were needed during verification)**
 
 If Steps 1–4 required any code fixes, commit them:
 
