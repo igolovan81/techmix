@@ -1,6 +1,6 @@
 package com.testingai.batch.tasklet;
 
-import com.testingai.batch.BatchTestConfig;
+import com.testingai.batch.testsupport.BatchTestConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;

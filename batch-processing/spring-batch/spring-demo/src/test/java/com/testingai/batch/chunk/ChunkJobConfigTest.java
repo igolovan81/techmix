@@ -2,7 +2,7 @@ package com.testingai.batch.chunk;
 
 import java.math.BigDecimal;
 
-import com.testingai.batch.BatchTestConfig;
+import com.testingai.batch.testsupport.BatchTestConfig;
 import com.testingai.batch.domain.BatchType;
 import com.testingai.batch.launch.BatchLaunchService;
 import com.testingai.batch.launch.JobRunResult;

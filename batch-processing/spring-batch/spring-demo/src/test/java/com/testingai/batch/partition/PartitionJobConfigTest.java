@@ -2,7 +2,7 @@ package com.testingai.batch.partition;
 
 import java.math.BigDecimal;
 
-import com.testingai.batch.BatchTestConfig;
+import com.testingai.batch.testsupport.BatchTestConfig;
 import com.testingai.batch.chunk.InvoiceItemWriter;
 import com.testingai.batch.chunk.InvoiceProcessor;
 import com.testingai.batch.domain.BatchType;

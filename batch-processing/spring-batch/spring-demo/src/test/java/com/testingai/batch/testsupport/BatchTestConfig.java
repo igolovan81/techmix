@@ -1,4 +1,4 @@
-package com.testingai.batch;
+package com.testingai.batch.testsupport;
 
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;

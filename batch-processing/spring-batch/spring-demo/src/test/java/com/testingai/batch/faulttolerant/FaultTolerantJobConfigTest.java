@@ -2,7 +2,7 @@ package com.testingai.batch.faulttolerant;
 
 import java.math.BigDecimal;
 
-import com.testingai.batch.BatchTestConfig;
+import com.testingai.batch.testsupport.BatchTestConfig;
 import com.testingai.batch.chunk.InvoiceItemWriter;
 import com.testingai.batch.domain.BatchType;
 import org.junit.jupiter.api.BeforeEach;
