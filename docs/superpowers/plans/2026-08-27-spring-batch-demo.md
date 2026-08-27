@@ -1536,8 +1536,10 @@ class FaultTolerantJobConfigTest {
 
 		assertThat(jobExecution.getStatus()).isEqualTo(BatchStatus.COMPLETED);
 
-		int totalAccounted = jobExecution.getStepExecutions().stream().mapToInt(StepExecution::getWriteCount).sum()
-				+ jobExecution.getStepExecutions().stream().mapToInt(StepExecution::getSkipCount).sum();
+		// StepExecution's count getters return long, not int -- mapToLong (mapToInt fails to compile against a
+		// method reference returning long, unlike the += narrowing BatchLaunchService/InvoiceJobListener rely on).
+		long totalAccounted = jobExecution.getStepExecutions().stream().mapToLong(StepExecution::getWriteCount).sum()
+				+ jobExecution.getStepExecutions().stream().mapToLong(StepExecution::getSkipCount).sum();
 		assertThat(totalAccounted).isEqualTo(100);
 	}
 }
