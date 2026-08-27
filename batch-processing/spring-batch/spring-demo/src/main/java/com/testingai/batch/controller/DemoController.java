@@ -2,6 +2,7 @@ package com.testingai.batch.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import com.testingai.batch.domain.BatchType;
 import com.testingai.batch.domain.Invoice;
@@ -88,6 +89,9 @@ public class DemoController {
 	}
 
 	private JobParameters uniqueParameters() {
-		return new JobParametersBuilder().addLong("timestamp", System.currentTimeMillis()).toJobParameters();
+		// A UUID, not a timestamp: System.currentTimeMillis() collides under concurrent requests
+		// (millisecond granularity), which produces identical JobParameters for two different
+		// launches and a primary-key violation in Spring Batch's own BATCH_JOB_INSTANCE table.
+		return new JobParametersBuilder().addString("invocationId", UUID.randomUUID().toString()).toJobParameters();
 	}
 }

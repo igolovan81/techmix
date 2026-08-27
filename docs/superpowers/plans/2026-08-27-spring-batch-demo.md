@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Java 21, Spring Boot 3.4.4. Module artifactId: `spring-batch-demo`; base package: `com.testingai.batch`.
-- App port `8103`. No Docker — H2 only (`jdbc:h2:mem:batchdb;DB_CLOSE_DELAY=-1`), `spring.batch.jdbc.initialize-schema=always`, `spring.batch.job.enabled=false` (jobs launch only via REST, never at startup).
+- App port `8103`. No Docker — H2 only (`jdbc:h2:mem:batchdb;DB_CLOSE_DELAY=-1`, HikariCP `maximum-pool-size: 30` — the 10 default exhausts once concurrent requests can each trigger a 4-worker partitioned job), `spring.batch.jdbc.initialize-schema=always`, `spring.batch.job.enabled=false` (jobs launch only via REST, never at startup).
 - `orders.batch_type` discriminator (`CHUNK`/`FAULT_TOLERANT`/`RESTART`/`PARTITION`) keeps each pattern's demo data isolated in one shared `orders` table.
 - Every reader's SQL includes `ORDER BY id` — required for `JdbcCursorItemReader`'s restart position (row number) to reliably map to the same records across separate reader instances. `restart/RestartJobConfig`'s reader is the one exception to filtering on `status = 'PENDING'` — filtering there would shrink the result set after a restart (once committed rows flip to `INVOICED`), which breaks the row-count-based restart position; see that reader's own comment.
 - `chunk/InvoiceProcessor` and `chunk/InvoiceItemWriter` are reused by `faulttolerant/` and `partition/` (writer) and `partition/` (processor) — do not duplicate this logic per package.
@@ -292,6 +292,11 @@ public class BatchDemoApplication {
 spring:
   datasource:
     url: jdbc:h2:mem:batchdb;DB_CLOSE_DELAY=-1
+    hikari:
+      # Default (10) is too small once concurrent requests can each trigger a 4-worker
+      # partitioned job at once (see partition/PartitionJobConfig's GRID_SIZE) -- exhausts
+      # under load-test-level concurrency and times out with "Connection is not available".
+      maximum-pool-size: 30
   batch:
     job:
       enabled: false
@@ -2292,6 +2297,7 @@ package com.testingai.batch.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import com.testingai.batch.domain.BatchType;
 import com.testingai.batch.domain.Invoice;
@@ -2377,7 +2383,10 @@ public class DemoController {
 	}
 
 	private org.springframework.batch.core.JobParameters uniqueParameters() {
-		return new JobParametersBuilder().addLong("timestamp", System.currentTimeMillis()).toJobParameters();
+		// A UUID, not a timestamp: System.currentTimeMillis() collides under concurrent requests
+		// (millisecond granularity), which produces identical JobParameters for two different
+		// launches and a primary-key violation in Spring Batch's own BATCH_JOB_INSTANCE table.
+		return new JobParametersBuilder().addString("invocationId", UUID.randomUUID().toString()).toJobParameters();
 	}
 }
 ```

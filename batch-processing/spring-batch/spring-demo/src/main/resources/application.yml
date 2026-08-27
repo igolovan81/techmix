@@ -1,6 +1,11 @@
 spring:
   datasource:
     url: jdbc:h2:mem:batchdb;DB_CLOSE_DELAY=-1
+    hikari:
+      # Default (10) is too small once concurrent requests can each trigger a 4-worker
+      # partitioned job at once (see partition/PartitionJobConfig's GRID_SIZE) -- exhausts
+      # under load-test-level concurrency and times out with "Connection is not available".
+      maximum-pool-size: 30
   batch:
     job:
       enabled: false
