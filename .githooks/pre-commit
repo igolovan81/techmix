@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT=$(git rev-parse --show-toplevel)
 
 # Collect staged Java files and the Maven reactor root each one belongs to
-STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(message-brokers|noSQL|cqrs-event-sourcing|template-engines|distributed-transactions|spring-boot-starters|communication-protocols|reactive-programming|workflow-engines|domain-driven-design|concurrency-patterns|data-integration)/.*\.java$' || true)
+STAGED_JAVA=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(message-brokers|noSQL|cqrs-event-sourcing|template-engines|distributed-transactions|spring-boot-starters|communication-protocols|reactive-programming|workflow-engines|domain-driven-design|concurrency-patterns|data-integration|batch-processing)/.*\.java$' || true)
 
 if [ -z "$STAGED_JAVA" ]; then
     exit 0
@@ -68,6 +68,11 @@ fi
 if echo "$STAGED_JAVA" | grep -q '^data-integration/'; then
     echo "[pre-commit] Applying Spotless formatting to staged data-integration Java files..."
     (cd "$ROOT/data-integration" && mvn spotless:apply --quiet)
+fi
+
+if echo "$STAGED_JAVA" | grep -q '^batch-processing/'; then
+    echo "[pre-commit] Applying Spotless formatting to staged batch-processing Java files..."
+    (cd "$ROOT/batch-processing" && mvn spotless:apply --quiet)
 fi
 
 # Re-stage the originally staged files (now formatted)
