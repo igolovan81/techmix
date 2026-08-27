@@ -15,7 +15,7 @@
 - Java 21, Spring Boot 3.4.4. Module artifactId: `spring-batch-demo`; base package: `com.testingai.batch`.
 - App port `8103`. No Docker — H2 only (`jdbc:h2:mem:batchdb;DB_CLOSE_DELAY=-1`), `spring.batch.jdbc.initialize-schema=always`, `spring.batch.job.enabled=false` (jobs launch only via REST, never at startup).
 - `orders.batch_type` discriminator (`CHUNK`/`FAULT_TOLERANT`/`RESTART`/`PARTITION`) keeps each pattern's demo data isolated in one shared `orders` table.
-- Every reader's SQL includes `ORDER BY id` — required for `JdbcCursorItemReader`'s restart position (row number) to reliably map to the same records across separate reader instances.
+- Every reader's SQL includes `ORDER BY id` — required for `JdbcCursorItemReader`'s restart position (row number) to reliably map to the same records across separate reader instances. `restart/RestartJobConfig`'s reader is the one exception to filtering on `status = 'PENDING'` — filtering there would shrink the result set after a restart (once committed rows flip to `INVOICED`), which breaks the row-count-based restart position; see that reader's own comment.
 - `chunk/InvoiceProcessor` and `chunk/InvoiceItemWriter` are reused by `faulttolerant/` and `partition/` (writer) and `partition/` (processor) — do not duplicate this logic per package.
 - Job-launch endpoints add a unique `timestamp` `JobParameter` on every call so they can be re-triggered repeatedly (`chunk`, `tasklet`, `faulttolerant`, `partition`) — **except** `restart-demo`, which deliberately uses only the caller-supplied `runId` with no other parameter, since reusing identical `JobParameters` across calls is what identifies it as the same job instance to restart.
 - Partition grid size is fixed at `4` in the step definition (`TaskExecutorPartitionHandler`'s grid size is set at bean-definition time, not re-readable per request without a custom `PartitionHandler`) — no `gridSize` REST parameter.
@@ -1831,10 +1831,18 @@ public class RestartJobConfig {
 	private final RestartProcessor restartProcessor;
 	private final InvoiceItemWriter invoiceItemWriter;
 
+	/**
+	 * Unlike every other reader in this module, this query is NOT filtered by status = 'PENDING'.
+	 * JdbcCursorItemReader's restart mechanism resumes by re-running this exact query and skipping
+	 * forward N rows (N = however many it had already read at the last successful commit) -- that
+	 * only works if the query returns the same rows in the same order across restarts. Filtering by
+	 * status would shrink the result set after the writer flips committed rows to INVOICED, silently
+	 * skipping past unprocessed rows on restart instead of resuming at the right one.
+	 */
 	@Bean
 	public JdbcCursorItemReader<Order> restartOrderReader() {
 		return new JdbcCursorItemReaderBuilder<Order>().name("restartOrderReader").dataSource(dataSource)
-				.sql("SELECT id, batch_type, customer_id, amount, status, created_at FROM orders WHERE batch_type = 'RESTART' AND status = 'PENDING' ORDER BY id")
+				.sql("SELECT id, batch_type, customer_id, amount, status, created_at FROM orders WHERE batch_type = 'RESTART' ORDER BY id")
 				.rowMapper(new OrderRowMapper()).saveState(true).build();
 	}
 
