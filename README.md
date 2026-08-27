@@ -13,7 +13,7 @@ For AI-assistant build/run commands and detailed architecture notes, see [CLAUDE
 | `frontend/angular/` | Angular 20 app with SSR, backed by `backend/rest-api` |
 | `frontend/angular-demo/` | Self-contained Angular 21 tour of framework capabilities (signals, forms, routing, `@defer`, ...) |
 | `message-brokers/` | Kafka, RabbitMQ, Azure Service Bus, SQS, Redis Streams, Apache Pulsar — six parallel demo apps covering the same messaging patterns per broker |
-| `noSQL/` | NoSQL database demos (currently MongoDB) |
+| `noSQL/` | NoSQL database demos (currently MongoDB, Cassandra) |
 | `cqrs-event-sourcing/` | CQRS/event sourcing with Axon Framework |
 | `template-engines/` | Server-side template engines (Handlebars, FreeMarker) |
 | `distributed-transactions/` | Saga pattern (choreography and orchestration) |

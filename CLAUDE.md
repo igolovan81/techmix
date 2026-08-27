@@ -273,7 +273,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `frontend/angular/` | Angular 20 with SSR via Express |
 | `frontend/angular-demo/` | Self-contained Angular 21 app touring the framework's capabilities (signals, forms, routing guards/resolvers, `@defer`, etc.) — no backend |
 | `message-brokers/<broker>/spring-demo/` | Six independent Spring Boot 3.4.4 demo apps (Java 21, Lombok) |
-| `noSQL/<database>/spring-demo/` | NoSQL database demo apps, same conventions as `message-brokers/` (currently: MongoDB) |
+| `noSQL/<database>/spring-demo/` | NoSQL database demo apps, same conventions as `message-brokers/` (currently: MongoDB, Cassandra). Cassandra covers CRUD, query-first denormalized data modeling, lightweight transactions (compare-and-swap), tunable consistency levels, TTL, and counters over a 3-node ring; `mvn test` needs no external infrastructure, but running the app needs `docker compose -f noSQL/cassandra/docker/docker-compose.yml up -d` first |
 | `cqrs-event-sourcing/<framework>/spring-demo/` | CQRS/event-sourcing framework demo apps, same conventions as `message-brokers/` (currently: Axon Framework) |
 | `template-engines/<engine>/spring-demo/` | Template-engine demo apps, same conventions as `message-brokers/` (currently: Handlebars, FreeMarker) — no external infrastructure required |
 | `distributed-transactions/<pattern>/spring-demo/` | Distributed-transaction pattern demo apps, same conventions as `message-brokers/` (currently: Saga, both choreography and orchestration) — no external infrastructure required |
