@@ -261,11 +261,14 @@ rules:
 ```dockerfile
 FROM cassandra:5.0
 
-RUN curl -fsSL -o /opt/jmx_prometheus_javaagent.jar \
-    https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.20.0/jmx_prometheus_javaagent-0.20.0.jar
+ADD https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.20.0/jmx_prometheus_javaagent-0.20.0.jar \
+    /opt/jmx_prometheus_javaagent.jar
+RUN chmod 644 /opt/jmx_prometheus_javaagent.jar
 
 COPY cassandra.yml /etc/jmx-exporter/cassandra.yml
 ```
+
+(`ADD <url>` rather than `RUN curl` because the base `cassandra:5.0` image has no `curl`/`wget`; the explicit `chmod` is needed because `ADD` leaves the file root-only (`600`), and the Cassandra process — including the `-javaagent` JVM flag that loads this jar — runs as a non-root user, so an unreadable jar makes the JVM fail with a misleading "Error opening zip file or JAR manifest missing".)
 
 - [ ] **Step 3: Write the Compose file**
 
@@ -285,6 +288,8 @@ services:
       CASSANDRA_ENDPOINT_SNITCH: SimpleSnitch
       CASSANDRA_DC: datacenter1
       CASSANDRA_RACK: rack1
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 100M
       JVM_EXTRA_OPTS: "-javaagent:/opt/jmx_prometheus_javaagent.jar=7070:/etc/jmx-exporter/cassandra.yml"
     ports:
       - "9042:9042"
@@ -308,6 +313,8 @@ services:
       CASSANDRA_ENDPOINT_SNITCH: SimpleSnitch
       CASSANDRA_DC: datacenter1
       CASSANDRA_RACK: rack1
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 100M
       JVM_EXTRA_OPTS: "-javaagent:/opt/jmx_prometheus_javaagent.jar=7070:/etc/jmx-exporter/cassandra.yml"
     ports:
       - "9043:9042"
@@ -334,6 +341,8 @@ services:
       CASSANDRA_ENDPOINT_SNITCH: SimpleSnitch
       CASSANDRA_DC: datacenter1
       CASSANDRA_RACK: rack1
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 100M
       JVM_EXTRA_OPTS: "-javaagent:/opt/jmx_prometheus_javaagent.jar=7070:/etc/jmx-exporter/cassandra.yml"
     ports:
       - "9044:9042"
@@ -505,7 +514,7 @@ cd noSQL/cassandra/docker
 docker compose up -d
 ```
 
-Wait ~60–90 seconds (three nodes forming a ring is slower than MongoDB's replica-set election), then verify:
+Wait ~60–90 seconds (three nodes forming a ring is slower than MongoDB's replica-set election). If a node gets OOM-killed (`docker ps -a` shows `Exited (137)`, or `docker events --since 30m --filter container=<name>` shows an `oom` event) — the default Cassandra JVM auto-sizes its heap based on the memory Docker Desktop's VM reports, which can be too aggressive for 3 concurrent nodes on a modest VM allocation — the `MAX_HEAP_SIZE: 512M` / `HEAP_NEWSIZE: 100M` environment variables already set on each node in this compose file should prevent this; if it still happens, increase Docker Desktop's memory allocation (Settings → Resources) rather than lowering the heap further. Then verify:
 ```bash
 docker exec cassandra1 nodetool status
 ```
