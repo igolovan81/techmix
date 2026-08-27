@@ -20,6 +20,12 @@ public class InvoiceJobListener implements JobExecutionListener {
 		int writeCount = 0;
 		int skipCount = 0;
 		for (StepExecution stepExecution : jobExecution.getStepExecutions()) {
+			// See BatchLaunchService.launch() for why partition-worker step executions (named
+			// "<workerStep>:partitionN") are excluded here: their totals are already aggregated
+			// into the manager step's own StepExecution, so counting both double-counts.
+			if (stepExecution.getStepName().contains(":")) {
+				continue;
+			}
 			readCount += stepExecution.getReadCount();
 			writeCount += stepExecution.getWriteCount();
 			skipCount += stepExecution.getSkipCount();

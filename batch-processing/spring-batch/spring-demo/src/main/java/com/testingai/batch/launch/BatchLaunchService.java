@@ -28,6 +28,13 @@ public class BatchLaunchService {
 		int writeCount = 0;
 		int skipCount = 0;
 		for (StepExecution stepExecution : jobExecution.getStepExecutions()) {
+			// Partitioned steps register a StepExecution per worker (named "<workerStep>:partitionN" by
+			// Spring Batch's own convention) *and* aggregate those totals into the manager step's own
+			// StepExecution. Summing every StepExecution would double-count partitioned jobs, so only the
+			// manager-level entries are counted here.
+			if (stepExecution.getStepName().contains(":")) {
+				continue;
+			}
 			readCount += stepExecution.getReadCount();
 			writeCount += stepExecution.getWriteCount();
 			skipCount += stepExecution.getSkipCount();
