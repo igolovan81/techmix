@@ -1,0 +1,36 @@
+{
+  "title": "Cassandra Demo Cluster",
+  "uid": "cassandra-demo",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Nodes Up",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "up{job=\"cassandra\"}", "legendFormat": "{{instance}}" }]
+    },
+    {
+      "id": 2,
+      "title": "Client Request Latency (read, 99th pct)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 6, "y": 0 },
+      "targets": [{ "expr": "org_apache_cassandra_metrics_clientrequest_read_latency{quantile=\"0.99\"}", "legendFormat": "{{instance}}" }]
+    },
+    {
+      "id": 3,
+      "title": "Pending Compactions",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 9, "x": 0, "y": 6 },
+      "targets": [{ "expr": "org_apache_cassandra_metrics_compaction_pendingtasks", "legendFormat": "{{instance}}" }]
+    },
+    {
+      "id": 4,
+      "title": "JVM Heap Used",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 9, "x": 9, "y": 8 },
+      "targets": [{ "expr": "jvm_memory_bytes_used{area=\"heap\"}", "legendFormat": "{{instance}}" }]
+    }
+  ]
+}

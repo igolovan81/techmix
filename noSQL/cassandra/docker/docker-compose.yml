@@ -1,0 +1,144 @@
+name: cassandra-cluster
+
+services:
+  cassandra1:
+    build: ./cassandra-metrics
+    hostname: cassandra1
+    container_name: cassandra1
+    environment:
+      CASSANDRA_SEEDS: cassandra1
+      CASSANDRA_CLUSTER_NAME: ecommerce_cluster
+      CASSANDRA_ENDPOINT_SNITCH: SimpleSnitch
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 100M
+      JVM_EXTRA_OPTS: "-javaagent:/opt/jmx_prometheus_javaagent.jar=7070:/etc/jmx-exporter/cassandra.yml"
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra1-data:/var/lib/cassandra
+    networks:
+      - cassandra_network
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'SELECT release_version FROM system.local' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+
+  cassandra2:
+    build: ./cassandra-metrics
+    hostname: cassandra2
+    container_name: cassandra2
+    environment:
+      CASSANDRA_SEEDS: cassandra1
+      CASSANDRA_CLUSTER_NAME: ecommerce_cluster
+      CASSANDRA_ENDPOINT_SNITCH: SimpleSnitch
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 100M
+      JVM_EXTRA_OPTS: "-javaagent:/opt/jmx_prometheus_javaagent.jar=7070:/etc/jmx-exporter/cassandra.yml"
+    ports:
+      - "9043:9042"
+    volumes:
+      - cassandra2-data:/var/lib/cassandra
+    networks:
+      - cassandra_network
+    depends_on:
+      cassandra1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'SELECT release_version FROM system.local' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+
+  cassandra3:
+    build: ./cassandra-metrics
+    hostname: cassandra3
+    container_name: cassandra3
+    environment:
+      CASSANDRA_SEEDS: cassandra1
+      CASSANDRA_CLUSTER_NAME: ecommerce_cluster
+      CASSANDRA_ENDPOINT_SNITCH: SimpleSnitch
+      CASSANDRA_DC: datacenter1
+      CASSANDRA_RACK: rack1
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 100M
+      JVM_EXTRA_OPTS: "-javaagent:/opt/jmx_prometheus_javaagent.jar=7070:/etc/jmx-exporter/cassandra.yml"
+    ports:
+      - "9044:9042"
+    volumes:
+      - cassandra3-data:/var/lib/cassandra
+    networks:
+      - cassandra_network
+    depends_on:
+      cassandra2:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'SELECT release_version FROM system.local' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+
+  cassandra-init:
+    image: cassandra:5.0
+    container_name: cassandra-init
+    entrypoint: ["/bin/bash", "-c"]
+    command: ["cqlsh cassandra1 -f /init/init-keyspace.cql"]
+    volumes:
+      - ./init:/init:ro
+    depends_on:
+      cassandra1:
+        condition: service_healthy
+      cassandra2:
+        condition: service_healthy
+      cassandra3:
+        condition: service_healthy
+    networks:
+      - cassandra_network
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: cassandra-prometheus
+    ports:
+      - "9096:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+    depends_on:
+      - cassandra1
+      - cassandra2
+      - cassandra3
+    networks:
+      - cassandra_network
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: cassandra-grafana
+    ports:
+      - "3003:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    networks:
+      - cassandra_network
+
+networks:
+  cassandra_network:
+    driver: bridge
+
+volumes:
+  cassandra1-data:
+  cassandra2-data:
+  cassandra3-data:
