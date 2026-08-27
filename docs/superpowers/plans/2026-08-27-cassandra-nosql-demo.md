@@ -1,6 +1,6 @@
 # Cassandra NoSQL Demo Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a `noSQL/cassandra/` module — a 3-node Cassandra ring (Docker Compose) plus a Spring Boot demo app — covering six wide-column-specific patterns (CRUD, query-first data modeling, lightweight transactions, tunable consistency, TTL, counters) over the same product-catalog/orders domain as the existing `noSQL/mongodb` module.
 
@@ -36,7 +36,7 @@
 **Interfaces:**
 - Produces: a buildable, empty Spring Boot module registered in the `noSQL` Maven reactor, port `8085`, connecting to `cassandra1:9042,cassandra2:9042,cassandra3:9042` / keyspace `ecommerce` when the context actually starts (not exercised by this task's test).
 
-- [ ] **Step 1: Register the module and add the pom**
+- [x] **Step 1: Register the module and add the pom**
 
 Add to `noSQL/pom.xml` inside `<modules>`:
 
@@ -98,7 +98,7 @@ Create `noSQL/cassandra/spring-demo/pom.xml`:
 </project>
 ```
 
-- [ ] **Step 2: Write the application class and config**
+- [x] **Step 2: Write the application class and config**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/CassandraDemoApplication.java`:
 
@@ -131,7 +131,7 @@ server:
   port: 8085
 ```
 
-- [ ] **Step 3: Write the trivial application test**
+- [x] **Step 3: Write the trivial application test**
 
 `noSQL/cassandra/spring-demo/src/test/java/com/testingai/cassandra/CassandraDemoApplicationTest.java`:
 
@@ -151,12 +151,12 @@ class CassandraDemoApplicationTest {
 
 This mirrors `noSQL/mongodb`'s `MongoDbDemoApplicationTest` exactly — it instantiates the class directly rather than loading the Spring context (`@SpringBootTest`), so it needs no Cassandra connectivity.
 
-- [ ] **Step 4: Run the build to verify the module compiles and the test passes**
+- [x] **Step 4: Run the build to verify the module compiles and the test passes**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test`
 Expected: `BUILD SUCCESS`, one test run (`CassandraDemoApplicationTest`), 0 failures.
 
-- [ ] **Step 5: Add the Cassandra row to `noSQL/README.md`**
+- [x] **Step 5: Add the Cassandra row to `noSQL/README.md`**
 
 Edit the comparison table:
 
@@ -167,7 +167,7 @@ Edit the comparison table:
 | [Cassandra](cassandra/) | 3-node ring, RF=3 | Wide-column, write-heavy workloads, tunable consistency, linear scalability |
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -195,7 +195,7 @@ git commit -m "feat(cassandra): scaffold cassandra-demo module"
 **Interfaces:**
 - Produces: a running 3-node `ecommerce` keyspace (RF=3) with all 6 tables from the spec, reachable from the host at `cassandra1:9042`/`cassandra2:9042`/`cassandra3:9042` (via `/etc/hosts`), monitored via Prometheus (`:9096`) and Grafana (`:3003`).
 
-- [ ] **Step 1: Write the keyspace/table init script**
+- [x] **Step 1: Write the keyspace/table init script**
 
 `noSQL/cassandra/docker/init/init-keyspace.cql`:
 
@@ -244,7 +244,7 @@ CREATE TABLE IF NOT EXISTS order_counts_by_product (
 );
 ```
 
-- [ ] **Step 2: Write the metrics image (jmx_exporter javaagent)**
+- [x] **Step 2: Write the metrics image (jmx_exporter javaagent)**
 
 `noSQL/cassandra/docker/cassandra-metrics/cassandra.yml`:
 
@@ -270,7 +270,7 @@ COPY cassandra.yml /etc/jmx-exporter/cassandra.yml
 
 (`ADD <url>` rather than `RUN curl` because the base `cassandra:5.0` image has no `curl`/`wget`; the explicit `chmod` is needed because `ADD` leaves the file root-only (`600`), and the Cassandra process — including the `-javaagent` JVM flag that loads this jar — runs as a non-root user, so an unreadable jar makes the JVM fail with a misleading "Error opening zip file or JAR manifest missing".)
 
-- [ ] **Step 3: Write the Compose file**
+- [x] **Step 3: Write the Compose file**
 
 `noSQL/cassandra/docker/docker-compose.yml`:
 
@@ -421,7 +421,7 @@ volumes:
   cassandra3-data:
 ```
 
-- [ ] **Step 4: Write the Prometheus and Grafana provisioning files**
+- [x] **Step 4: Write the Prometheus and Grafana provisioning files**
 
 `noSQL/cassandra/docker/prometheus/prometheus.yml`:
 
@@ -503,7 +503,7 @@ providers:
 }
 ```
 
-- [ ] **Step 5: Bring the cluster up and verify**
+- [x] **Step 5: Bring the cluster up and verify**
 
 Run:
 ```bash
@@ -532,7 +532,7 @@ Expected: three `"health":"up"` entries (Prometheus successfully scraping all 3 
 
 Open Grafana at `http://localhost:3003` (admin/admin) and confirm the "Cassandra Demo Cluster" dashboard is present with data flowing into at least the "Nodes Up" panel. The `up{job="cassandra"}` expression is exact (Prometheus always names this metric `up`), but the other three panels' exact metric names depend on how the jmx_exporter catch-all rule renders Cassandra's dropwizard-style MBeans (histograms/timers can expose per-percentile or per-rate suffixes that vary by exporter version) — if a panel shows "No data", open Prometheus at `http://localhost:9096/graph`, use the metric-name autocomplete to find the actual name (search `clientrequest`, `compaction`, `jvm_memory`), and update that panel's `expr` in `noSQL/cassandra/docker/grafana/dashboards/cassandra.json` to match, then `docker compose restart grafana`. This is expected troubleshooting, not a sign the setup is broken — the design spec flags this monitoring piece as the part most likely to need iteration.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -552,7 +552,7 @@ git commit -m "feat(cassandra): add 3-node Docker Compose cluster with monitorin
 **Interfaces:**
 - Produces: `Product` (fields: `UUID id`, `String name`, `BigDecimal price`, `int stock`), `ProductService.create(Product)`, `.findById(UUID)`, `.update(UUID, Product)`, `.delete(UUID)` — all returning/consuming `Product`, all used by `controller/DemoController` (Task 9) and `lwt/StockReservationService` (Task 4, reads `Product`).
 
-- [ ] **Step 1: Write the entity**
+- [x] **Step 1: Write the entity**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/crud/Product.java`:
 
@@ -582,7 +582,7 @@ public class Product {
 }
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `noSQL/cassandra/spring-demo/src/test/java/com/testingai/cassandra/crud/ProductServiceTest.java`:
 
@@ -660,12 +660,12 @@ class ProductServiceTest {
 }
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=ProductServiceTest`
 Expected: FAIL — `ProductService` does not exist (compile error).
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/crud/ProductService.java`:
 
@@ -709,12 +709,12 @@ public class ProductService {
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=ProductServiceTest`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -735,7 +735,7 @@ git commit -m "feat(cassandra): add crud pattern (Product/ProductService)"
 - Consumes: `com.testingai.cassandra.crud.Product` (Task 3).
 - Produces: `StockReservationService.decrementIfAvailable(UUID productId, int quantity)` returning `Product` (the product as read, pre-decrement — callers read `.getPrice()` off it) — used by `datamodeling/OrderService` (Task 6). Throws `IllegalArgumentException` if the product doesn't exist, `IllegalStateException` if stock is insufficient or the CAS write is lost to a concurrent writer.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `noSQL/cassandra/spring-demo/src/test/java/com/testingai/cassandra/lwt/StockReservationServiceTest.java`:
 
@@ -821,12 +821,12 @@ class StockReservationServiceTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=StockReservationServiceTest`
 Expected: FAIL — `StockReservationService` does not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/lwt/StockReservationService.java`:
 
@@ -873,12 +873,12 @@ public class StockReservationService {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=StockReservationServiceTest`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -898,7 +898,7 @@ git commit -m "feat(cassandra): add lwt pattern (compare-and-swap stock decremen
 **Interfaces:**
 - Produces: `OrderCountService.increment(UUID productId)` (void), `.getCount(UUID productId)` returning `long` (0 if no row exists yet) — used by `datamodeling/OrderService` (Task 6) and `controller/DemoController` (Task 9).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `noSQL/cassandra/spring-demo/src/test/java/com/testingai/cassandra/counter/OrderCountServiceTest.java`:
 
@@ -971,12 +971,12 @@ class OrderCountServiceTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=OrderCountServiceTest`
 Expected: FAIL — `OrderCountService` does not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/counter/OrderCountService.java`:
 
@@ -1013,12 +1013,12 @@ public class OrderCountService {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=OrderCountServiceTest`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -1042,7 +1042,7 @@ git commit -m "feat(cassandra): add counter pattern (order count per product)"
 - Consumes: `StockReservationService.decrementIfAvailable(UUID, int)` → `Product` (Task 4); `OrderCountService.increment(UUID)` (Task 5).
 - Produces: `OrderService.placeOrder(String customerId, UUID productId, int quantity)` returning `OrderByCustomer` — used by `controller/DemoController` (Task 9). `OrderService.findByCustomer(String customerId)` → `List<OrderByCustomer>`, `.findByProduct(UUID productId)` → `List<OrderByProduct>` — also used by the controller.
 
-- [ ] **Step 1: Write the entities and request record**
+- [x] **Step 1: Write the entities and request record**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/datamodeling/OrderByCustomer.java`:
 
@@ -1139,7 +1139,7 @@ public record PlaceOrderRequest(String customerId, UUID productId, int quantity)
 }
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `noSQL/cassandra/spring-demo/src/test/java/com/testingai/cassandra/datamodeling/OrderServiceTest.java`:
 
@@ -1225,12 +1225,12 @@ class OrderServiceTest {
 }
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=OrderServiceTest`
 Expected: FAIL — `OrderService` does not exist (compile error).
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/datamodeling/OrderService.java`:
 
@@ -1287,12 +1287,12 @@ public class OrderService {
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=OrderServiceTest`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -1313,7 +1313,7 @@ git commit -m "feat(cassandra): add datamodeling pattern (denormalized order tab
 **Interfaces:**
 - Produces: `ConsistencyDemoService.readAt(UUID productId, String consistencyLevel)` returning `ConsistencyReadResult` (record: `product` `Product`, `consistencyLevel` `String`, `elapsedMillis` `long`) — used by `controller/DemoController` (Task 9). Throws `IllegalArgumentException` if `consistencyLevel` isn't one of `ONE`/`QUORUM`/`ALL`, and if the row doesn't exist.
 
-- [ ] **Step 1: Write the result record**
+- [x] **Step 1: Write the result record**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/consistency/ConsistencyReadResult.java`:
 
@@ -1326,7 +1326,7 @@ public record ConsistencyReadResult(Product product, String consistencyLevel, lo
 }
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `noSQL/cassandra/spring-demo/src/test/java/com/testingai/cassandra/consistency/ConsistencyDemoServiceTest.java`:
 
@@ -1403,12 +1403,12 @@ class ConsistencyDemoServiceTest {
 }
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=ConsistencyDemoServiceTest`
 Expected: FAIL — `ConsistencyDemoService` does not exist (compile error).
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/consistency/ConsistencyDemoService.java`:
 
@@ -1463,12 +1463,12 @@ public class ConsistencyDemoService {
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=ConsistencyDemoServiceTest`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -1489,7 +1489,7 @@ git commit -m "feat(cassandra): add consistency pattern (tunable read consistenc
 **Interfaces:**
 - Produces: `ProductView` (record: `UUID productId`, `UUID viewedAt`); `RecentlyViewedService.recordView(UUID productId)` (void), `.listViews(UUID productId)` returning `List<ProductView>` — both used by `controller/DemoController` (Task 9).
 
-- [ ] **Step 1: Write the view record**
+- [x] **Step 1: Write the view record**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/ttl/ProductView.java`:
 
@@ -1502,7 +1502,7 @@ public record ProductView(UUID productId, UUID viewedAt) {
 }
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `noSQL/cassandra/spring-demo/src/test/java/com/testingai/cassandra/ttl/RecentlyViewedServiceTest.java`:
 
@@ -1567,12 +1567,12 @@ class RecentlyViewedServiceTest {
 }
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=RecentlyViewedServiceTest`
 Expected: FAIL — `RecentlyViewedService` does not exist (compile error).
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/ttl/RecentlyViewedService.java`:
 
@@ -1612,12 +1612,12 @@ public class RecentlyViewedService {
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=RecentlyViewedServiceTest`
 Expected: PASS, 2 tests.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -1638,7 +1638,7 @@ git commit -m "feat(cassandra): add ttl pattern (recently viewed products)"
 - Consumes: `ProductService` (Task 3), `OrderService` (Task 6), `ConsistencyDemoService` (Task 7), `RecentlyViewedService` (Task 8), `OrderCountService` (Task 5) — all as constructor-injected fields.
 - Produces: the ten HTTP endpoints listed in the spec's API surface table.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `noSQL/cassandra/spring-demo/src/test/java/com/testingai/cassandra/controller/DemoControllerTest.java`:
 
@@ -1802,12 +1802,12 @@ class DemoControllerTest {
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=DemoControllerTest`
 Expected: FAIL — `DemoController` does not exist (compile error).
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `noSQL/cassandra/spring-demo/src/main/java/com/testingai/cassandra/controller/DemoController.java`:
 
@@ -1904,17 +1904,17 @@ public class DemoController {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test -Dtest=DemoControllerTest`
 Expected: PASS, 10 tests.
 
-- [ ] **Step 5: Run the full module test suite**
+- [x] **Step 5: Run the full module test suite**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test`
 Expected: `BUILD SUCCESS`, all tests across every package pass (no live cluster needed — everything is mocked).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -1934,7 +1934,7 @@ git commit -m "feat(cassandra): add DemoController wiring all six patterns"
 - Consumes: nothing (drives the running app over HTTP).
 - Produces: a Gatling `Simulation` runnable via `mvn gatling:test`, excluded from `mvn test` by the inherited `noSQL/pom.xml` surefire `**/performance/**` exclude.
 
-- [ ] **Step 1: Write the simulation**
+- [x] **Step 1: Write the simulation**
 
 `noSQL/cassandra/spring-demo/src/test/java/com/testingai/cassandra/performance/DemoSimulation.java`:
 
@@ -1991,12 +1991,12 @@ public class DemoSimulation extends Simulation {
 }
 ```
 
-- [ ] **Step 2: Verify it compiles**
+- [x] **Step 2: Verify it compiles**
 
 Run: `cd noSQL && mvn -pl cassandra/spring-demo test-compile`
 Expected: `BUILD SUCCESS` (the surefire exclude keeps `mvn test` from running this as a JUnit test, but `test-compile` still compiles it).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -2015,7 +2015,7 @@ git commit -m "feat(cassandra): add Gatling performance simulation"
 
 **Interfaces:** none — documentation only.
 
-- [ ] **Step 1: Write `noSQL/cassandra/README.md`**
+- [x] **Step 1: Write `noSQL/cassandra/README.md`**
 
 Follow `noSQL/mongodb/README.md`'s structure exactly, substituting Cassandra-specific content:
 
@@ -2258,7 +2258,7 @@ docker compose down
 ```
 ```
 
-- [ ] **Step 2: Add the Cassandra section to `CLAUDE.md`**
+- [x] **Step 2: Add the Cassandra section to `CLAUDE.md`**
 
 Add a new command section (alphabetically/logically after the "NoSQL database demos" generic section, matching how other per-technology sections are added):
 
@@ -2285,7 +2285,7 @@ Add a row to the repository layout table:
 | `noSQL/cassandra/spring-demo/` | Wide-column NoSQL demo — CRUD, query-first denormalized data modeling, lightweight transactions (compare-and-swap), tunable consistency levels, TTL, and counters, over a 3-node Cassandra ring; `mvn test` needs no external infrastructure, but running the app needs `docker compose -f noSQL/cassandra/docker/docker-compose.yml up -d` first |
 ```
 
-- [ ] **Step 3: Update the repo-root `README.md`**
+- [x] **Step 3: Update the repo-root `README.md`**
 
 Change line 16 from:
 ```markdown
@@ -2296,7 +2296,7 @@ to:
 | `noSQL/` | NoSQL database demos (currently MongoDB, Cassandra) |
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 cd /Users/admin/IdeaProjects/private/techmix-copy
@@ -2312,12 +2312,12 @@ git commit -m "docs(cassandra): add module README and CLAUDE.md command section"
 
 **Interfaces:** none.
 
-- [ ] **Step 1: Full clean build**
+- [x] **Step 1: Full clean build**
 
 Run: `cd noSQL && mvn clean package`
 Expected: `BUILD SUCCESS` for every module including `cassandra-demo`.
 
-- [ ] **Step 2: Bring up the cluster (if not already running from Task 2) and the app**
+- [x] **Step 2: Bring up the cluster (if not already running from Task 2) and the app**
 
 ```bash
 cd noSQL/cassandra/docker && docker compose up -d
@@ -2325,7 +2325,7 @@ cd noSQL/cassandra/docker && docker compose up -d
 cd ../spring-demo && mvn spring-boot:run
 ```
 
-- [ ] **Step 3: Walk every endpoint from the README and confirm expected behavior**
+- [x] **Step 3: Walk every endpoint from the README and confirm expected behavior**
 
 Run each `curl` command from `noSQL/cassandra/README.md`'s "Trigger endpoints" section in order, substituting the real `<id>` returned by the create call. Confirm:
 - Create/read/update/delete all return `200` with the expected JSON shape.
@@ -2335,19 +2335,19 @@ Run each `curl` command from `noSQL/cassandra/README.md`'s "Trigger endpoints" s
 - `recently-viewed` returns at least one row immediately after a `GET /demo/products/{id}` call.
 - `order-count` increases by 1 after each successful `placeOrder`.
 
-- [ ] **Step 4: Run the Gatling load test**
+- [x] **Step 4: Run the Gatling load test**
 
 Run: `cd noSQL/cassandra/spring-demo && mvn gatling:test`
 Expected: `BUILD SUCCESS`, an HTML report generated under `target/gatling/`, all Gatling checks (`status().is(200)`) passing.
 
-- [ ] **Step 5: Tear down**
+- [x] **Step 5: Tear down**
 
 ```bash
 cd noSQL/cassandra/docker
 docker compose down
 ```
 
-- [ ] **Step 6: Final commit (if any fixes were needed during verification)**
+- [x] **Step 6: Final commit (if any fixes were needed during verification)**
 
 If Steps 1–4 required any code fixes, commit them:
 
