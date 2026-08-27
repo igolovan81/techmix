@@ -19,7 +19,7 @@
 - `chunk/InvoiceProcessor` and `chunk/InvoiceItemWriter` are reused by `faulttolerant/` and `partition/` (writer) and `partition/` (processor) — do not duplicate this logic per package.
 - Job-launch endpoints add a unique `timestamp` `JobParameter` on every call so they can be re-triggered repeatedly (`chunk`, `tasklet`, `faulttolerant`, `partition`) — **except** `restart-demo`, which deliberately uses only the caller-supplied `runId` with no other parameter, since reusing identical `JobParameters` across calls is what identifies it as the same job instance to restart.
 - Partition grid size is fixed at `4` in the step definition (`TaskExecutorPartitionHandler`'s grid size is set at bean-definition time, not re-readable per request without a custom `PartitionHandler`) — no `gridSize` REST parameter.
-- Job-config integration tests use `@SpringBootTest(classes = { ...that job's own beans only... })` + `@SpringBatchTest` — never the full application context — because with all five `Job` beans loaded, `@SpringBatchTest`'s auto-wired `JobLauncherTestUtils` cannot unambiguously resolve which `Job` to bind. Every such test's `@BeforeEach` clears **both** `orders` and `invoices` tables fully (not scoped to its own `batch_type`) — all job-config tests share one persistent H2 instance for the whole `mvn test` run.
+- Job-config integration tests use `@SpringBootTest(classes = { com.testingai.batch.BatchTestConfig.class, ...that job's own beans... })` + `@SpringBatchTest` — never the full application context — because with all five `Job` beans loaded, `@SpringBatchTest`'s auto-wired `JobLauncherTestUtils` cannot unambiguously resolve which `Job` to bind. `BatchTestConfig` (a test-only `@SpringBootConfiguration @EnableAutoConfiguration` marker with no `@ComponentScan`, created in Task 6) is required in every such `classes` list: `@SpringBootTest(classes = ...)` skips Spring Boot's auto-configuration entirely (no `DataSource`, no Batch infrastructure) unless one of the listed classes carries `@SpringBootConfiguration` — confirmed by hitting `NoSuchBeanDefinitionException: DataSource` without it. Every job-config test's `@BeforeEach` clears **both** `orders` and `invoices` tables fully (not scoped to its own `batch_type`) — all job-config tests share one persistent H2 instance for the whole `mvn test` run.
 - No custom `@ControllerAdvice`/exception handling — job-launch endpoints let `JobExecutionAlreadyRunningException`/`JobRestartException`/`JobInstanceAlreadyCompleteException`/`JobParametersInvalidException` propagate to Spring's default error handling, matching how `noSQL/mongodb` and `noSQL/cassandra` let `IllegalStateException` propagate uncaught.
 - Field style matches every other module: Lombok `@Data`/`@NoArgsConstructor`/`@AllArgsConstructor` on POJOs, `@RequiredArgsConstructor` + `private final` on services, `@Slf4j` for logging (already used elsewhere in this repo, e.g. `workflow-engines/camunda`). Tab indentation — the `spotless-maven-plugin`/eclipse-formatter wired into `batch-processing/pom.xml` reformats on commit via `.githooks/pre-commit`, so exact whitespace in this plan's code blocks is not load-bearing.
 - If a Spring Batch API signature in this plan doesn't match the actual library version, consult the Spring Batch 5.x docs (or `context7`, library id `/spring-projects/spring-batch/v5.2.5`) for the current signature rather than guessing — every signature in this plan was verified against that source before writing.
@@ -986,6 +986,7 @@ git commit -m "feat(spring-batch): add listener pattern (job/step lifecycle stat
 - Create: `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/chunk/InvoiceProcessor.java`
 - Create: `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/chunk/InvoiceItemWriter.java`
 - Create: `batch-processing/spring-batch/spring-demo/src/main/java/com/testingai/batch/chunk/ChunkJobConfig.java`
+- Create: `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/BatchTestConfig.java` (shared by every job-config test in Tasks 6–10)
 - Test: `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/chunk/ChunkJobConfigTest.java`
 
 **Interfaces:**
@@ -1056,7 +1057,21 @@ public class InvoiceItemWriter implements ItemWriter<Invoice> {
 }
 ```
 
-- [ ] **Step 2: Write the failing integration test**
+- [ ] **Step 2: Write the shared test bootstrap config and the failing integration test**
+
+`batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/BatchTestConfig.java` — a minimal bootstrap for job-config integration tests: `@SpringBootConfiguration` + `@EnableAutoConfiguration` (DataSource, Batch infrastructure, schema init) without `@ComponentScan`, so including it alongside one job's own beans in `@SpringBootTest(classes = ...)` gives full Spring Boot auto-configuration without dragging in the other four `Job` beans:
+
+```java
+package com.testingai.batch;
+
+import org.springframework.boot.SpringBootConfiguration;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+
+@SpringBootConfiguration
+@EnableAutoConfiguration
+public class BatchTestConfig {
+}
+```
 
 `batch-processing/spring-batch/spring-demo/src/test/java/com/testingai/batch/chunk/ChunkJobConfigTest.java`:
 
@@ -1065,6 +1080,7 @@ package com.testingai.batch.chunk;
 
 import java.math.BigDecimal;
 
+import com.testingai.batch.BatchTestConfig;
 import com.testingai.batch.domain.BatchType;
 import com.testingai.batch.launch.BatchLaunchService;
 import com.testingai.batch.launch.JobRunResult;
@@ -1086,8 +1102,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(classes = { ChunkJobConfig.class, InvoiceProcessor.class, InvoiceItemWriter.class,
-		InvoiceJobListener.class, InvoiceStepListener.class, ListenerStatsService.class, BatchLaunchService.class })
+@SpringBootTest(classes = { BatchTestConfig.class, ChunkJobConfig.class, InvoiceProcessor.class,
+		InvoiceItemWriter.class, InvoiceJobListener.class, InvoiceStepListener.class, ListenerStatsService.class,
+		BatchLaunchService.class })
 @SpringBatchTest
 class ChunkJobConfigTest {
 
@@ -1316,6 +1333,7 @@ git commit -m "feat(spring-batch): add chunk pattern (core ETL job) and BatchLau
 ```java
 package com.testingai.batch.tasklet;
 
+import com.testingai.batch.BatchTestConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
@@ -1330,7 +1348,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(classes = { TaskletJobConfig.class, ArchiveSummaryTasklet.class })
+@SpringBootTest(classes = { BatchTestConfig.class, TaskletJobConfig.class, ArchiveSummaryTasklet.class })
 @SpringBatchTest
 class TaskletJobConfigTest {
 
@@ -1467,6 +1485,7 @@ package com.testingai.batch.faulttolerant;
 
 import java.math.BigDecimal;
 
+import com.testingai.batch.BatchTestConfig;
 import com.testingai.batch.chunk.InvoiceItemWriter;
 import com.testingai.batch.domain.BatchType;
 import org.junit.jupiter.api.BeforeEach;
@@ -1484,7 +1503,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(classes = { FaultTolerantJobConfig.class, FaultTolerantProcessor.class, InvoiceItemWriter.class })
+@SpringBootTest(classes = { BatchTestConfig.class, FaultTolerantJobConfig.class, FaultTolerantProcessor.class,
+		InvoiceItemWriter.class })
 @SpringBatchTest
 class FaultTolerantJobConfigTest {
 
@@ -1643,6 +1663,7 @@ package com.testingai.batch.restart;
 
 import java.math.BigDecimal;
 
+import com.testingai.batch.BatchTestConfig;
 import com.testingai.batch.chunk.InvoiceItemWriter;
 import com.testingai.batch.domain.BatchType;
 import org.junit.jupiter.api.BeforeEach;
@@ -1659,8 +1680,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(classes = { RestartJobConfig.class, RestartProcessor.class, RestartFailureTracker.class,
-		InvoiceItemWriter.class })
+@SpringBootTest(classes = { BatchTestConfig.class, RestartJobConfig.class, RestartProcessor.class,
+		RestartFailureTracker.class, InvoiceItemWriter.class })
 @SpringBatchTest
 class RestartJobConfigTest {
 
@@ -1866,6 +1887,7 @@ package com.testingai.batch.partition;
 
 import java.math.BigDecimal;
 
+import com.testingai.batch.BatchTestConfig;
 import com.testingai.batch.chunk.InvoiceItemWriter;
 import com.testingai.batch.chunk.InvoiceProcessor;
 import com.testingai.batch.domain.BatchType;
@@ -1883,8 +1905,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(classes = { PartitionJobConfig.class, OrderRangePartitioner.class, InvoiceProcessor.class,
-		InvoiceItemWriter.class })
+@SpringBootTest(classes = { BatchTestConfig.class, PartitionJobConfig.class, OrderRangePartitioner.class,
+		InvoiceProcessor.class, InvoiceItemWriter.class })
 @SpringBatchTest
 class PartitionJobConfigTest {
 
