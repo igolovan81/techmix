@@ -17,6 +17,8 @@
 - `orders.batch_type` discriminator (`CHUNK`/`FAULT_TOLERANT`/`RESTART`/`PARTITION`) keeps each pattern's demo data isolated in one shared `orders` table.
 - Every reader's SQL includes `ORDER BY id` — required for `JdbcCursorItemReader`'s restart position (row number) to reliably map to the same records across separate reader instances. `restart/RestartJobConfig`'s reader is the one exception to filtering on `status = 'PENDING'` — filtering there would shrink the result set after a restart (once committed rows flip to `INVOICED`), which breaks the row-count-based restart position; see that reader's own comment.
 - `chunk/InvoiceProcessor` and `chunk/InvoiceItemWriter` are reused by `faulttolerant/` and `partition/` (writer) and `partition/` (processor) — do not duplicate this logic per package.
+- Every `JdbcCursorItemReader` bean (`chunk`, `faulttolerant`, `restart`; `partition`'s was already `@StepScope` for late-binding) must be `@Bean @StepScope`, never a plain singleton `@Bean` — `JdbcCursorItemReader` holds a stateful, open cursor, and a singleton would be shared across every concurrent execution of that job, corrupting cursor position under concurrent requests (`InvalidDataAccessResourceUsageException: Unexpected cursor position change` — a real bug hit via `mvn spring-boot:run` under concurrent load).
+- `chunk/InvoiceItemWriter` claims each order via a conditional `UPDATE orders SET status = 'INVOICED' WHERE id = ? AND status = 'PENDING'` (checking the affected-row count) rather than an unconditional status flip, and only inserts an invoice for orders it actually claimed. This is required, not optional: nothing prevents the same job pattern from being launched concurrently (each launch gets its own unique `JobParameters`), so two concurrent executions can legitimately read the same `PENDING` rows before either commits — without the claim, both would insert an invoice for the same order (a real bug: 5 concurrent `chunk` launches against 100 orders produced 500 invoices before this fix).
 - Job-launch endpoints add a unique `timestamp` `JobParameter` on every call so they can be re-triggered repeatedly (`chunk`, `tasklet`, `faulttolerant`, `partition`) — **except** `restart-demo`, which deliberately uses only the caller-supplied `runId` with no other parameter, since reusing identical `JobParameters` across calls is what identifies it as the same job instance to restart.
 - Partition grid size is fixed at `4` in the step definition (`TaskExecutorPartitionHandler`'s grid size is set at bean-definition time, not re-readable per request without a custom `PartitionHandler`) — no `gridSize` REST parameter.
 - Job-config integration tests use `@SpringBootTest(classes = { com.testingai.batch.testsupport.BatchTestConfig.class, ...that job's own beans... })` + `@SpringBatchTest` — never the full application context — because with all five `Job` beans loaded, `@SpringBatchTest`'s auto-wired `JobLauncherTestUtils` cannot unambiguously resolve which `Job` to bind. `BatchTestConfig` (a test-only `@SpringBootConfiguration @EnableAutoConfiguration` marker with no `@ComponentScan`, created in Task 6) is required in every such `classes` list: `@SpringBootTest(classes = ...)` skips Spring Boot's auto-configuration entirely (no `DataSource`, no Batch infrastructure) unless one of the listed classes carries `@SpringBootConfiguration` — confirmed by hitting `NoSuchBeanDefinitionException: DataSource` without it. `BatchTestConfig` lives in its own `com.testingai.batch.testsupport` package, not `com.testingai.batch` — placing it alongside `BatchDemoApplication` breaks `@WebMvcTest`'s config auto-detection for *other* test classes (e.g. `DemoControllerTest` in Task 11), which walks up from the test's package and errors on finding two `@SpringBootConfiguration` classes. Every job-config test's `@BeforeEach` clears **both** `orders` and `invoices` tables fully (not scoped to its own `batch_type`) — all job-config tests share one persistent H2 instance for the whole `mvn test` run.
@@ -1033,6 +1035,7 @@ public class InvoiceProcessor implements ItemProcessor<Order, Invoice> {
 ```java
 package com.testingai.batch.chunk;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.testingai.batch.domain.Invoice;
@@ -1047,24 +1050,46 @@ import org.springframework.stereotype.Component;
 public class InvoiceItemWriter implements ItemWriter<Invoice> {
 
 	private static final String INSERT_INVOICE = "INSERT INTO invoices (order_id, customer_id, amount, tax, total) VALUES (?, ?, ?, ?, ?)";
-	private static final String MARK_INVOICED = "UPDATE orders SET status = 'INVOICED' WHERE id = ?";
+	// Conditional, not unconditional: this is a claim, not just a status flip. Multiple readers can
+	// legitimately see the same PENDING rows if the same job pattern is launched concurrently (nothing
+	// prevents that -- each launch gets its own unique JobParameters so it can run independently). Only
+	// the execution whose UPDATE actually flips a row from PENDING wins the right to invoice it; a
+	// concurrent execution that loses the race sees 0 affected rows for that order and must not insert
+	// a duplicate invoice for it.
+	private static final String CLAIM_ORDER = "UPDATE orders SET status = 'INVOICED' WHERE id = ? AND status = 'PENDING'";
 
 	private final JdbcTemplate jdbcTemplate;
 
 	@Override
 	public void write(Chunk<? extends Invoice> chunk) {
 		List<? extends Invoice> invoices = chunk.getItems();
+		if (invoices.isEmpty()) {
+			return;
+		}
 
-		jdbcTemplate.batchUpdate(INSERT_INVOICE, invoices, invoices.size(), (ps, invoice) -> {
+		// batchUpdate(sql, Collection<T>, batchSize, pss) returns int[][] -- one row per internal batch
+		// chunk. Since batchSize == invoices.size(), everything runs as a single batch, so exactly one
+		// row comes back.
+		int[] claimed = jdbcTemplate.batchUpdate(CLAIM_ORDER, invoices, invoices.size(),
+				(ps, invoice) -> ps.setLong(1, invoice.getOrderId()))[0];
+
+		List<Invoice> claimedInvoices = new ArrayList<>();
+		for (int i = 0; i < invoices.size(); i++) {
+			if (claimed[i] > 0) {
+				claimedInvoices.add(invoices.get(i));
+			}
+		}
+		if (claimedInvoices.isEmpty()) {
+			return;
+		}
+
+		jdbcTemplate.batchUpdate(INSERT_INVOICE, claimedInvoices, claimedInvoices.size(), (ps, invoice) -> {
 			ps.setLong(1, invoice.getOrderId());
 			ps.setString(2, invoice.getCustomerId());
 			ps.setBigDecimal(3, invoice.getAmount());
 			ps.setBigDecimal(4, invoice.getTax());
 			ps.setBigDecimal(5, invoice.getTotal());
 		});
-
-		jdbcTemplate.batchUpdate(MARK_INVOICED, invoices, invoices.size(),
-				(ps, invoice) -> ps.setLong(1, invoice.getOrderId()));
 	}
 }
 ```
@@ -1091,8 +1116,14 @@ public class BatchTestConfig {
 package com.testingai.batch.chunk;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
-import com.testingai.batch.testsupport.BatchTestConfig;
 import com.testingai.batch.domain.BatchType;
 import com.testingai.batch.launch.BatchLaunchService;
 import com.testingai.batch.launch.JobRunResult;
@@ -1100,6 +1131,7 @@ import com.testingai.batch.listener.InvoiceJobListener;
 import com.testingai.batch.listener.InvoiceStepListener;
 import com.testingai.batch.listener.ListenerStats;
 import com.testingai.batch.listener.ListenerStatsService;
+import com.testingai.batch.testsupport.BatchTestConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
@@ -1185,6 +1217,33 @@ class ChunkJobConfigTest {
 		assertThat(result.readCount()).isEqualTo(5);
 		assertThat(result.writeCount()).isEqualTo(5);
 		assertThat(result.skipCount()).isZero();
+	}
+
+	@Test
+	void invoiceChunkJob_shouldNotDoubleInvoiceOrdersWhenLaunchedConcurrently() throws Exception {
+		// Reproduces a real bug found via mvn spring-boot:run: two overlapping launches of the same
+		// job pattern (each with its own valid, unique JobParameters -- nothing prevents that) both
+		// see the same PENDING rows before either commits. InvoiceItemWriter's conditional claim
+		// (UPDATE ... WHERE status = 'PENDING') must let only one of them actually invoice each order.
+		ExecutorService executor = Executors.newFixedThreadPool(2);
+		try {
+			List<Future<JobExecution>> futures = new ArrayList<>();
+			for (int i = 0; i < 2; i++) {
+				futures.add(executor.submit(() -> jobLauncherTestUtils.launchJob(new JobParametersBuilder()
+						.addString("invocationId", UUID.randomUUID().toString()).toJobParameters())));
+			}
+			for (Future<JobExecution> future : futures) {
+				assertThat(future.get(30, TimeUnit.SECONDS).getStatus()).isEqualTo(BatchStatus.COMPLETED);
+			}
+		} finally {
+			executor.shutdown();
+		}
+
+		Integer invoiceCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM invoices", Integer.class);
+		assertThat(invoiceCount).isEqualTo(15);
+		Integer distinctOrdersInvoiced = jdbcTemplate.queryForObject("SELECT COUNT(DISTINCT order_id) FROM invoices",
+				Integer.class);
+		assertThat(distinctOrdersInvoiced).isEqualTo(15);
 	}
 }
 ```
@@ -1277,6 +1336,7 @@ import com.testingai.batch.listener.InvoiceStepListener;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -1296,7 +1356,15 @@ public class ChunkJobConfig {
 	private final InvoiceJobListener invoiceJobListener;
 	private final InvoiceStepListener invoiceStepListener;
 
+	/**
+	 * @StepScope is required, not optional: JdbcCursorItemReader holds a stateful, open cursor.
+	 * As a plain singleton @Bean it would be shared across every concurrent execution of this
+	 * job, and concurrent reads against one shared cursor corrupt each other's position
+	 * ("Unexpected cursor position change"). @StepScope gives each step execution its own
+	 * instance.
+	 */
 	@Bean
+	@StepScope
 	public JdbcCursorItemReader<Order> chunkOrderReader() {
 		return new JdbcCursorItemReaderBuilder<Order>().name("chunkOrderReader").dataSource(dataSource)
 				.sql("SELECT id, batch_type, customer_id, amount, status, created_at FROM orders WHERE batch_type = 'CHUNK' AND status = 'PENDING' ORDER BY id")
@@ -1321,7 +1389,7 @@ public class ChunkJobConfig {
 - [x] **Step 5: Run the test to verify it passes**
 
 Run: `cd batch-processing && mvn -pl spring-batch/spring-demo test -Dtest=ChunkJobConfigTest`
-Expected: PASS, 2 tests.
+Expected: PASS, 3 tests.
 
 - [x] **Step 6: Commit**
 
@@ -1608,6 +1676,7 @@ import com.testingai.batch.domain.OrderRowMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -1625,7 +1694,15 @@ public class FaultTolerantJobConfig {
 	private final FaultTolerantProcessor faultTolerantProcessor;
 	private final InvoiceItemWriter invoiceItemWriter;
 
+	/**
+	 * @StepScope is required, not optional: JdbcCursorItemReader holds a stateful, open cursor.
+	 * As a plain singleton @Bean it would be shared across every concurrent execution of this
+	 * job, and concurrent reads against one shared cursor corrupt each other's position
+	 * ("Unexpected cursor position change"). @StepScope gives each step execution its own
+	 * instance.
+	 */
 	@Bean
+	@StepScope
 	public JdbcCursorItemReader<Order> faultTolerantOrderReader() {
 		return new JdbcCursorItemReaderBuilder<Order>().name("faultTolerantOrderReader").dataSource(dataSource)
 				.sql("SELECT id, batch_type, customer_id, amount, status, created_at FROM orders WHERE batch_type = 'FAULT_TOLERANT' AND status = 'PENDING' ORDER BY id")
@@ -1833,6 +1910,7 @@ import com.testingai.batch.domain.OrderRowMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -1857,8 +1935,13 @@ public class RestartJobConfig {
 	 * only works if the query returns the same rows in the same order across restarts. Filtering by
 	 * status would shrink the result set after the writer flips committed rows to INVOICED, silently
 	 * skipping past unprocessed rows on restart instead of resuming at the right one.
+	 *
+	 * @StepScope is also required here for the usual reason (see ChunkJobConfig/FaultTolerantJobConfig):
+	 * a plain singleton @Bean would share one stateful cursor across every concurrent execution of this
+	 * job, corrupting cursor position under concurrent requests.
 	 */
 	@Bean
+	@StepScope
 	public JdbcCursorItemReader<Order> restartOrderReader() {
 		return new JdbcCursorItemReaderBuilder<Order>().name("restartOrderReader").dataSource(dataSource)
 				.sql("SELECT id, batch_type, customer_id, amount, status, created_at FROM orders WHERE batch_type = 'RESTART' ORDER BY id")

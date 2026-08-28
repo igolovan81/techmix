@@ -1,8 +1,14 @@
 package com.testingai.batch.chunk;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
-import com.testingai.batch.testsupport.BatchTestConfig;
 import com.testingai.batch.domain.BatchType;
 import com.testingai.batch.launch.BatchLaunchService;
 import com.testingai.batch.launch.JobRunResult;
@@ -10,6 +16,7 @@ import com.testingai.batch.listener.InvoiceJobListener;
 import com.testingai.batch.listener.InvoiceStepListener;
 import com.testingai.batch.listener.ListenerStats;
 import com.testingai.batch.listener.ListenerStatsService;
+import com.testingai.batch.testsupport.BatchTestConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
@@ -94,5 +101,32 @@ class ChunkJobConfigTest {
 		assertThat(result.readCount()).isEqualTo(5);
 		assertThat(result.writeCount()).isEqualTo(5);
 		assertThat(result.skipCount()).isZero();
+	}
+
+	@Test
+	void invoiceChunkJob_shouldNotDoubleInvoiceOrdersWhenLaunchedConcurrently() throws Exception {
+		// Reproduces a real bug found via mvn spring-boot:run: two overlapping launches of the same
+		// job pattern (each with its own valid, unique JobParameters -- nothing prevents that) both
+		// see the same PENDING rows before either commits. InvoiceItemWriter's conditional claim
+		// (UPDATE ... WHERE status = 'PENDING') must let only one of them actually invoice each order.
+		ExecutorService executor = Executors.newFixedThreadPool(2);
+		try {
+			List<Future<JobExecution>> futures = new ArrayList<>();
+			for (int i = 0; i < 2; i++) {
+				futures.add(executor.submit(() -> jobLauncherTestUtils.launchJob(new JobParametersBuilder()
+						.addString("invocationId", UUID.randomUUID().toString()).toJobParameters())));
+			}
+			for (Future<JobExecution> future : futures) {
+				assertThat(future.get(30, TimeUnit.SECONDS).getStatus()).isEqualTo(BatchStatus.COMPLETED);
+			}
+		} finally {
+			executor.shutdown();
+		}
+
+		Integer invoiceCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM invoices", Integer.class);
+		assertThat(invoiceCount).isEqualTo(15);
+		Integer distinctOrdersInvoiced = jdbcTemplate.queryForObject("SELECT COUNT(DISTINCT order_id) FROM invoices",
+				Integer.class);
+		assertThat(distinctOrdersInvoiced).isEqualTo(15);
 	}
 }

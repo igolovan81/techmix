@@ -130,6 +130,13 @@ flowchart LR
 | Restart | `restartDemoJob` | Fails deterministically on the 5th order processed for a given `runId` (once, ever); relaunching with the same `runId` resumes from the last committed chunk rather than reprocessing everything. Its reader deliberately does **not** filter by `status = 'PENDING'` (unlike every other reader here) — `JdbcCursorItemReader` restarts by re-running its query and skipping forward N already-read rows, which only works if the query returns a stable row set across restarts |
 | Partitioning | `partitionedInvoiceJob` | `OrderRangePartitioner` splits pending `PARTITION` orders into 4 id-range partitions, each run by its own worker step via `TaskExecutorPartitionHandler` |
 
+## Concurrent launches
+
+Nothing prevents the same job pattern from being triggered multiple times concurrently — each launch endpoint gets its own unique `JobParameters`, so two overlapping `POST /demo/batch/chunk` calls run as two independent job executions rather than colliding. Two things make that safe:
+
+- Every `JdbcCursorItemReader` is `@StepScope`d, so each concurrent execution gets its own cursor instead of sharing one stateful reader (a shared singleton reader corrupts under concurrent reads — this was a real bug caught via `mvn spring-boot:run` under load).
+- `InvoiceItemWriter` *claims* each order with a conditional `UPDATE ... WHERE status = 'PENDING'` rather than an unconditional status flip, checking the affected-row count before inserting an invoice. Two concurrent executions can legitimately read the same `PENDING` row before either commits; only the one whose claim succeeds gets to invoice it.
+
 ## Stop the app
 
 `Ctrl+C` in the terminal running `mvn spring-boot:run` — H2 is in-memory, so all data (orders, invoices, and Spring Batch's own job history) resets on restart.

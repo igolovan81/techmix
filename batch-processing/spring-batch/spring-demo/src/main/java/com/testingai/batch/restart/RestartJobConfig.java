@@ -9,6 +9,7 @@ import com.testingai.batch.domain.OrderRowMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -33,8 +34,13 @@ public class RestartJobConfig {
 	 * rows in the same order across restarts. Filtering by status would shrink the result set after the writer flips
 	 * committed rows to INVOICED, silently skipping past unprocessed rows on restart instead of resuming at the right
 	 * one.
+	 *
+	 * @StepScope is also required here for the usual reason (see ChunkJobConfig/FaultTolerantJobConfig): a plain
+	 *            singleton @Bean would share one stateful cursor across every concurrent execution of this job,
+	 *            corrupting cursor position under concurrent requests.
 	 */
 	@Bean
+	@StepScope
 	public JdbcCursorItemReader<Order> restartOrderReader() {
 		return new JdbcCursorItemReaderBuilder<Order>().name("restartOrderReader").dataSource(dataSource).sql(
 				"SELECT id, batch_type, customer_id, amount, status, created_at FROM orders WHERE batch_type = 'RESTART' ORDER BY id")

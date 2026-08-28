@@ -10,6 +10,7 @@ import com.testingai.batch.listener.InvoiceStepListener;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -29,7 +30,14 @@ public class ChunkJobConfig {
 	private final InvoiceJobListener invoiceJobListener;
 	private final InvoiceStepListener invoiceStepListener;
 
+	/**
+	 * @StepScope is required, not optional: JdbcCursorItemReader holds a stateful, open cursor. As a plain
+	 *            singleton @Bean it would be shared across every concurrent execution of this job, and concurrent reads
+	 *            against one shared cursor corrupt each other's position ("Unexpected cursor position
+	 *            change"). @StepScope gives each step execution its own instance.
+	 */
 	@Bean
+	@StepScope
 	public JdbcCursorItemReader<Order> chunkOrderReader() {
 		return new JdbcCursorItemReaderBuilder<Order>().name("chunkOrderReader").dataSource(dataSource).sql(
 				"SELECT id, batch_type, customer_id, amount, status, created_at FROM orders WHERE batch_type = 'CHUNK' AND status = 'PENDING' ORDER BY id")
