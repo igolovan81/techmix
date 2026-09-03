@@ -1,0 +1,7 @@
+package com.testingai.hibernate.repository;
+
+import com.testingai.hibernate.entity.Author;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface AuthorRepository extends JpaRepository<Author, Long> {
+}

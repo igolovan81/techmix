@@ -17,7 +17,8 @@
 - App port: `8105` (next free slot after `data-access/jooq/spring-demo`'s `8104`). Postgres (docker compose): `5435` (jOOQ occupies `5434`).
 - `spring.jpa.hibernate.ddl-auto: none` in both profiles — Hibernate maps onto `schema.sql`, it does not generate it. `schema.sql` statements must use `CREATE TABLE IF NOT EXISTS` (idempotent — `spring.sql.init.mode: always` re-runs it on every start, and Postgres keeps data across restarts via the docker compose volume).
 - **Deviation from the spec's package sketch:** the spec describes `associations/BookAuthorService` covering all four techniques (naive N+1, `JOIN FETCH`, `@EntityGraph`, `@BatchSize`) as methods on one class. This plan splits it into two services instead: `BookAuthorService` (naive N+1 + `JOIN FETCH` + `@EntityGraph`, all three operating on `Book.authors`, which carries no batch-fetch annotation) and `CopyBatchFetchService` (the `@BatchSize` fix, operating on the separate `LibraryItem.copies` collection). Reason: `@BatchSize` is a blanket, always-on mapping annotation — putting it on `Book.authors` would make the "naive" method no longer demonstrate pure N+1 (Hibernate would silently batch it too), destroying the before/after contrast the pattern exists to show. Splitting the collection keeps the baseline honest.
-- Entities are Lombok `@Getter @Setter @NoArgsConstructor` classes (never `record` — JPA entities need mutable state and a no-arg constructor) with `@EqualsAndHashCode(onlyExplicitlyIncluded = true)` and `@EqualsAndHashCode.Include` on `id` only — never `@Data` on an entity with a collection field (recurses into lazy proxies / breaks on unset FK). `LibraryItem`/`Book`/`Dvd`/`Magazine` and `Person`/`Member`/`Librarian` are `sealed`/`final` hierarchies (modern-Java preference, `.claude/rules/code-review.md`) — safe here because every `@ManyToOne` reference targets the abstract base (`Copy.libraryItem : LibraryItem`, `Loan.member : Member` is the one exception and `Member` is a leaf `final` class, which is fine since nothing ever needs a lazy proxy specifically typed as `Member`'s own subtype).
+- Entities are Lombok `@Getter @Setter @NoArgsConstructor` classes (never `record` — JPA entities need mutable state and a no-arg constructor) with `@EqualsAndHashCode(onlyExplicitlyIncluded = true)` and `@EqualsAndHashCode.Include` on `id` only — never `@Data` on an entity with a collection field (recurses into lazy proxies / breaks on unset FK).
+- **`LibraryItem` and `Person` are plain `abstract class`, not `sealed`**, despite the modern-Java preference for sealed hierarchies (`.claude/rules/code-review.md`) — verified during implementation, not just anticipated: Hibernate generates a ByteBuddy lazy-load proxy subclass of an entity at `SessionFactory` bootstrap whenever it's the target of a `@ManyToOne`/`@OneToOne` (here, `Copy.libraryItem : LibraryItem`), and the JVM's `sealed`/`permits` check rejects that runtime-generated class, crashing startup with `IncompatibleClassChangeError: ... is not a permitted subclass`. `Book`/`Dvd`/`Magazine`/`Member`/`Librarian` stay `final` — only the abstract roots needed the fix. Task 6's `switch` over these types therefore needs an explicit `default` branch (no `sealed` means no compiler-enforced exhaustiveness).
 - Services use constructor injection; `@RequiredArgsConstructor` on `private final` fields is the default, except `AuthorCacheService` (Task 4), which needs an explicit constructor to build a `TransactionTemplate` from the injected `PlatformTransactionManager`.
 - `FailureSimulator` follows the exact shape from `message-brokers/kafka/spring-demo/.../util/FailureSimulator.java` per `.claude/rules/code-review.md` (`FAILURE_RATE = 0.05`, `maybeThrow(String context)`, no `shouldFail()`), created in Task 5 where it's first needed (`locking/CopyCheckoutService`) — same placement pattern the jOOQ module used (`FailureSimulator` landed right before the task that needed it).
 - `FailureSimulator.maybeThrow` fires unconditionally as the first statement inside both `checkoutOptimistic` and `checkoutPessimistic`, so ~5% of calls throw regardless of request validity. Any test calling either method must go through the `checkoutOptimisticIgnoringSimulatedFailures` / `checkoutPessimisticIgnoringSimulatedFailures` retry helpers defined in Task 5, exactly like jOOQ's `placeOrderIgnoringSimulatedFailures`, or it will be flaky.
@@ -763,7 +764,10 @@ import org.hibernate.annotations.BatchSize;
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public sealed abstract class LibraryItem permits Book, Dvd, Magazine {
+// Not sealed: Hibernate generates a ByteBuddy lazy-load proxy subclass of LibraryItem at runtime
+// (Copy.libraryItem is a lazy @ManyToOne to it) and the JVM's sealed/permits check rejects that
+// generated class, crashing SessionFactory bootstrap with IncompatibleClassChangeError.
+public abstract class LibraryItem {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -987,7 +991,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public sealed abstract class Person permits Member, Librarian {
+// Not sealed: same reason as LibraryItem (see there) — Hibernate builds a lazy-load proxy factory
+// for every entity persister, including abstract inheritance roots, regardless of whether a
+// specific association happens to be lazy; sealed/permits rejects the generated proxy subclass.
+public abstract class Person {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -2443,6 +2450,7 @@ public class LibraryCatalogService {
 			case Book b -> "BOOK";
 			case Dvd d -> "DVD";
 			case Magazine m -> "MAGAZINE";
+			default -> throw new IllegalStateException("Unknown LibraryItem subtype: " + item.getClass());
 		};
 		return new LibraryItemSummary(item.getId(), item.getTitle(), item.getPublicationYear(), itemType);
 	}
@@ -2489,6 +2497,7 @@ public class PersonDirectoryService {
 		return switch (person) {
 			case Member m -> new PersonSummary(m.getId(), m.getName(), "MEMBER", m.getMembershipDate().toString());
 			case Librarian l -> new PersonSummary(l.getId(), l.getName(), "LIBRARIAN", l.getDepartment());
+			default -> throw new IllegalStateException("Unknown Person subtype: " + person.getClass());
 		};
 	}
 }
