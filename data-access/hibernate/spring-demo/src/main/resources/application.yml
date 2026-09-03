@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:hibernatedemo;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        generate_statistics: true
+        cache:
+          use_second_level_cache: true
+          region:
+            factory_class: jcache
+        javax:
+          cache:
+            provider: com.github.benmanes.caffeine.jcache.spi.CaffeineCachingProvider
+
+server:
+  port: 8105
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui/index.html

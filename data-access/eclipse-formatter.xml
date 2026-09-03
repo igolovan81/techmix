@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<profiles version="21">
+    <profile kind="CodeFormatterProfile" name="techmix" version="21">
+        <!-- Line width: 120 characters -->
+        <setting id="org.eclipse.jdt.core.formatter.lineSplit" value="120"/>
+        <!-- Javadoc comment line width -->
+        <setting id="org.eclipse.jdt.core.formatter.comment.line_length" value="120"/>
+        <!-- Keep Javadoc formatting enabled -->
+        <setting id="org.eclipse.jdt.core.formatter.comment.format_javadoc_comments" value="true"/>
+        <setting id="org.eclipse.jdt.core.formatter.comment.format_block_comments" value="true"/>
+        <!-- Indent with tabs (Eclipse default) -->
+        <setting id="org.eclipse.jdt.core.formatter.tabulation.char" value="tab"/>
+        <setting id="org.eclipse.jdt.core.formatter.tabulation.size" value="4"/>
+        <setting id="org.eclipse.jdt.core.formatter.indentation.size" value="4"/>
+    </profile>
+</profiles>
