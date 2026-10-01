@@ -224,6 +224,20 @@ mvn test -pl request-logging/spring-demo -Dtest=ClassName    # single test class
 mvn spring-boot:run -pl request-logging/spring-demo -am      # run the demo app (-am builds the starter first)
 ```
 
+### Hibernate data-access demo (run from the module root, Docker only needed for the `postgres` profile and one test)
+
+```bash
+cd data-access/hibernate/spring-demo
+
+mvn clean package                          # build
+mvn test                                    # unit tests against H2 (Gatling and CopyCheckoutServiceConcurrencyIT excluded automatically)
+mvn test -Dtest=CopyCheckoutServiceConcurrencyIT   # the one Postgres-only test — requires a Docker daemon (Testcontainers)
+mvn spring-boot:run                          # run the app against H2 (:8105)
+docker compose -f data-access/hibernate/docker/docker-compose.yml up -d   # Postgres on :5435, for the postgres profile
+mvn spring-boot:run -Dspring-boot.run.profiles=postgres               # run against real Postgres
+mvn gatling:test                            # load test — requires the app running first
+```
+
 ### Backend REST API
 
 ```bash
@@ -303,6 +317,7 @@ docker compose -f cqrs-event-sourcing/axon/docker/docker-compose.yml up -d
 | `reactive-programming/project-reactor/{spring-demo,upstream-demo}/` | Project Reactor demo — two independent Spring Boot WebFlux apps covering Mono/Flux basics, backpressure/error handling, schedulers/concurrency, and SSE/WebClient streaming; `upstream-demo` must be started before `spring-demo`'s `streaming/upstream/*` endpoints work — no external infrastructure required |
 | `workflow-engines/camunda/spring-demo/` | Camunda 8 (Zeebe) BPMN workflow demo — service tasks, exclusive gateway, user task (approval), and error-boundary-driven failure routing over the order-fulfillment domain shared with `distributed-transactions/saga`; requires Docker for both the running app (`docker compose`) and `mvn test` (Testcontainers) |
 | `spring-boot-starters/<starter>/<starter>-spring-boot-starter/` + `.../spring-demo/` | Custom Spring Boot starter demos — each starter is an auto-configuration jar plus a consuming demo app in the same Maven reactor (currently: request-logging) — no external infrastructure required |
+| `data-access/hibernate/spring-demo/` | Hibernate/JPA demo app — association fetching and the N+1 problem, first/second-level caching, optimistic/pessimistic locking, and inheritance/embeddable/converter/auditing mapping over a library-lending domain (`author`, `library_item` [SINGLE_TABLE: Book/Dvd/Magazine], `copy`, `person` [JOINED: Member/Librarian], `loan`); `mvn test` needs no external infrastructure, but the one concurrency IT and the `postgres` profile need `docker compose -f data-access/hibernate/docker/docker-compose.yml up -d` first |
 | `docker-compose.yml` | Shared infrastructure stack |
 
 ### Message broker demos
